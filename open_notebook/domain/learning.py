@@ -67,8 +67,8 @@ class LearningJourney(ObjectModel):
     ) -> Optional["LearningJourney"]:
         try:
             rows = await repo_query(
-                "SELECT * FROM learning_journey WHERE main_session = $session LIMIT 1",
-                {"session": ensure_record_id(main_session_id)},
+                "SELECT * FROM learning_journey WHERE main_session = $session_id LIMIT 1",
+                {"session_id": ensure_record_id(main_session_id)},
             )
             return cls(**rows[0]) if rows else None
         except Exception as exc:
@@ -143,7 +143,7 @@ class LearningJourney(ObjectModel):
         aside_ids = [ensure_record_id(aside.id) for aside in asides if aside.id]
         if not aside_ids:
             return []
-        query = "SELECT * FROM learning_update WHERE aside IN $asides"
+        query = "SELECT * FROM learning_update WHERE $asides CONTAINS aside"
         if not include_unmerged:
             query += " AND include_in_main = true"
         query += " ORDER BY created ASC"
@@ -202,8 +202,8 @@ class LearningAside(ObjectModel):
     async def get_for_chat_session(cls, session_id: str) -> Optional["LearningAside"]:
         try:
             rows = await repo_query(
-                "SELECT * FROM learning_aside WHERE chat_session = $session LIMIT 1",
-                {"session": ensure_record_id(session_id)},
+                "SELECT * FROM learning_aside WHERE chat_session = $session_id LIMIT 1",
+                {"session_id": ensure_record_id(session_id)},
             )
             return cls(**rows[0]) if rows else None
         except Exception as exc:

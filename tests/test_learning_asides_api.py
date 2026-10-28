@@ -239,14 +239,14 @@ async def test_resolve_aside_creates_versioned_user_approved_update(client):
 
 
 @pytest.mark.asyncio
-async def test_resume_prioritizes_active_aside(client):
-    journey = _journey(active_session="chat_session:child")
-    aside = _aside()
+async def test_resume_offers_parked_aside_when_main_session_is_active(client):
+    journey = _journey(active_session="chat_session:main")
+    aside = _aside(status="parked")
     journey_response = LearningJourneyResponse(
         id=journey.id or "",
         notebook_id=journey.notebook,
         main_session_id=journey.main_session,
-        active_session_id=aside.chat_session,
+        active_session_id=journey.active_session,
         objective=journey.objective,
         status="active",
         asides=[_aside_response(aside)],

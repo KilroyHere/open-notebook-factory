@@ -4,6 +4,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from surrealdb import AsyncSurreal, RecordID
 
 from open_notebook.domain.learning import (
     AsideAnchor,
@@ -42,6 +43,78 @@ class TestMigration26:
         assert len(manager.up_migrations) == 26
         assert len(manager.up_migrations) == len(manager.down_migrations)
         assert "learning_journey" in manager.up_migrations[25].sql
+
+
+@pytest.mark.asyncio
+async def test_learning_queries_use_non_reserved_bind_parameters():
+    """SurrealDB v2 reserves `$session`; exercise the real query parser."""
+    async with AsyncSurreal("mem://") as db:
+        await db.use("learning_asides", "query_bindings")
+        await db.query((MIGRATIONS_DIR / "1.surrealql").read_text())
+        await db.query((MIGRATIONS_DIR / "3.surrealql").read_text())
+        await db.query((MIGRATIONS_DIR / "26.surrealql").read_text())
+        await db.query(
+            """
+            CREATE notebook:one SET name = 'One', description = '';
+            CREATE chat_session:main SET title = 'Main';
+            RELATE chat_session:main->refers_to->notebook:one;
+            CREATE learning_journey:one SET
+                notebook = notebook:one,
+                main_session = chat_session:main,
+                active_session = chat_session:main,
+                status = 'active';
+            CREATE chat_session:aside SET title = 'Aside';
+            CREATE learning_aside:one SET
+                journey = learning_journey:one,
+                parent_session = chat_session:main,
+                chat_session = chat_session:aside,
+                title = 'Aside',
+                status = 'resolved',
+                anchor = { type: 'message', content: 'Anchor' },
+                context_snapshot = [];
+            CREATE learning_update:one SET
+                aside = learning_aside:one,
+                conclusion = 'Conclusion',
+                open_questions = [],
+                citations = [],
+                include_in_main = true,
+                version = 1;
+            """
+        )
+
+        relations = await db.query(
+            """
+            SELECT id FROM refers_to
+            WHERE in = $session_id AND out = $notebook
+            LIMIT 1
+            """,
+            {
+                "session_id": RecordID("chat_session", "main"),
+                "notebook": RecordID("notebook", "one"),
+            },
+        )
+        journeys = await db.query(
+            """
+            SELECT * FROM learning_journey
+            WHERE main_session = $session_id
+            LIMIT 1
+            """,
+            {"session_id": RecordID("chat_session", "main")},
+        )
+        updates = await db.query(
+            """
+            SELECT * FROM learning_update
+            WHERE $asides CONTAINS aside
+            """,
+            {"asides": [RecordID("learning_aside", "one")]},
+        )
+
+    assert isinstance(relations, list)
+    assert isinstance(journeys, list)
+    assert isinstance(updates, list)
+    assert len(relations) == 1
+    assert len(journeys) == 1
+    assert len(updates) == 1
 
 
 class TestLearningModels:
@@ -152,7 +225,7 @@ async def test_get_journey_for_main_session_normalizes_record_id():
     assert journey is not None
     assert journey.id == "learning_journey:one"
     assert repo_query.await_args is not None
-    assert str(repo_query.await_args.args[1]["session"]) == "chat_session:main"
+    assert str(repo_query.await_args.args[1]["session_id"]) == "chat_session:main"
 
 
 @pytest.mark.asyncio

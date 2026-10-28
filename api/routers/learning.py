@@ -48,9 +48,9 @@ async def _verify_notebook_session(
     notebook = await Notebook.get(full_notebook_id)
     session = await ChatSession.get(full_session_id)
     relation = await repo_query(
-        "SELECT id FROM refers_to WHERE in = $session AND out = $notebook LIMIT 1",
+        "SELECT id FROM refers_to WHERE in = $session_id AND out = $notebook LIMIT 1",
         {
-            "session": ensure_record_id(full_session_id),
+            "session_id": ensure_record_id(full_session_id),
             "notebook": ensure_record_id(full_notebook_id),
         },
     )
@@ -188,7 +188,7 @@ async def get_journey_resume(
             for aside in open_asides
             if aside.chat_session_id == response.active_session_id
         ),
-        None,
+        open_asides[0] if open_asides else None,
     )
     accepted_findings = [
         update.conclusion for update in response.updates if update.include_in_main
