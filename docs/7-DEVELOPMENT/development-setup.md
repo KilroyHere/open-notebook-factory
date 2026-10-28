@@ -21,6 +21,15 @@ The worker is not optional. Source processing, embeddings and podcasts are backg
 - **Docker** with the Compose plugin, for SurrealDB
 - **ffmpeg** if you work on podcasts or audio/video sources (the Docker image installs it)
 
+On a fresh Debian or Ubuntu machine, the repository includes an idempotent installer:
+
+```bash
+bash scripts/install-dev-prerequisites.sh
+bash scripts/install-dev-prerequisites.sh --check
+```
+
+It installs Node.js 22, uv with Python 3.12, Docker Engine with Compose v2, Git, Make and ffmpeg. Use `--without-docker` when Docker is managed separately (for example, by your organization). Other operating systems should install the prerequisites above with their native package manager; the script exits without making changes on unsupported systems.
+
 ## 1. Clone and install
 
 ```bash

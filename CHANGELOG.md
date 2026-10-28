@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Learning asides keep prerequisite questions out of the main notebook chat.** Open any assistant answer as a durable side conversation, follow the tangent independently, park or resume it later, and explicitly resolve its useful conclusion back into the main chat context or save it as a note. Asides retain their originating message, remain hidden from the normal session list, and surface a resume prompt when a learner returns.
+- **One-command Debian/Ubuntu development prerequisites.** `scripts/install-dev-prerequisites.sh` installs and verifies Node.js 22, uv with Python 3.12, Docker Engine with Compose v2, Git, Make and ffmpeg on a clean machine. It is idempotent, has a read-only `--check` mode, and can leave Docker or ffmpeg to an existing system installation.
 
 ### Changed
 - **Documentation rewritten against the code.** Every page under `docs/` was checked against v1.15.0 and rewritten where it described an older or imagined product (#1458, #1459, #1460, #1461):
