@@ -1,0 +1,39 @@
+-- Migration 26: durable learning journeys, isolated asides, and approved updates.
+
+DEFINE TABLE IF NOT EXISTS learning_journey SCHEMAFULL;
+DEFINE FIELD IF NOT EXISTS notebook ON TABLE learning_journey TYPE record<notebook>;
+DEFINE FIELD IF NOT EXISTS main_session ON TABLE learning_journey TYPE record<chat_session>;
+DEFINE FIELD IF NOT EXISTS active_session ON TABLE learning_journey TYPE option<record<chat_session>>;
+DEFINE FIELD IF NOT EXISTS objective ON TABLE learning_journey TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS status ON TABLE learning_journey TYPE string DEFAULT "active";
+DEFINE FIELD IF NOT EXISTS created ON learning_journey DEFAULT time::now() VALUE $before OR time::now();
+DEFINE FIELD IF NOT EXISTS updated ON learning_journey DEFAULT time::now() VALUE time::now();
+DEFINE INDEX IF NOT EXISTS idx_learning_journey_main_session ON TABLE learning_journey COLUMNS main_session UNIQUE;
+DEFINE INDEX IF NOT EXISTS idx_learning_journey_notebook ON TABLE learning_journey COLUMNS notebook;
+
+DEFINE TABLE IF NOT EXISTS learning_aside SCHEMAFULL;
+DEFINE FIELD IF NOT EXISTS journey ON TABLE learning_aside TYPE record<learning_journey>;
+DEFINE FIELD IF NOT EXISTS parent_aside ON TABLE learning_aside TYPE option<record<learning_aside>>;
+DEFINE FIELD IF NOT EXISTS parent_session ON TABLE learning_aside TYPE record<chat_session>;
+DEFINE FIELD IF NOT EXISTS chat_session ON TABLE learning_aside TYPE record<chat_session>;
+DEFINE FIELD IF NOT EXISTS title ON TABLE learning_aside TYPE string;
+DEFINE FIELD IF NOT EXISTS status ON TABLE learning_aside TYPE string DEFAULT "active";
+DEFINE FIELD IF NOT EXISTS anchor ON TABLE learning_aside FLEXIBLE TYPE object;
+DEFINE FIELD IF NOT EXISTS context_snapshot ON TABLE learning_aside FLEXIBLE TYPE array<object>;
+DEFINE FIELD IF NOT EXISTS created ON learning_aside DEFAULT time::now() VALUE $before OR time::now();
+DEFINE FIELD IF NOT EXISTS updated ON learning_aside DEFAULT time::now() VALUE time::now();
+DEFINE INDEX IF NOT EXISTS idx_learning_aside_journey ON TABLE learning_aside COLUMNS journey;
+DEFINE INDEX IF NOT EXISTS idx_learning_aside_chat_session ON TABLE learning_aside COLUMNS chat_session UNIQUE;
+
+DEFINE TABLE IF NOT EXISTS learning_update SCHEMAFULL;
+DEFINE FIELD IF NOT EXISTS aside ON TABLE learning_update TYPE record<learning_aside>;
+DEFINE FIELD IF NOT EXISTS conclusion ON TABLE learning_update TYPE string;
+DEFINE FIELD IF NOT EXISTS relevance ON TABLE learning_update TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS open_questions ON TABLE learning_update TYPE array<string> DEFAULT [];
+DEFINE FIELD IF NOT EXISTS citations ON TABLE learning_update TYPE array<string> DEFAULT [];
+DEFINE FIELD IF NOT EXISTS include_in_main ON TABLE learning_update TYPE bool DEFAULT true;
+DEFINE FIELD IF NOT EXISTS saved_note ON TABLE learning_update TYPE option<record<note>>;
+DEFINE FIELD IF NOT EXISTS version ON TABLE learning_update TYPE int DEFAULT 1;
+DEFINE FIELD IF NOT EXISTS created ON learning_update DEFAULT time::now() VALUE $before OR time::now();
+DEFINE FIELD IF NOT EXISTS updated ON learning_update DEFAULT time::now() VALUE time::now();
+DEFINE INDEX IF NOT EXISTS idx_learning_update_aside_version ON TABLE learning_update COLUMNS aside, version UNIQUE;

@@ -1,0 +1,5 @@
+-- Remove learning-aside persistence introduced by migration 26.
+
+REMOVE TABLE IF EXISTS learning_update;
+REMOVE TABLE IF EXISTS learning_aside;
+REMOVE TABLE IF EXISTS learning_journey;
