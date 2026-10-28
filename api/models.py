@@ -93,6 +93,148 @@ class AskResponse(BaseModel):
     question: str = Field(..., description="Original question")
 
 
+# Learning-aside models
+class AsideAnchorRequest(BaseModel):
+    type: Literal["message", "source", "citation", "equation"] = "message"
+    content: str = Field(..., min_length=1, max_length=20_000)
+    message_id: Optional[str] = None
+    source_id: Optional[str] = None
+    locator: Optional[str] = Field(None, max_length=1_000)
+
+    @field_validator("content")
+    @classmethod
+    def validate_content_not_blank(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("Aside anchor content cannot be empty")
+        return stripped
+
+
+class CreateLearningAsideRequest(BaseModel):
+    notebook_id: str
+    parent_session_id: str
+    parent_aside_id: Optional[str] = None
+    title: Optional[str] = Field(None, max_length=200)
+    objective: Optional[str] = Field(None, max_length=2_000)
+    model_override: Optional[str] = None
+    anchor: AsideAnchorRequest
+
+    @field_validator("title")
+    @classmethod
+    def validate_title_not_blank(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("Aside title cannot be empty")
+        return stripped
+
+
+class UpdateLearningAsideRequest(BaseModel):
+    title: Optional[str] = Field(None, min_length=1, max_length=200)
+    status: Optional[Literal["active", "parked", "discarded"]] = None
+
+    @field_validator("title")
+    @classmethod
+    def validate_title_not_blank(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("Aside title cannot be empty")
+        return stripped
+
+
+class SendLearningAsideMessageRequest(BaseModel):
+    message: str = Field(..., min_length=1, max_length=100_000)
+    context: Dict[str, Any] = Field(default_factory=dict)
+    model_override: Optional[str] = None
+
+    @field_validator("message")
+    @classmethod
+    def validate_message_not_blank(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("Aside message cannot be empty")
+        return stripped
+
+
+class ResolveLearningAsideRequest(BaseModel):
+    conclusion: str = Field(..., min_length=1, max_length=100_000)
+    relevance: Optional[str] = Field(None, max_length=50_000)
+    open_questions: List[str] = Field(default_factory=list, max_length=50)
+    citations: List[str] = Field(default_factory=list, max_length=100)
+    include_in_main: bool = True
+    save_as_note: bool = False
+
+    @field_validator("conclusion")
+    @classmethod
+    def validate_conclusion_not_blank(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("Learning update conclusion cannot be empty")
+        return stripped
+
+
+class LearningAsideMessageResponse(BaseModel):
+    id: str
+    type: str
+    content: str
+    timestamp: Optional[str] = None
+
+
+class LearningUpdateResponse(BaseModel):
+    id: str
+    aside_id: str
+    conclusion: str
+    relevance: Optional[str] = None
+    open_questions: List[str]
+    citations: List[str]
+    include_in_main: bool
+    saved_note_id: Optional[str] = None
+    version: int
+    created: str
+    updated: str
+
+
+class LearningAsideResponse(BaseModel):
+    id: str
+    journey_id: str
+    parent_aside_id: Optional[str] = None
+    parent_session_id: str
+    chat_session_id: str
+    title: str
+    status: Literal["active", "parked", "resolved", "discarded"]
+    anchor: AsideAnchorRequest
+    messages: List[LearningAsideMessageResponse] = Field(default_factory=list)
+    updates: List[LearningUpdateResponse] = Field(default_factory=list)
+    created: str
+    updated: str
+
+
+class LearningJourneyResponse(BaseModel):
+    id: str
+    notebook_id: str
+    main_session_id: str
+    active_session_id: Optional[str] = None
+    objective: Optional[str] = None
+    status: Literal["active", "archived"]
+    asides: List[LearningAsideResponse] = Field(default_factory=list)
+    updates: List[LearningUpdateResponse] = Field(default_factory=list)
+    created: str
+    updated: str
+
+
+class LearningJourneyResumeResponse(BaseModel):
+    journey: Optional[LearningJourneyResponse] = None
+    current_point: Optional[str] = None
+    accepted_findings: List[str] = Field(default_factory=list)
+    open_aside_ids: List[str] = Field(default_factory=list)
+    recommended_action: Literal[
+        "start_aside", "continue_main", "resume_aside", "review"
+    ] = "start_aside"
+
+
 # Models API models
 class ModelCreate(BaseModel):
     name: str = Field(..., description="Model name (e.g., gpt-5-mini, claude, gemini)")

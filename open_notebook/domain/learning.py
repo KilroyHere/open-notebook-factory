@@ -7,7 +7,11 @@ from pydantic import BaseModel, Field, field_validator
 
 from open_notebook.database.repository import ensure_record_id, repo_query
 from open_notebook.domain.base import ObjectModel
-from open_notebook.exceptions import DatabaseOperationError, InvalidInputError
+from open_notebook.exceptions import (
+    DatabaseOperationError,
+    InvalidInputError,
+    NotFoundError,
+)
 
 AsideStatus = Literal["active", "parked", "resolved", "discarded"]
 JourneyStatus = Literal["active", "archived"]
@@ -74,6 +78,18 @@ class LearningJourney(ObjectModel):
             raise DatabaseOperationError("Failed to load learning journey") from exc
 
     @classmethod
+    async def get_for_notebook(cls, notebook_id: str) -> List["LearningJourney"]:
+        try:
+            rows = await repo_query(
+                "SELECT * FROM learning_journey WHERE notebook = $notebook",
+                {"notebook": ensure_record_id(notebook_id)},
+            )
+            return [cls(**row) for row in rows]
+        except Exception as exc:
+            logger.exception(f"Failed to list learning journeys for {notebook_id}")
+            raise DatabaseOperationError("Failed to list learning journeys") from exc
+
+    @classmethod
     async def get_or_create(
         cls,
         notebook_id: str,
@@ -137,6 +153,21 @@ class LearningJourney(ObjectModel):
         except Exception as exc:
             logger.exception(f"Failed to list learning updates for journey {self.id}")
             raise DatabaseOperationError("Failed to list learning updates") from exc
+
+    async def delete_with_asides(self) -> bool:
+        """Delete a journey, its updates, asides, and child chat sessions."""
+        from open_notebook.domain.notebook import ChatSession
+
+        for aside in await self.get_asides(include_discarded=True):
+            for update in await aside.get_updates():
+                await update.delete()
+            try:
+                child_session = await ChatSession.get(aside.chat_session)
+                await child_session.delete()
+            except NotFoundError:
+                pass
+            await aside.delete()
+        return await super().delete()
 
 
 class LearningAside(ObjectModel):

@@ -33,6 +33,7 @@ from api.routers import (
     episode_profiles,
     insights,
     languages,
+    learning,
     models,
     notebooks,
     notes,
@@ -404,6 +405,7 @@ app.include_router(credentials.router, prefix="/api", tags=["credentials"])
 app.include_router(providers.router, prefix="/api", tags=["providers"])
 app.include_router(capabilities.router, prefix="/api", tags=["capabilities"])
 app.include_router(languages.router, prefix="/api", tags=["languages"])
+app.include_router(learning.router, prefix="/api", tags=["learning"])
 
 
 @app.get("/")

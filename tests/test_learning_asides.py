@@ -11,6 +11,7 @@ from open_notebook.domain.learning import (
     LearningJourney,
     LearningUpdate,
 )
+from open_notebook.domain.notebook import Notebook
 from open_notebook.exceptions import InvalidInputError
 
 MIGRATIONS_DIR = Path("open_notebook/database/migrations")
@@ -168,3 +169,19 @@ async def test_journey_lists_only_non_discarded_asides_by_default():
         assert await journey.get_asides() == []
 
     assert "status != 'discarded'" in repo_query.await_args.args[0]
+
+
+@pytest.mark.asyncio
+async def test_notebook_chat_sessions_hide_learning_asides_by_default():
+    notebook = Notebook(id="notebook:one", name="One", description="")
+    with patch(
+        "open_notebook.domain.notebook.repo_query",
+        new_callable=AsyncMock,
+        return_value=[],
+    ) as repo_query:
+        assert await notebook.get_chat_sessions() == []
+
+    assert (
+        "select value chat_session from learning_aside"
+        in (repo_query.await_args.args[0])
+    )

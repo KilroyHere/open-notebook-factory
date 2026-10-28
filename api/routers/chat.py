@@ -15,6 +15,7 @@ from api.routers._chat_shared import (
     get_session_or_404,
 )
 from open_notebook.database.repository import ensure_record_id, repo_query
+from open_notebook.domain.learning import LearningJourney
 from open_notebook.domain.notebook import ChatSession, Notebook
 from open_notebook.exceptions import (
     NotFoundError,
@@ -86,6 +87,10 @@ class ExecuteChatResponse(BaseModel):
 class BuildContextRequest(BaseModel):
     notebook_id: str = Field(..., description="Notebook ID")
     context_config: Dict[str, Any] = Field(..., description="Context configuration")
+    session_id: Optional[str] = Field(
+        None,
+        description="Main chat session whose accepted learning updates are included",
+    )
 
 
 class BuildContextResponse(BaseModel):
@@ -289,7 +294,11 @@ async def delete_session(session_id: str):
     """Delete a chat session."""
     try:
         # Get session (normalizes the ID and 404s if missing)
-        _full_session_id, session = await get_session_or_404(session_id)
+        full_session_id, session = await get_session_or_404(session_id)
+
+        journey = await LearningJourney.get_for_main_session(full_session_id)
+        if journey:
+            await journey.delete_with_asides()
 
         await session.delete()
 
@@ -404,6 +413,45 @@ async def build_context(request: BuildContextRequest):
         context_data, total_content = await build_notebook_context(
             notebook, request.context_config
         )
+
+        if request.session_id:
+            full_session_id = (
+                request.session_id
+                if request.session_id.startswith("chat_session:")
+                else f"chat_session:{request.session_id}"
+            )
+            journey = await LearningJourney.get_for_main_session(full_session_id)
+            if journey and journey.notebook == str(notebook.id):
+                updates = await journey.get_updates(include_unmerged=False)
+                if updates:
+                    context_data["learning_updates"] = [
+                        update.as_context_entry() for update in updates
+                    ]
+                    update_text = "\n\n".join(
+                        "\n".join(
+                            part
+                            for part in [
+                                f"Conclusion: {update.conclusion}",
+                                (
+                                    f"Relevance: {update.relevance}"
+                                    if update.relevance
+                                    else ""
+                                ),
+                                (
+                                    "Citations: " + ", ".join(update.citations)
+                                    if update.citations
+                                    else ""
+                                ),
+                            ]
+                            if part
+                        )
+                        for update in updates
+                    )
+                    total_content = (
+                        f"{total_content}\n\n"
+                        "# Accepted learning updates\n\n"
+                        f"{update_text}"
+                    ).strip()
 
         char_count = len(total_content)
         estimated_tokens = token_count(total_content) if total_content else 0
