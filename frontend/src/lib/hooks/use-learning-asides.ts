@@ -1,0 +1,238 @@
+'use client'
+
+import { useCallback, useMemo, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { learningApi } from '@/lib/api/learning'
+import { QUERY_KEYS } from '@/lib/api/query-client'
+import {
+  LearningAsideAnchor,
+  LearningAsideStatus,
+  ResolveLearningAsideRequest,
+} from '@/lib/types/api'
+import { useTranslation } from '@/lib/hooks/use-translation'
+import { getApiErrorMessage } from '@/lib/utils/error-handler'
+
+interface UseLearningAsidesParams {
+  notebookId: string
+  mainSessionId: string | null
+  buildContext: () => Promise<Record<string, unknown>>
+  modelOverride?: string
+}
+
+export function useLearningAsides({
+  notebookId,
+  mainSessionId,
+  buildContext,
+  modelOverride,
+}: UseLearningAsidesParams) {
+  const { t } = useTranslation()
+  const queryClient = useQueryClient()
+  const [activeAsideId, setActiveAsideId] = useState<string | null>(null)
+  const [panelOpen, setPanelOpen] = useState(false)
+
+  const journeyKey = useMemo(
+    () =>
+      mainSessionId
+        ? QUERY_KEYS.learningJourney(notebookId, mainSessionId)
+        : (['learning', notebookId, 'no-session'] as const),
+    [mainSessionId, notebookId]
+  )
+  const resumeKey = useMemo(
+    () =>
+      mainSessionId
+        ? QUERY_KEYS.learningResume(notebookId, mainSessionId)
+        : (['learning', notebookId, 'no-session', 'resume'] as const),
+    [mainSessionId, notebookId]
+  )
+
+  const journeyQuery = useQuery({
+    queryKey: journeyKey,
+    queryFn: () => learningApi.getJourney(notebookId, mainSessionId!),
+    enabled: !!mainSessionId,
+  })
+
+  const resumeQuery = useQuery({
+    queryKey: resumeKey,
+    queryFn: () => learningApi.getResume(notebookId, mainSessionId!),
+    enabled: !!mainSessionId,
+  })
+
+  const asideQuery = useQuery({
+    queryKey: activeAsideId
+      ? QUERY_KEYS.learningAside(activeAsideId)
+      : ['learning', 'asides', 'none'],
+    queryFn: () => learningApi.getAside(activeAsideId!),
+    enabled: !!activeAsideId && panelOpen,
+  })
+
+  const refresh = useCallback(
+    async (asideId?: string) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: journeyKey }),
+        queryClient.invalidateQueries({ queryKey: resumeKey }),
+        ...(asideId
+          ? [
+              queryClient.invalidateQueries({
+                queryKey: QUERY_KEYS.learningAside(asideId),
+              }),
+            ]
+          : []),
+      ])
+    },
+    [journeyKey, queryClient, resumeKey]
+  )
+
+  const createMutation = useMutation({
+    mutationFn: (anchor: LearningAsideAnchor) => {
+      if (!mainSessionId) {
+        throw new Error('A main chat session is required before opening an aside')
+      }
+      const title =
+        anchor.content.split(/[.!?]\s/)[0]?.slice(0, 80) ||
+        t('learningAsides.untitled')
+      return learningApi.createAside({
+        notebook_id: notebookId,
+        parent_session_id: mainSessionId,
+        title,
+        model_override: modelOverride,
+        anchor,
+      })
+    },
+    onMutate: () => {
+      setActiveAsideId(null)
+      setPanelOpen(true)
+    },
+    onSuccess: async (aside) => {
+      queryClient.setQueryData(QUERY_KEYS.learningAside(aside.id), aside)
+      setActiveAsideId(aside.id)
+      setPanelOpen(true)
+      await refresh(aside.id)
+      toast.success(t('learningAsides.created'))
+    },
+    onError: (error: unknown) => {
+      const apiError = error as {
+        response?: { data?: { detail?: string } }
+        message?: string
+      }
+      toast.error(
+        getApiErrorMessage(
+          apiError.response?.data?.detail || apiError.message,
+          (key) => t(key),
+          'learningAsides.createFailed'
+        )
+      )
+    },
+  })
+
+  const sendMutation = useMutation({
+    mutationFn: async ({
+      asideId,
+      message,
+    }: {
+      asideId: string
+      message: string
+    }) => {
+      const context = await buildContext()
+      return learningApi.sendMessage(asideId, {
+        message,
+        context,
+        model_override: modelOverride,
+      })
+    },
+    onSuccess: async (aside) => {
+      queryClient.setQueryData(QUERY_KEYS.learningAside(aside.id), aside)
+      await refresh(aside.id)
+    },
+    onError: (error: unknown) => {
+      const apiError = error as {
+        response?: { data?: { detail?: string } }
+        message?: string
+      }
+      toast.error(
+        getApiErrorMessage(
+          apiError.response?.data?.detail || apiError.message,
+          (key) => t(key),
+          'learningAsides.sendFailed'
+        )
+      )
+    },
+  })
+
+  const resolveMutation = useMutation({
+    mutationFn: ({
+      asideId,
+      data,
+    }: {
+      asideId: string
+      data: ResolveLearningAsideRequest
+    }) => learningApi.resolveAside(asideId, data),
+    onSuccess: async (aside) => {
+      queryClient.setQueryData(QUERY_KEYS.learningAside(aside.id), aside)
+      await refresh(aside.id)
+      toast.success(t('learningAsides.resolvedSuccess'))
+    },
+    onError: (error: unknown) => {
+      const apiError = error as {
+        response?: { data?: { detail?: string } }
+        message?: string
+      }
+      toast.error(
+        getApiErrorMessage(
+          apiError.response?.data?.detail || apiError.message,
+          (key) => t(key),
+          'learningAsides.resolveFailed'
+        )
+      )
+    },
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: ({
+      asideId,
+      status,
+    }: {
+      asideId: string
+      status: Exclude<LearningAsideStatus, 'resolved'>
+    }) => learningApi.updateAside(asideId, { status }),
+    onSuccess: async (aside) => {
+      queryClient.setQueryData(QUERY_KEYS.learningAside(aside.id), aside)
+      await refresh(aside.id)
+    },
+  })
+
+  const openAside = useCallback((asideId: string) => {
+    setActiveAsideId(asideId)
+    setPanelOpen(true)
+  }, [])
+
+  const openList = useCallback(() => {
+    setActiveAsideId(null)
+    setPanelOpen(true)
+  }, [])
+
+  const activeAside = useMemo(() => {
+    if (asideQuery.data) return asideQuery.data
+    return journeyQuery.data?.asides.find((aside) => aside.id === activeAsideId)
+  }, [activeAsideId, asideQuery.data, journeyQuery.data])
+
+  return {
+    journey: journeyQuery.data,
+    resume: resumeQuery.data,
+    asides: journeyQuery.data?.asides ?? [],
+    activeAside,
+    activeAsideId,
+    panelOpen,
+    isLoading: journeyQuery.isLoading,
+    isCreating: createMutation.isPending,
+    isSending: sendMutation.isPending,
+    isResolving: resolveMutation.isPending,
+    setPanelOpen,
+    openAside,
+    openList,
+    createAside: createMutation.mutateAsync,
+    sendMessage: sendMutation.mutateAsync,
+    resolveAside: resolveMutation.mutateAsync,
+    updateStatus: updateMutation.mutateAsync,
+  }
+}

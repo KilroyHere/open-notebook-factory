@@ -50,6 +50,17 @@ Things to know:
 
 A session is one conversation; its messages are saved and reloaded when you come back. Click **Sessions** to open **Chat Sessions**, where you can create a session (give it a title), switch to another one, rename it or delete it. Each session remembers the conversation, not the context selection.
 
+## Learning Asides
+
+Use an aside when an answer raises a prerequisite or tangent that you want to explore without filling the main conversation with the detour.
+
+1. Under an assistant answer, click **Open as an aside**.
+2. Ask follow-up questions in the side panel. The aside retains the selected answer and the parent conversation up to that point.
+3. **Park** it to return later, **Discard** it if the tangent was not useful, or **Resolve aside** when you have an answer.
+4. Before resolving, edit the proposed conclusion and decide whether to use it in the main conversation, save it as a note, or both.
+
+The complete aside transcript stays isolated. Only the conclusion you approve is added to future main-chat context. The **Asides** button lists active, parked and resolved asides; when you return to a notebook with unfinished work, a resume prompt takes you back to it. Aside sessions do not appear in the normal **Chat Sessions** list.
+
 ## Choosing the Model
 
 The model button next to the message box opens **Model Configuration**. Pick a model to use for this session instead of your **Chat Model** default, or click **Reset to Default**. Only language models you have added in **Manage → Models** are listed.

@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
-import { Bot, User, Send, Loader2, FileText, Lightbulb, StickyNote, Clock } from 'lucide-react'
+import { Bot, User, Send, Loader2, FileText, Lightbulb, StickyNote, Clock, GitBranch } from 'lucide-react'
 import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
 import {
   SourceChatMessage,
@@ -53,6 +53,10 @@ interface ChatPanelProps {
   notebookContextStats?: NotebookContextStats
   // Notebook ID for saving notes
   notebookId?: string
+  // Learning-aside actions (notebook chat only)
+  onOpenAside?: (message: SourceChatMessage) => void
+  onOpenAsides?: () => void
+  asideCount?: number
 }
 
 export function ChatPanel({
@@ -72,7 +76,10 @@ export function ChatPanel({
   title,
   contextType = 'source',
   notebookContextStats,
-  notebookId
+  notebookId,
+  onOpenAside,
+  onOpenAsides,
+  asideCount = 0
 }: ChatPanelProps) {
   const { t } = useTranslation()
   const [sessionManagerOpen, setSessionManagerOpen] = useState(false)
@@ -110,6 +117,21 @@ export function ChatPanel({
             <span aria-hidden className="h-3.5 w-[3px] rounded-full bg-teal" />
             {title || (contextType === 'source' ? t('chat.chatWith', { name: t('navigation.sources') }) : t('chat.chatWith', { name: t('common.notebook') }))}
           </CardTitle>
+          <div className="flex items-center gap-1">
+          {onOpenAsides && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-2 text-muted-foreground"
+              onClick={onOpenAsides}
+            >
+              <GitBranch className="h-4 w-4" />
+              <span className="text-xs">
+                {t('learningAsides.title')}
+                {asideCount > 0 ? ` (${asideCount})` : ''}
+              </span>
+            </Button>
+          )}
           {onSelectSession && onCreateSession && onDeleteSession && (
             <Dialog open={sessionManagerOpen} onOpenChange={setSessionManagerOpen}>
               <Button
@@ -139,6 +161,7 @@ export function ChatPanel({
               </DialogContent>
             </Dialog>
           )}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col min-h-0 p-0">
@@ -159,6 +182,7 @@ export function ChatPanel({
                   message={message}
                   notebookId={notebookId}
                   onReferenceClick={handleReferenceClick}
+                  onOpenAside={onOpenAside}
                 />
               ))
             )}
@@ -320,12 +344,14 @@ interface ChatMessageProps {
   message: SourceChatMessage
   notebookId?: string
   onReferenceClick: (type: string, id: string) => void
+  onOpenAside?: (message: SourceChatMessage) => void
 }
 
 const ChatMessage = memo(function ChatMessage({
   message,
   notebookId,
-  onReferenceClick
+  onReferenceClick,
+  onOpenAside
 }: ChatMessageProps) {
   return (
     <div
@@ -361,6 +387,9 @@ const ChatMessage = memo(function ChatMessage({
           <MessageActions
             content={message.content}
             notebookId={notebookId}
+            onOpenAside={
+              onOpenAside ? () => onOpenAside(message) : undefined
+            }
           />
         )}
       </div>

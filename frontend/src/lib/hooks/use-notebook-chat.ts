@@ -162,6 +162,7 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
     // Call API to build context with actual content
     const response = await chatApi.buildContext({
       notebook_id: notebookId,
+      session_id: currentSessionId ?? undefined,
       context_config
     })
 
@@ -170,7 +171,7 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
     setCharCount(response.char_count)
 
     return response.context
-  }, [notebookId, sources, notes, contextSelections])
+  }, [notebookId, currentSessionId, sources, notes, contextSelections])
 
   // Send message (synchronous, no streaming)
   const sendMessage = useCallback(async (message: string, modelOverride?: string) => {
@@ -317,6 +318,7 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
     deleteSession,
     switchSession,
     sendMessage,
+    buildContext,
     setModelOverride,
     refetchSessions
   }

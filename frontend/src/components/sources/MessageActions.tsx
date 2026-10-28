@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { Save, Copy, Loader2, Check } from 'lucide-react'
+import { Save, Copy, Loader2, Check, GitBranch } from 'lucide-react'
 import { useCreateNote } from '@/lib/hooks/use-notes'
 import { toast } from 'sonner'
 import { useTranslation } from '@/lib/hooks/use-translation'
@@ -11,9 +11,10 @@ import { useTranslation } from '@/lib/hooks/use-translation'
 interface MessageActionsProps {
   content: string
   notebookId?: string
+  onOpenAside?: () => void
 }
 
-export function MessageActions({ content, notebookId }: MessageActionsProps) {
+export function MessageActions({ content, notebookId, onOpenAside }: MessageActionsProps) {
   const { t } = useTranslation()
   const [copySuccess, setCopySuccess] = useState(false)
   const createNote = useCreateNote()
@@ -71,6 +72,24 @@ export function MessageActions({ content, notebookId }: MessageActionsProps) {
   return (
     <TooltipProvider>
       <div className="flex gap-1">
+        {onOpenAside && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2"
+                onClick={onOpenAside}
+                aria-label={t('learningAsides.open')}
+              >
+                <GitBranch className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{t('learningAsides.open')}</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
         {notebookId && (
           <Tooltip>
             <TooltipTrigger asChild>
