@@ -458,6 +458,7 @@ export const esES = {
     createFailed: "No se pudo crear el aparte",
     sendFailed: "No se pudo enviar el mensaje del aparte",
     resolveFailed: "No se pudo resolver el aparte",
+    updateFailed: "No se pudo actualizar el aparte",
     resolvedSuccess: "Aparte resuelto",
     listDescription: "Explora preguntas previas sin perder tu lugar en la conversación principal.",
     empty: "Aún no hay apartes. Abre uno desde un mensaje del asistente.",

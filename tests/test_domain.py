@@ -253,6 +253,10 @@ class TestNotebookDomain:
                 "open_notebook.domain.base.repo_delete",
                 new=AsyncMock(return_value=True),
             ),
+            patch(
+                "open_notebook.domain.learning.LearningJourney.get_for_notebook",
+                new=AsyncMock(return_value=[]),
+            ),
         ):
             result = await notebook.delete()
 

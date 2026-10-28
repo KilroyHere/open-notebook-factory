@@ -458,6 +458,7 @@ export const plPL = {
     createFailed: "Nie udało się utworzyć dygresji",
     sendFailed: "Nie udało się wysłać wiadomości",
     resolveFailed: "Nie udało się zakończyć dygresji",
+    updateFailed: "Nie udało się zaktualizować dygresji",
     resolvedSuccess: "Dygresja zakończona",
     listDescription: "Zgłębiaj pytania wstępne bez utraty miejsca w głównej rozmowie.",
     empty: "Brak dygresji. Otwórz ją z wiadomości asystenta.",

@@ -458,6 +458,7 @@ export const ptBR = {
     createFailed: "Não foi possível criar o aparte",
     sendFailed: "Não foi possível enviar a mensagem",
     resolveFailed: "Não foi possível resolver o aparte",
+    updateFailed: "Não foi possível atualizar o aparte",
     resolvedSuccess: "Aparte resolvido",
     listDescription: "Explore pré-requisitos sem perder seu lugar na conversa principal.",
     empty: "Ainda não há apartes. Abra um em uma mensagem do assistente.",

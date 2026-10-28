@@ -458,6 +458,7 @@ export const frFR = {
     createFailed: "Impossible de créer l’aparté",
     sendFailed: "Impossible d’envoyer le message",
     resolveFailed: "Impossible de résoudre l’aparté",
+    updateFailed: "Impossible de mettre à jour l’aparté",
     resolvedSuccess: "Aparté résolu",
     listDescription: "Explorez les prérequis sans perdre votre place dans la conversation principale.",
     empty: "Aucun aparté. Ouvrez-en un depuis un message de l’assistant.",

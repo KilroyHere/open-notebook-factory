@@ -458,6 +458,7 @@ export const zhCN = {
     createFailed: "无法创建旁支讨论",
     sendFailed: "无法发送旁支消息",
     resolveFailed: "无法完成旁支讨论",
+    updateFailed: "无法更新旁支讨论",
     resolvedSuccess: "旁支讨论已完成",
     listDescription: "在不丢失主对话位置的情况下深入了解前置问题。",
     empty: "还没有旁支讨论。可从助手消息中打开。",

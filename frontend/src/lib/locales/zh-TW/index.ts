@@ -458,6 +458,7 @@ export const zhTW = {
     createFailed: "無法建立支線討論",
     sendFailed: "無法傳送支線訊息",
     resolveFailed: "無法完成支線討論",
+    updateFailed: "無法更新支線討論",
     resolvedSuccess: "支線討論已完成",
     listDescription: "在不失去主對話位置的情況下深入理解前置問題。",
     empty: "尚無支線討論。可從助理訊息中開啟。",

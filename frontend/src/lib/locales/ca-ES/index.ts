@@ -458,6 +458,7 @@ export const caES = {
     createFailed: "No s’ha pogut crear l’incís",
     sendFailed: "No s’ha pogut enviar el missatge",
     resolveFailed: "No s’ha pogut resoldre l’incís",
+    updateFailed: "No s’ha pogut actualitzar l’incís",
     resolvedSuccess: "Incís resolt",
     listDescription: "Explora preguntes prèvies sense perdre el punt de la conversa principal.",
     empty: "Encara no hi ha incisos. Obre’n un des d’un missatge de l’assistent.",

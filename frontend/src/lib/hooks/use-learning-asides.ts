@@ -199,6 +199,19 @@ export function useLearningAsides({
       queryClient.setQueryData(QUERY_KEYS.learningAside(aside.id), aside)
       await refresh(aside.id)
     },
+    onError: (error: unknown) => {
+      const apiError = error as {
+        response?: { data?: { detail?: string } }
+        message?: string
+      }
+      toast.error(
+        getApiErrorMessage(
+          apiError.response?.data?.detail || apiError.message,
+          (key) => t(key),
+          'learningAsides.updateFailed'
+        )
+      )
+    },
   })
 
   const openAside = useCallback((asideId: string) => {

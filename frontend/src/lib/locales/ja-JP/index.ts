@@ -458,6 +458,7 @@ export const jaJP = {
     createFailed: "補足会話を作成できませんでした",
     sendFailed: "メッセージを送信できませんでした",
     resolveFailed: "補足会話を完了できませんでした",
+    updateFailed: "補足会話を更新できませんでした",
     resolvedSuccess: "補足会話を完了しました",
     listDescription: "メインの会話での位置を失わずに、前提となる疑問を掘り下げます。",
     empty: "補足会話はまだありません。アシスタントのメッセージから開けます。",

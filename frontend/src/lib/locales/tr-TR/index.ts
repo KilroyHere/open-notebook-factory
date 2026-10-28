@@ -458,6 +458,7 @@ export const trTR = {
     createFailed: "Yan konuşma oluşturulamadı",
     sendFailed: "Mesaj gönderilemedi",
     resolveFailed: "Yan konuşma çözülemedi",
+    updateFailed: "Yan konuşma güncellenemedi",
     resolvedSuccess: "Yan konuşma çözüldü",
     listDescription: "Ana konuşmadaki yerinizi kaybetmeden ön koşul sorularını araştırın.",
     empty: "Henüz yan konuşma yok. Bir asistan mesajından açın.",

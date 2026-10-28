@@ -458,6 +458,7 @@ export const itIT = {
     createFailed: "Impossibile creare la digressione",
     sendFailed: "Impossibile inviare il messaggio",
     resolveFailed: "Impossibile risolvere la digressione",
+    updateFailed: "Impossibile aggiornare la digressione",
     resolvedSuccess: "Digressione risolta",
     listDescription: "Approfondisci i prerequisiti senza perdere il punto nella conversazione principale.",
     empty: "Nessuna digressione. Aprine una da un messaggio dell’assistente.",

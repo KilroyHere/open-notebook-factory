@@ -151,6 +151,7 @@ async def test_get_journey_for_main_session_normalizes_record_id():
 
     assert journey is not None
     assert journey.id == "learning_journey:one"
+    assert repo_query.await_args is not None
     assert str(repo_query.await_args.args[1]["session"]) == "chat_session:main"
 
 
@@ -168,6 +169,7 @@ async def test_journey_lists_only_non_discarded_asides_by_default():
     ) as repo_query:
         assert await journey.get_asides() == []
 
+    assert repo_query.await_args is not None
     assert "status != 'discarded'" in repo_query.await_args.args[0]
 
 
@@ -181,6 +183,7 @@ async def test_notebook_chat_sessions_hide_learning_asides_by_default():
     ) as repo_query:
         assert await notebook.get_chat_sessions() == []
 
+    assert repo_query.await_args is not None
     assert (
         "select value chat_session from learning_aside"
         in (repo_query.await_args.args[0])

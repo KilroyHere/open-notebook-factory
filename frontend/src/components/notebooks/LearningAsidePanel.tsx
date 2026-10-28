@@ -109,8 +109,12 @@ export function LearningAsidePanel({
 
   const send = async () => {
     if (!activeAside || !input.trim() || isSending) return
-    await onSendMessage(activeAside.id, input.trim())
-    setInput('')
+    try {
+      await onSendMessage(activeAside.id, input.trim())
+      setInput('')
+    } catch {
+      // The mutation owns the translated error toast.
+    }
   }
 
   const resolve = async () => {
@@ -121,14 +125,18 @@ export function LearningAsidePanel({
     const citations = Array.from(
       new Set((citationMatches ?? []).map((value) => value.slice(1, -1)))
     )
-    await onResolve(activeAside.id, {
-      conclusion: conclusion.trim(),
-      relevance: relevance.trim() || undefined,
-      citations,
-      include_in_main: includeInMain,
-      save_as_note: saveAsNote,
-    })
-    setShowResolution(false)
+    try {
+      await onResolve(activeAside.id, {
+        conclusion: conclusion.trim(),
+        relevance: relevance.trim() || undefined,
+        citations,
+        include_in_main: includeInMain,
+        save_as_note: saveAsNote,
+      })
+      setShowResolution(false)
+    } catch {
+      // The mutation owns the translated error toast.
+    }
   }
 
   return (
@@ -353,7 +361,10 @@ export function LearningAsidePanel({
                         variant="ghost"
                         size="sm"
                         onClick={() =>
-                          void onUpdateStatus(activeAside.id, 'parked')
+                          void onUpdateStatus(
+                            activeAside.id,
+                            'parked'
+                          ).catch(() => undefined)
                         }
                       >
                         <Pause className="mr-1.5 h-3.5 w-3.5" />
@@ -365,7 +376,10 @@ export function LearningAsidePanel({
                         variant="ghost"
                         size="sm"
                         onClick={() =>
-                          void onUpdateStatus(activeAside.id, 'active')
+                          void onUpdateStatus(
+                            activeAside.id,
+                            'active'
+                          ).catch(() => undefined)
                         }
                       >
                         <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
@@ -378,7 +392,10 @@ export function LearningAsidePanel({
                         size="sm"
                         className="text-destructive hover:text-destructive"
                         onClick={() =>
-                          void onUpdateStatus(activeAside.id, 'discarded')
+                          void onUpdateStatus(
+                            activeAside.id,
+                            'discarded'
+                          ).catch(() => undefined)
                         }
                       >
                         <Trash2 className="mr-1.5 h-3.5 w-3.5" />

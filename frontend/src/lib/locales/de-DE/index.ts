@@ -461,6 +461,7 @@ export const deDE = {
     createFailed: "Exkurs konnte nicht erstellt werden",
     sendFailed: "Nachricht im Exkurs konnte nicht gesendet werden",
     resolveFailed: "Exkurs konnte nicht abgeschlossen werden",
+    updateFailed: "Exkurs konnte nicht aktualisiert werden",
     resolvedSuccess: "Exkurs abgeschlossen",
     listDescription: "Vertiefe Voraussetzungen, ohne die Stelle im Hauptgespräch zu verlieren.",
     empty: "Noch keine Exkurse. Öffne einen über eine Assistentenantwort.",

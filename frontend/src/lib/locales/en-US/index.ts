@@ -456,6 +456,7 @@ export const enUS = {
     createFailed: "Failed to create aside",
     sendFailed: "Failed to send aside message",
     resolveFailed: "Failed to resolve aside",
+    updateFailed: "Failed to update aside",
     resolvedSuccess: "Aside resolved",
     listDescription: "Explore prerequisite questions without losing your place in the main conversation.",
     empty: "No asides yet. Open one from an assistant message.",
