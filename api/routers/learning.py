@@ -22,7 +22,11 @@ from api.models import (
     UpdateLearningAsideRequest,
     UpdateLearningSectionRequest,
 )
-from api.routers._chat_shared import normalize_record_id
+from api.routers._chat_shared import (
+    INTERNAL_ID_INSTRUCTION,
+    model_facing_context,
+    normalize_record_id,
+)
 from open_notebook.database.repository import ensure_record_id, repo_query
 from open_notebook.domain.learning import (
     AsideAnchor,
@@ -30,6 +34,7 @@ from open_notebook.domain.learning import (
     LearningJourney,
     LearningSection,
     LearningUpdate,
+    latest_update_versions,
 )
 from open_notebook.domain.notebook import ChatSession, Note, Notebook
 from open_notebook.exceptions import InvalidInputError, NotFoundError
@@ -95,7 +100,9 @@ async def _snapshot_parent_context(
     return snapshot[-100:]
 
 
-def _update_response(update: LearningUpdate) -> LearningUpdateResponse:
+def _update_response(
+    update: LearningUpdate, superseded: bool = False
+) -> LearningUpdateResponse:
     return LearningUpdateResponse(
         id=update.id or "",
         aside_id=update.aside,
@@ -107,22 +114,48 @@ def _update_response(update: LearningUpdate) -> LearningUpdateResponse:
         saved_note_id=update.saved_note,
         applied_message_id=update.applied_message_id,
         version=update.version,
+        superseded=superseded,
         created=_timestamp(update.created),
         updated=_timestamp(update.updated),
     )
 
 
-async def _aside_response(aside: LearningAside) -> LearningAsideResponse:
-    messages = [
-        LearningAsideMessageResponse(
-            id=str(getattr(message, "id", "") or ""),
-            type=str(getattr(message, "type", "unknown")),
-            content=extract_text_content(getattr(message, "content", "")),
-            timestamp=None,
-        )
-        for message in await _raw_session_messages(aside.chat_session)
+def _update_responses(updates: List[LearningUpdate]) -> List[LearningUpdateResponse]:
+    current = {id(update) for update in latest_update_versions(updates)}
+    return [
+        _update_response(update, superseded=id(update) not in current)
+        for update in updates
     ]
-    updates = [_update_response(update) for update in await aside.get_updates()]
+
+
+async def _aside_response(
+    aside: LearningAside,
+    *,
+    include_messages: bool = True,
+    updates: Optional[List[LearningUpdate]] = None,
+) -> LearningAsideResponse:
+    """Serialize an aside.
+
+    ``include_messages=False`` skips the LangGraph checkpoint read and returns
+    ``messages=[]``: the journey listing only needs aside metadata, and the
+    aside detail endpoint is the source of a transcript. ``updates`` lets a
+    caller that already loaded them avoid a query per aside.
+    """
+    messages = (
+        [
+            LearningAsideMessageResponse(
+                id=str(getattr(message, "id", "") or ""),
+                type=str(getattr(message, "type", "unknown")),
+                content=extract_text_content(getattr(message, "content", "")),
+                timestamp=None,
+            )
+            for message in await _raw_session_messages(aside.chat_session)
+        ]
+        if include_messages
+        else []
+    )
+    if updates is None:
+        updates = await aside.get_updates()
     return LearningAsideResponse(
         id=aside.id or "",
         journey_id=aside.journey,
@@ -133,7 +166,7 @@ async def _aside_response(aside: LearningAside) -> LearningAsideResponse:
         status=aside.status,
         anchor=aside.anchor.model_dump(),
         messages=messages,
-        updates=updates,
+        updates=_update_responses(updates),
         created=_timestamp(aside.created),
         updated=_timestamp(aside.updated),
     )
@@ -151,12 +184,26 @@ def _section_response(section: LearningSection) -> LearningSectionResponse:
     )
 
 
-async def _journey_response(journey: LearningJourney) -> LearningJourneyResponse:
-    asides = [
-        await _aside_response(aside)
-        for aside in await journey.get_asides(include_discarded=True)
-    ]
-    updates = [_update_response(update) for update in await journey.get_updates()]
+async def _journey_response(
+    journey: LearningJourney, include_messages: bool = False
+) -> LearningJourneyResponse:
+    """Serialize a journey; aside transcripts are only loaded on request."""
+    all_updates = await journey.get_updates()
+    updates_by_aside: Dict[str, List[LearningUpdate]] = {}
+    for update in all_updates:
+        updates_by_aside.setdefault(update.aside, []).append(update)
+    asides = []
+    for aside in await journey.get_asides(include_discarded=True):
+        aside_updates = sorted(
+            updates_by_aside.get(aside.id or "", []),
+            key=lambda update: update.version,
+        )
+        asides.append(
+            await _aside_response(
+                aside, include_messages=include_messages, updates=aside_updates
+            )
+        )
+    updates = _update_responses(all_updates)
     sections = [
         _section_response(section)
         for section in await LearningSection.get_for_journey(journey.id or "")
@@ -184,10 +231,19 @@ async def _get_aside(aside_id: str) -> LearningAside:
 async def get_journey(
     notebook_id: str = Query(...),
     main_session_id: str = Query(...),
+    include_messages: bool = Query(
+        False,
+        description=(
+            "Load every aside's transcript. Off by default: asides are listed "
+            "with messages=[]; GET /learning/asides/{id} returns one transcript"
+        ),
+    ),
 ):
     full_session_id, _, _ = await _verify_notebook_session(notebook_id, main_session_id)
     journey = await LearningJourney.get_for_main_session(full_session_id)
-    return await _journey_response(journey) if journey else None
+    if not journey:
+        return None
+    return await _journey_response(journey, include_messages=include_messages)
 
 
 @router.get("/journeys/resume", response_model=LearningJourneyResumeResponse)
@@ -213,7 +269,9 @@ async def get_journey_resume(
         open_asides[-1] if open_asides else None,
     )
     accepted_findings = [
-        update.conclusion for update in response.updates if update.include_in_main
+        update.conclusion
+        for update in response.updates
+        if update.include_in_main and not update.superseded
     ]
     current_point: Optional[str]
     if active_aside:
@@ -355,6 +413,92 @@ async def update_aside(aside_id: str, request: UpdateLearningAsideRequest):
     return await _aside_response(aside)
 
 
+# Bounds for the ancestry summary a nested dive receives. Only the immediate
+# parent's transcript is sent in full (its branch snapshot); the main thread and
+# outer asides are summarized so deep nesting cannot grow the prompt unbounded.
+MAX_ANCESTOR_DEPTH = 8
+MAIN_EXCERPT_MESSAGES = 12
+MAIN_EXCERPT_CHARS = 6_000
+ANCESTOR_FIELD_CHARS = 600
+LEARNING_PATH_CHARS = 16_000
+
+
+def _clip(text: str, limit: int) -> str:
+    text = text.strip()
+    return text if len(text) <= limit else text[: limit - 1].rstrip() + "\u2026"
+
+
+def _clip_tail(text: str, limit: int) -> str:
+    """Clip from the front, keeping the end (the part nearest the branch)."""
+    text = text.strip()
+    return text if len(text) <= limit else "\u2026" + text[-(limit - 1) :].lstrip()
+
+
+def _format_transcript(snapshot: List[Dict[str, str]]) -> str:
+    return "\n\n".join(
+        f"{item.get('role', 'unknown').upper()}: {item.get('content', '')}"
+        for item in snapshot
+    )
+
+
+async def _aside_ancestors(aside: LearningAside) -> List[LearningAside]:
+    """Return the asides this one branched from, outermost first."""
+    ancestors: List[LearningAside] = []
+    seen = {aside.id}
+    current = aside
+    while current.parent_aside and len(ancestors) < MAX_ANCESTOR_DEPTH:
+        if current.parent_aside in seen:
+            break
+        try:
+            parent = await LearningAside.get(current.parent_aside)
+        except NotFoundError:
+            break
+        seen.add(parent.id)
+        ancestors.append(parent)
+        current = parent
+    ancestors.reverse()
+    return ancestors
+
+
+async def _learning_path(aside: LearningAside) -> Optional[str]:
+    """Compact ancestry for a nested dive, or None for a top-level aside.
+
+    It holds the main-thread excerpt captured when the outermost aside branched,
+    then each ancestor's title, anchor and latest conclusion. Transcripts of
+    ancestors other than the immediate parent are never included.
+    """
+    ancestors = await _aside_ancestors(aside)
+    if not ancestors:
+        return None
+
+    parts: List[str] = []
+    root = ancestors[0]
+    if root.parent_aside is None and root.context_snapshot:
+        excerpt = _clip_tail(
+            _format_transcript(root.context_snapshot[-MAIN_EXCERPT_MESSAGES:]),
+            MAIN_EXCERPT_CHARS,
+        )
+        parts.append(f"Main thread at the first branch (excerpt):\n{excerpt}")
+
+    for depth, ancestor in enumerate(ancestors, start=1):
+        lines = [
+            f"Aside {depth}: {_clip(ancestor.title, 200)}",
+            f"Branched from: {_clip(ancestor.anchor.content, ANCESTOR_FIELD_CHARS)}",
+        ]
+        updates = await ancestor.get_updates()
+        if updates:
+            latest = max(updates, key=lambda update: update.version)
+            lines.append(
+                f"Conclusion: {_clip(latest.conclusion, ANCESTOR_FIELD_CHARS)}"
+            )
+        else:
+            lines.append(f"Status: {ancestor.status}, no conclusion yet")
+        parts.append("\n".join(lines))
+
+    # Over the bound, keep the innermost ancestors: they matter most here.
+    return _clip_tail("\n\n".join(parts), LEARNING_PATH_CHARS)
+
+
 @router.post("/asides/{aside_id}/messages", response_model=LearningAsideResponse)
 async def send_aside_message(aside_id: str, request: SendLearningAsideMessageRequest):
     aside = await _get_aside(aside_id)
@@ -371,11 +515,8 @@ async def send_aside_message(aside_id: str, request: SendLearningAsideMessageReq
     state_values = dict(current_state.values) if current_state else {}
     state_values["messages"] = list(state_values.get("messages", []))
 
-    parent_transcript = "\n\n".join(
-        f"{item.get('role', 'unknown').upper()}: {item.get('content', '')}"
-        for item in aside.context_snapshot
-    )
-    context = dict(request.context)
+    parent_transcript = _format_transcript(aside.context_snapshot)
+    context = model_facing_context(request.context)
     context["learning_aside"] = {
         "title": aside.title,
         "anchor": aside.anchor.model_dump(),
@@ -383,11 +524,17 @@ async def send_aside_message(aside_id: str, request: SendLearningAsideMessageReq
         "instruction": (
             "Answer this isolated learning aside. Preserve source citations and "
             "focus on the prerequisite or tangent without redirecting the main path. "
-            "Never expose or cite internal learning_aside, learning_update, "
-            "chat_session, or message IDs. Only cite source, note, or "
-            "source_insight IDs that appear in the selected research context."
+            + INTERNAL_ID_INSTRUCTION
         ),
     }
+    learning_path = await _learning_path(aside)
+    if learning_path:
+        context["learning_aside"]["learning_path"] = learning_path
+        context["learning_aside"]["instruction"] += (
+            " This is a nested dive: learning_path summarizes the main thread "
+            "and each aside it branched from, outermost first. Use it to keep "
+            "the answer consistent with what the learner already settled."
+        )
     state_values["context"] = context
     state_values["notebook"] = notebook
     model_override = (
@@ -416,11 +563,16 @@ async def send_aside_message(aside_id: str, request: SendLearningAsideMessageReq
         raise InvalidInputError("Aside chat returned no messages")
 
     await session.save()
-    if aside.status != "active":
-        aside.status = "active"
-        await aside.save()
-    journey.active_session = aside.chat_session
-    await journey.save()
+    # A follow-up on a resolved aside is a clarifying question, not a reopen:
+    # it stays resolved (its accepted update is unchanged) and navigation stays
+    # on the parent. Re-resolving is the explicit way to change the conclusion.
+    # A parked aside is resumed by writing to it.
+    if aside.status != "resolved":
+        if aside.status != "active":
+            aside.status = "active"
+            await aside.save()
+        journey.active_session = aside.chat_session
+        await journey.save()
     return await _aside_response(aside)
 
 

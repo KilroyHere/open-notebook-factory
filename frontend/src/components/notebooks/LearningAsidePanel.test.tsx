@@ -135,6 +135,28 @@ describe('LearningAsidePanel', () => {
     )
   })
 
+  it('waits for the aside transcript instead of calling it empty', () => {
+    const summary = { ...aside, messages: [] }
+    const { rerender } = render(
+      <LearningAsidePanel
+        {...baseProps}
+        activeAside={summary}
+        isAsideLoading
+      />
+    )
+
+    expect(screen.getByText('common.loading')).toBeInTheDocument()
+    expect(screen.queryByText('learningAsides.askHint')).not.toBeInTheDocument()
+
+    rerender(
+      <LearningAsidePanel {...baseProps} activeAside={aside} />
+    )
+
+    expect(
+      screen.getByText('Why does that inequality apply here?')
+    ).toBeInTheDocument()
+  })
+
   it('does not offer destructive discard after an aside is resolved', () => {
     render(
       <LearningAsidePanel

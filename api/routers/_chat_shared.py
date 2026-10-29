@@ -12,7 +12,7 @@ Behavior notes:
   them to the same status codes and messages as before.
 """
 
-from typing import Any, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from fastapi import HTTPException
 from pydantic import BaseModel, Field
@@ -32,6 +32,58 @@ class ChatMessage(BaseModel):
 class SuccessResponse(BaseModel):
     success: bool = Field(True, description="Operation success status")
     message: str = Field(..., description="Success message")
+
+
+INTERNAL_ID_INSTRUCTION = (
+    "Never expose or cite internal learning_aside, learning_update, "
+    "chat_session, or message IDs. Only cite source, note, or "
+    "source_insight IDs that appear in the selected research context."
+)
+
+LEARNING_UPDATES_INSTRUCTION = (
+    "learning_updates are conclusions the learner accepted from side "
+    "conversations. Use them as background for your answer. " + INTERNAL_ID_INSTRUCTION
+)
+
+# Fields of an accepted learning update that the model may see. Record IDs
+# (`id`, `aside`) and backlinks (`applied_message_id`) stay server-side so the
+# model has nothing internal to cite.
+_MODEL_VISIBLE_UPDATE_FIELDS = (
+    "conclusion",
+    "relevance",
+    "open_questions",
+    "citations",
+)
+
+
+def model_facing_context(context: Dict[str, Any]) -> Dict[str, Any]:
+    """Return a copy of chat context that is safe to render into a prompt.
+
+    ``context["learning_updates"]`` carries record IDs so the API can link the
+    updates to the reply that used them. The model only needs their content, so
+    the IDs are dropped and an instruction forbids citing internal records.
+    The input is not mutated.
+    """
+    prepared = dict(context)
+    updates = prepared.get("learning_updates")
+    if not isinstance(updates, list):
+        prepared.pop("learning_updates", None)
+        return prepared
+    visible = [
+        {
+            field: item[field]
+            for field in _MODEL_VISIBLE_UPDATE_FIELDS
+            if item.get(field)
+        }
+        for item in updates
+        if isinstance(item, dict) and item.get("conclusion")
+    ]
+    if not visible:
+        prepared.pop("learning_updates", None)
+        return prepared
+    prepared["learning_updates"] = visible
+    prepared["learning_updates_instruction"] = LEARNING_UPDATES_INSTRUCTION
+    return prepared
 
 
 def normalize_record_id(table: str, record_id: str) -> str:

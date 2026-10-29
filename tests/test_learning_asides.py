@@ -295,3 +295,87 @@ async def test_notebook_chat_sessions_hide_learning_asides_by_default():
         "select value chat_session from learning_aside"
         in (repo_query.await_args.args[0])
     )
+
+
+def _journey_with_asides(*aside_ids: str):
+    journey = LearningJourney(
+        id="learning_journey:one",
+        notebook="notebook:one",
+        main_session="chat_session:main",
+    )
+    asides = [
+        LearningAside(
+            id=aside_id,
+            journey="learning_journey:one",
+            parent_session="chat_session:main",
+            chat_session=f"chat_session:{aside_id.split(':')[1]}",
+            title="Aside",
+            status="resolved",
+            anchor=AsideAnchor(content="Anchor"),
+        )
+        for aside_id in aside_ids
+    ]
+    return journey, asides
+
+
+def _update_row(update_id: str, aside: str, version: int, include: bool = True):
+    return {
+        "id": update_id,
+        "aside": aside,
+        "conclusion": f"Conclusion {update_id}",
+        "include_in_main": include,
+        "version": version,
+    }
+
+
+@pytest.mark.asyncio
+async def test_main_context_uses_only_the_latest_resolution_per_aside():
+    journey, asides = _journey_with_asides("learning_aside:a", "learning_aside:b")
+    rows = [
+        _update_row("learning_update:a1", "learning_aside:a", 1),
+        _update_row("learning_update:b1", "learning_aside:b", 1),
+        _update_row("learning_update:a2", "learning_aside:a", 2),
+    ]
+    with (
+        patch.object(
+            LearningJourney, "get_asides", new_callable=AsyncMock, return_value=asides
+        ),
+        patch(
+            "open_notebook.domain.learning.repo_query",
+            new_callable=AsyncMock,
+            return_value=rows,
+        ),
+    ):
+        merged = await journey.get_updates(include_unmerged=False)
+        everything = await journey.get_updates()
+
+    assert [update.id for update in merged] == [
+        "learning_update:b1",
+        "learning_update:a2",
+    ]
+    # Superseded versions stay stored and listed for audit.
+    assert [update.id for update in everything] == [
+        "learning_update:a1",
+        "learning_update:b1",
+        "learning_update:a2",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_re_resolution_excluded_from_main_drops_the_older_version_too():
+    journey, asides = _journey_with_asides("learning_aside:a")
+    rows = [
+        _update_row("learning_update:a1", "learning_aside:a", 1, include=True),
+        _update_row("learning_update:a2", "learning_aside:a", 2, include=False),
+    ]
+    with (
+        patch.object(
+            LearningJourney, "get_asides", new_callable=AsyncMock, return_value=asides
+        ),
+        patch(
+            "open_notebook.domain.learning.repo_query",
+            new_callable=AsyncMock,
+            return_value=rows,
+        ),
+    ):
+        assert await journey.get_updates(include_unmerged=False) == []

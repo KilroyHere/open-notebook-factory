@@ -273,6 +273,8 @@ export interface LearningUpdate {
   saved_note_id?: string | null
   applied_message_id?: string | null
   version: number
+  /** A newer resolution of the same aside replaced this one in main context. */
+  superseded?: boolean
   created: string
   updated: string
 }
@@ -286,6 +288,10 @@ export interface LearningAside {
   title: string
   status: LearningAsideStatus
   anchor: LearningAsideAnchor
+  /**
+   * The aside transcript. Only GET/POST on a single aside fill it; asides
+   * inside a journey response arrive with an empty list.
+   */
   messages: NotebookChatMessage[]
   updates: LearningUpdate[]
   created: string

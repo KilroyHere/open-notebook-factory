@@ -25,3 +25,5 @@ An aside is a child `chat_session` with a SurrealDB `learning_aside` record that
 - Stable message identifiers and source snapshots are part of the feature contract.
 - Deleting notebooks or main sessions must cascade through hidden child sessions and updates.
 - A future learner model can consume approved updates, but explanation alone must never imply mastery.
+- A nested dive receives its immediate parent's transcript up to the anchor (its `context_snapshot`) plus a bounded learning path built when each message is sent: a main-thread excerpt from the outermost aside's snapshot and each ancestor's title, anchor and latest conclusion. Ancestor transcripts are never copied, which keeps deep nesting from growing the prompt.
+- Re-resolving an aside stores a new `learning_update` version. Only the latest version per aside can enter main context; older versions stay stored for audit and are reported as `superseded`.
