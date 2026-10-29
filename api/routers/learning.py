@@ -373,6 +373,92 @@ async def update_aside(aside_id: str, request: UpdateLearningAsideRequest):
     return await _aside_response(aside)
 
 
+# Bounds for the ancestry summary a nested dive receives. Only the immediate
+# parent's transcript is sent in full (its branch snapshot); the main thread and
+# outer asides are summarized so deep nesting cannot grow the prompt unbounded.
+MAX_ANCESTOR_DEPTH = 8
+MAIN_EXCERPT_MESSAGES = 12
+MAIN_EXCERPT_CHARS = 6_000
+ANCESTOR_FIELD_CHARS = 600
+LEARNING_PATH_CHARS = 16_000
+
+
+def _clip(text: str, limit: int) -> str:
+    text = text.strip()
+    return text if len(text) <= limit else text[: limit - 1].rstrip() + "\u2026"
+
+
+def _clip_tail(text: str, limit: int) -> str:
+    """Clip from the front, keeping the end (the part nearest the branch)."""
+    text = text.strip()
+    return text if len(text) <= limit else "\u2026" + text[-(limit - 1) :].lstrip()
+
+
+def _format_transcript(snapshot: List[Dict[str, str]]) -> str:
+    return "\n\n".join(
+        f"{item.get('role', 'unknown').upper()}: {item.get('content', '')}"
+        for item in snapshot
+    )
+
+
+async def _aside_ancestors(aside: LearningAside) -> List[LearningAside]:
+    """Return the asides this one branched from, outermost first."""
+    ancestors: List[LearningAside] = []
+    seen = {aside.id}
+    current = aside
+    while current.parent_aside and len(ancestors) < MAX_ANCESTOR_DEPTH:
+        if current.parent_aside in seen:
+            break
+        try:
+            parent = await LearningAside.get(current.parent_aside)
+        except NotFoundError:
+            break
+        seen.add(parent.id)
+        ancestors.append(parent)
+        current = parent
+    ancestors.reverse()
+    return ancestors
+
+
+async def _learning_path(aside: LearningAside) -> Optional[str]:
+    """Compact ancestry for a nested dive, or None for a top-level aside.
+
+    It holds the main-thread excerpt captured when the outermost aside branched,
+    then each ancestor's title, anchor and latest conclusion. Transcripts of
+    ancestors other than the immediate parent are never included.
+    """
+    ancestors = await _aside_ancestors(aside)
+    if not ancestors:
+        return None
+
+    parts: List[str] = []
+    root = ancestors[0]
+    if root.parent_aside is None and root.context_snapshot:
+        excerpt = _clip_tail(
+            _format_transcript(root.context_snapshot[-MAIN_EXCERPT_MESSAGES:]),
+            MAIN_EXCERPT_CHARS,
+        )
+        parts.append(f"Main thread at the first branch (excerpt):\n{excerpt}")
+
+    for depth, ancestor in enumerate(ancestors, start=1):
+        lines = [
+            f"Aside {depth}: {_clip(ancestor.title, 200)}",
+            f"Branched from: {_clip(ancestor.anchor.content, ANCESTOR_FIELD_CHARS)}",
+        ]
+        updates = await ancestor.get_updates()
+        if updates:
+            latest = max(updates, key=lambda update: update.version)
+            lines.append(
+                f"Conclusion: {_clip(latest.conclusion, ANCESTOR_FIELD_CHARS)}"
+            )
+        else:
+            lines.append(f"Status: {ancestor.status}, no conclusion yet")
+        parts.append("\n".join(lines))
+
+    # Over the bound, keep the innermost ancestors: they matter most here.
+    return _clip_tail("\n\n".join(parts), LEARNING_PATH_CHARS)
+
+
 @router.post("/asides/{aside_id}/messages", response_model=LearningAsideResponse)
 async def send_aside_message(aside_id: str, request: SendLearningAsideMessageRequest):
     aside = await _get_aside(aside_id)
@@ -389,10 +475,7 @@ async def send_aside_message(aside_id: str, request: SendLearningAsideMessageReq
     state_values = dict(current_state.values) if current_state else {}
     state_values["messages"] = list(state_values.get("messages", []))
 
-    parent_transcript = "\n\n".join(
-        f"{item.get('role', 'unknown').upper()}: {item.get('content', '')}"
-        for item in aside.context_snapshot
-    )
+    parent_transcript = _format_transcript(aside.context_snapshot)
     context = model_facing_context(request.context)
     context["learning_aside"] = {
         "title": aside.title,
@@ -404,6 +487,14 @@ async def send_aside_message(aside_id: str, request: SendLearningAsideMessageReq
             + INTERNAL_ID_INSTRUCTION
         ),
     }
+    learning_path = await _learning_path(aside)
+    if learning_path:
+        context["learning_aside"]["learning_path"] = learning_path
+        context["learning_aside"]["instruction"] += (
+            " This is a nested dive: learning_path summarizes the main thread "
+            "and each aside it branched from, outermost first. Use it to keep "
+            "the answer consistent with what the learner already settled."
+        )
     state_values["context"] = context
     state_values["notebook"] = notebook
     model_override = (

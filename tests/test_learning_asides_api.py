@@ -850,8 +850,10 @@ async def test_resume_lists_only_current_resolutions_as_accepted(client):
     assert response.json()["accepted_findings"] == ["Revised conclusion"]
 
 
-def _send_aside_message(client, aside, journey):
+def _send_aside_message(client, aside, journey, captured=None):
     def fake_invoke(graph, state, config, user_message):
+        if captured is not None:
+            captured["context"] = state["context"]
         return {"messages": [user_message, SimpleNamespace(id="ai:r", type="ai")]}
 
     with (
@@ -924,3 +926,175 @@ def test_message_to_parked_aside_resumes_it(client):
     assert journey.active_session == "chat_session:child"
     save_aside.assert_awaited_once()
     save_journey.assert_awaited_once()
+
+
+def _nested_chain():
+    root = _aside(
+        id="learning_aside:root",
+        chat_session="chat_session:root",
+        parent_session="chat_session:main",
+        title="What is the ELBO?",
+        status="resolved",
+        anchor=AsideAnchor(content="The ELBO bounds the log evidence."),
+        context_snapshot=[
+            {"id": "h1", "role": "human", "content": "Explain VAEs"},
+            {"id": "a1", "role": "ai", "content": "MAIN THREAD ANSWER"},
+        ],
+    )
+    middle = _aside(
+        id="learning_aside:middle",
+        parent_aside="learning_aside:root",
+        chat_session="chat_session:middle",
+        parent_session="chat_session:root",
+        title="Why Jensen?",
+        status="active",
+        anchor=AsideAnchor(content="Jensen's inequality gives the bound."),
+        context_snapshot=[
+            {"id": "r1", "role": "ai", "content": "ROOT ASIDE TRANSCRIPT " * 50}
+        ],
+    )
+    leaf = _aside(
+        id="learning_aside:leaf",
+        parent_aside="learning_aside:middle",
+        chat_session="chat_session:leaf",
+        parent_session="chat_session:middle",
+        title="What is convexity?",
+        anchor=AsideAnchor(content="log is concave."),
+        context_snapshot=[{"id": "m1", "role": "ai", "content": "MIDDLE TRANSCRIPT"}],
+    )
+    return root, middle, leaf
+
+
+@pytest.mark.asyncio
+async def test_nested_dive_learning_path_summarizes_every_ancestor():
+    from api.routers.learning import _learning_path
+
+    root, middle, leaf = _nested_chain()
+    by_id = {aside.id: aside for aside in (root, middle)}
+    updates = {
+        root.id: [
+            LearningUpdate(aside=root.id or "", conclusion="Old ELBO", version=1),
+            LearningUpdate(
+                aside=root.id or "", conclusion="ELBO is a bound", version=2
+            ),
+        ],
+        middle.id: [],
+    }
+
+    async def fake_get(record_id):
+        return by_id[record_id]
+
+    async def fake_updates(self):
+        return updates[self.id]
+
+    with (
+        patch(
+            "api.routers.learning.LearningAside.get",
+            new_callable=AsyncMock,
+            side_effect=fake_get,
+        ),
+        patch.object(LearningAside, "get_updates", new=fake_updates),
+        patch(
+            "api.routers.learning._raw_session_messages",
+            new_callable=AsyncMock,
+        ) as raw_messages,
+    ):
+        path = await _learning_path(leaf)
+
+    assert path is not None
+    assert "MAIN THREAD ANSWER" in path
+    assert path.index("What is the ELBO?") < path.index("Why Jensen?")
+    assert "ELBO is a bound" in path
+    assert "Old ELBO" not in path
+    assert "Jensen's inequality gives the bound." in path
+    assert "no conclusion yet" in path
+    # Ancestor transcripts are not dumped; the immediate parent's transcript
+    # travels separately as parent_conversation_at_branch.
+    assert "ROOT ASIDE TRANSCRIPT" not in path
+    assert "learning_aside:" not in path
+    raw_messages.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_top_level_aside_has_no_learning_path():
+    from api.routers.learning import _learning_path
+
+    assert await _learning_path(_aside()) is None
+
+
+@pytest.mark.asyncio
+async def test_learning_path_is_bounded_for_deep_and_long_ancestry():
+    from api.routers.learning import (
+        LEARNING_PATH_CHARS,
+        MAX_ANCESTOR_DEPTH,
+        _learning_path,
+    )
+
+    long_text = "x" * 20_000
+    chain = {
+        f"learning_aside:a{depth}": _aside(
+            id=f"learning_aside:a{depth}",
+            parent_aside=f"learning_aside:a{depth + 1}" if depth < 30 else None,
+            chat_session=f"chat_session:a{depth}",
+            title=f"Level {depth}",
+            anchor=AsideAnchor(content=long_text),
+            context_snapshot=[{"role": "ai", "content": long_text}],
+        )
+        for depth in range(31)
+    }
+    leaf = _aside(parent_aside="learning_aside:a0")
+    get = AsyncMock(side_effect=lambda record_id: chain[record_id])
+
+    async def no_updates(self):
+        return []
+
+    with (
+        patch("api.routers.learning.LearningAside.get", new=get),
+        patch.object(LearningAside, "get_updates", new=no_updates),
+    ):
+        path = await _learning_path(leaf)
+
+    assert path is not None
+    assert len(path) <= LEARNING_PATH_CHARS
+    assert get.await_count == MAX_ANCESTOR_DEPTH
+    # The innermost ancestor survives the bound.
+    assert "Level 0" in path
+
+
+@pytest.mark.asyncio
+async def test_learning_path_stops_on_a_parent_cycle():
+    from api.routers.learning import _learning_path
+
+    first = _aside(id="learning_aside:first", parent_aside="learning_aside:second")
+    second = _aside(id="learning_aside:second", parent_aside="learning_aside:first")
+    get = AsyncMock(return_value=second)
+
+    async def no_updates(self):
+        return []
+
+    with (
+        patch("api.routers.learning.LearningAside.get", new=get),
+        patch.object(LearningAside, "get_updates", new=no_updates),
+    ):
+        path = await _learning_path(first)
+
+    assert path is not None
+    assert get.await_count == 1
+
+
+def test_nested_dive_message_carries_learning_path(client):
+    _, _, leaf = _nested_chain()
+    journey = _journey()
+    captured: dict[str, Any] = {}
+    with patch(
+        "api.routers.learning._learning_path",
+        new_callable=AsyncMock,
+        return_value="LEARNING PATH",
+    ):
+        response, _, _ = _send_aside_message(client, leaf, journey, captured)
+
+    assert response.status_code == 200
+    aside_context = captured["context"]["learning_aside"]
+    assert aside_context["learning_path"] == "LEARNING PATH"
+    assert "MIDDLE TRANSCRIPT" in aside_context["parent_conversation_at_branch"]
+    assert "nested dive" in aside_context["instruction"]
