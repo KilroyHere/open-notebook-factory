@@ -440,4 +440,37 @@ describe('LearningJourneyRail', () => {
     ).toHaveAttribute('data-state', 'active')
     expect(screen.getByText('Explain the ELBO.')).toBeInTheDocument()
   })
+
+  it('shows plain-text previews without citations or markdown', () => {
+    const raw =
+      '**Scaled dot-product attention** computes $QK^T/\\sqrt{d_k}$ [source:6tsit42].'
+    render(
+      <LearningJourneyRail
+        messages={[
+          { id: 'human:raw', type: 'human', content: `## Explain _attention_ [note:n1]` },
+          { id: 'ai:raw', type: 'ai', content: raw },
+        ]}
+        asides={[
+          {
+            ...aside,
+            status: 'active',
+            updates: [],
+            anchor: { type: 'message', message_id: 'ai:raw', content: raw },
+          },
+        ]}
+        activeAsideId={null}
+        onShowMain={vi.fn()}
+        onOpenAside={vi.fn()}
+        onNavigateToMessage={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText('Explain attention')).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'Scaled dot-product attention computes QK^T/ sqrt d_k.'
+      )
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/source:6tsit42|\*\*|\$/)).not.toBeInTheDocument()
+  })
 })

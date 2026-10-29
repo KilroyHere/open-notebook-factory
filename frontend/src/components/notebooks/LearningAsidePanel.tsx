@@ -24,7 +24,10 @@ import {
   ResolveLearningAsideRequest,
 } from '@/lib/types/api'
 import { useTranslation } from '@/lib/hooks/use-translation'
-import { createLearningUpdateDraft } from '@/lib/utils/learning-asides'
+import {
+  createLearningUpdateDraft,
+  toPlainTextPreview,
+} from '@/lib/utils/learning-asides'
 import { isSendShortcut, sendShortcutHint } from '@/lib/utils/composer-shortcut'
 import {
   LearningEvidenceButtons,
@@ -245,9 +248,11 @@ export function LearningAsidePanel({
                           {aside.title}
                         </p>
                         <p className="mt-1 line-clamp-2 break-words text-xs text-muted-foreground">
-                          {aside.status === 'resolved' && aside.updates.at(-1)
-                            ? aside.updates.at(-1)!.conclusion
-                            : aside.anchor.content}
+                          {toPlainTextPreview(
+                            aside.status === 'resolved' && aside.updates.at(-1)
+                              ? aside.updates.at(-1)!.conclusion
+                              : aside.anchor.content
+                          )}
                         </p>
                       </div>
                       <Badge className="shrink-0" variant={statusVariant(aside.status)}>
@@ -311,7 +316,7 @@ export function LearningAsidePanel({
               </div>
               {!activeAside.anchor.message_id && (
                 <p className="mt-1 line-clamp-2 break-words text-xs text-muted-foreground">
-                  {activeAside.anchor.content}
+                  {toPlainTextPreview(activeAside.anchor.content)}
                 </p>
               )}
             </div>
