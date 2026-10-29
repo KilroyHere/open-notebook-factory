@@ -177,6 +177,13 @@ export function useLearningAsides({
     },
   })
 
+  // Read-only: drafts an editable resolution and saves nothing. The panel
+  // falls back to a local draft on failure, so there is no error toast.
+  const draftMutation = useMutation({
+    mutationFn: (asideId: string) =>
+      learningApi.draftResolution(asideId, { model_override: modelOverride }),
+  })
+
   const resolveMutation = useMutation({
     mutationFn: ({
       asideId,
@@ -325,6 +332,7 @@ export function useLearningAsides({
     refreshJourney: () => refresh(),
     createAside: createMutation.mutateAsync,
     sendMessage: sendMutation.mutateAsync,
+    draftResolution: draftMutation.mutateAsync,
     resolveAside: resolveMutation.mutateAsync,
     updateStatus: updateMutation.mutateAsync,
     syncSections: syncSectionsMutation.mutateAsync,

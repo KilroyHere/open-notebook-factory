@@ -5,6 +5,7 @@ import {
   createAsideTitle,
   createLearningUpdateDraft,
   toPlainTextPreview,
+  normalizeOpenQuestions,
 } from './learning-asides'
 
 describe('learning aside text helpers', () => {
@@ -79,5 +80,17 @@ describe('learning aside text helpers', () => {
     ).toBe(
       'Scaled dot-product attention computes QK^T / sqrt d_k. Then a softmax.'
     )
+  })
+
+  it('trims, drops blank and de-duplicates open questions in order', () => {
+    expect(
+      normalizeOpenQuestions([
+        ' Why a Gaussian prior? ',
+        '',
+        '   ',
+        'When is the bound tight?',
+        'Why a Gaussian prior?',
+      ])
+    ).toEqual(['Why a Gaussian prior?', 'When is the bound tight?'])
   })
 })

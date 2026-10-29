@@ -10,10 +10,12 @@ from langchain_core.runnables import RunnableConfig
 
 from api.models import (
     CreateLearningAsideRequest,
+    DraftLearningResolutionRequest,
     LearningAsideMessageResponse,
     LearningAsideResponse,
     LearningJourneyResponse,
     LearningJourneyResumeResponse,
+    LearningResolutionDraftResponse,
     LearningSectionResponse,
     LearningUpdateResponse,
     ResolveLearningAsideRequest,
@@ -39,6 +41,7 @@ from open_notebook.domain.learning import (
 from open_notebook.domain.notebook import ChatSession, Note, Notebook
 from open_notebook.exceptions import InvalidInputError, NotFoundError
 from open_notebook.graphs.chat import graph as chat_graph
+from open_notebook.graphs.learning_resolution import draft_learning_resolution
 from open_notebook.utils.graph_utils import invoke_chat_turn
 from open_notebook.utils.text_utils import extract_text_content
 
@@ -574,6 +577,57 @@ async def send_aside_message(aside_id: str, request: SendLearningAsideMessageReq
         journey.active_session = aside.chat_session
         await journey.save()
     return await _aside_response(aside)
+
+
+@router.post(
+    "/asides/{aside_id}/draft-resolution",
+    response_model=LearningResolutionDraftResponse,
+)
+async def draft_aside_resolution(
+    aside_id: str, request: Optional[DraftLearningResolutionRequest] = None
+):
+    """Draft an editable conclusion, relevance and open questions. Saves nothing."""
+    aside = await _get_aside(aside_id)
+    if aside.status == "discarded":
+        raise InvalidInputError("Discarded asides cannot be resolved")
+
+    raw_messages = await _raw_session_messages(aside.chat_session)
+    transcript = [
+        {
+            "role": str(getattr(message, "type", "unknown")),
+            "content": extract_text_content(getattr(message, "content", "")),
+        }
+        for message in raw_messages
+    ]
+    if not any(turn["role"] == "ai" and turn["content"].strip() for turn in transcript):
+        raise InvalidInputError("Ask a question in this aside before drafting")
+
+    session = await ChatSession.get(aside.chat_session)
+    model_override = (
+        request.model_override
+        if request is not None and request.model_override is not None
+        else session.model_override
+    )
+    internal_ids = [
+        aside.id or "",
+        aside.journey,
+        aside.parent_aside or "",
+        aside.parent_session,
+        aside.chat_session,
+        aside.anchor.message_id or "",
+        *(str(getattr(message, "id", "") or "") for message in raw_messages),
+        *(item.get("id", "") for item in aside.context_snapshot),
+        *(update.id or "" for update in await aside.get_updates()),
+    ]
+    draft = await draft_learning_resolution(
+        title=aside.title,
+        anchor=aside.anchor.content,
+        parent_context=aside.context_snapshot,
+        transcript=transcript,
+        model_id=model_override,
+        internal_ids=[value for value in internal_ids if value],
+    )
+    return LearningResolutionDraftResponse(**draft.model_dump())
 
 
 @router.post("/asides/{aside_id}/resolve", response_model=LearningAsideResponse)

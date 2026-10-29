@@ -154,6 +154,7 @@ describe('LearningAsidePanel', () => {
         conclusion:
           'The logarithm is concave, so Jensen gives a lower bound.',
         relevance: 'This justifies the first derivation step.',
+        open_questions: [],
         citations: [],
         include_in_main: true,
         save_as_note: false,
@@ -181,6 +182,209 @@ describe('LearningAsidePanel', () => {
     expect(
       screen.getByText('Why does that inequality apply here?')
     ).toBeInTheDocument()
+  })
+
+  it('prefills every field from the model draft and sends edited open questions', async () => {
+    let finishDraft: (value: {
+      conclusion: string
+      relevance: string
+      open_questions: string[]
+    }) => void = () => undefined
+    const onDraftResolution = vi.fn(
+      () =>
+        new Promise<{
+          conclusion: string
+          relevance: string
+          open_questions: string[]
+        }>((resolve) => {
+          finishDraft = resolve
+        })
+    )
+    const onResolve = vi.fn().mockResolvedValue(undefined)
+    render(
+      <LearningAsidePanel
+        {...baseProps}
+        activeAside={aside}
+        onDraftResolution={onDraftResolution}
+        onResolve={onResolve}
+      />
+    )
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'learningAsides.resolve' })
+    )
+
+    expect(onDraftResolution).toHaveBeenCalledWith('learning_aside:one')
+    expect(
+      await screen.findByText('learningAsides.drafting')
+    ).toBeInTheDocument()
+    expect(
+      screen.getByPlaceholderText('learningAsides.conclusionPlaceholder')
+    ).toBeDisabled()
+    const submit = screen
+      .getAllByRole('button', { name: 'learningAsides.resolve' })
+      .at(-1)!
+    expect(submit).toBeDisabled()
+
+    finishDraft({
+      conclusion: 'Log is concave, so Jensen gives the ELBO [source:paper].',
+      relevance: 'It justifies the first derivation step.',
+      open_questions: ['When is the bound tight?', 'Why a Gaussian prior?'],
+    })
+
+    await waitFor(() =>
+      expect(
+        screen.getByPlaceholderText('learningAsides.conclusionPlaceholder')
+      ).toHaveValue('Log is concave, so Jensen gives the ELBO [source:paper].')
+    )
+    expect(screen.queryByText('learningAsides.drafting')).not.toBeInTheDocument()
+    expect(
+      screen.getByPlaceholderText('learningAsides.relevancePlaceholder')
+    ).toHaveValue('It justifies the first derivation step.')
+    const questions = screen.getAllByPlaceholderText(
+      'learningAsides.openQuestionPlaceholder'
+    )
+    expect(questions.map((input) => (input as HTMLInputElement).value)).toEqual([
+      'When is the bound tight?',
+      'Why a Gaussian prior?',
+    ])
+
+    fireEvent.click(
+      screen.getAllByRole('button', {
+        name: 'learningAsides.removeOpenQuestion',
+      })[1]
+    )
+    fireEvent.click(
+      screen.getByRole('button', { name: 'learningAsides.addOpenQuestion' })
+    )
+    const added = screen
+      .getAllByPlaceholderText('learningAsides.openQuestionPlaceholder')
+      .at(-1)!
+    fireEvent.change(added, { target: { value: '  What does the KL gap mean? ' } })
+    fireEvent.click(
+      screen.getByRole('button', { name: 'learningAsides.addOpenQuestion' })
+    )
+
+    fireEvent.click(
+      screen.getAllByRole('button', { name: 'learningAsides.resolve' }).at(-1)!
+    )
+
+    await waitFor(() =>
+      expect(onResolve).toHaveBeenCalledWith('learning_aside:one', {
+        conclusion: 'Log is concave, so Jensen gives the ELBO [source:paper].',
+        relevance: 'It justifies the first derivation step.',
+        open_questions: [
+          'When is the bound tight?',
+          'What does the KL gap mean?',
+        ],
+        citations: ['source:paper'],
+        include_in_main: true,
+        save_as_note: false,
+      })
+    )
+  })
+
+  it('falls back to the last answer when the model draft fails', async () => {
+    const onDraftResolution = vi.fn().mockRejectedValue(new Error('502'))
+    render(
+      <LearningAsidePanel
+        {...baseProps}
+        activeAside={aside}
+        onDraftResolution={onDraftResolution}
+      />
+    )
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'learningAsides.resolve' })
+    )
+
+    expect(
+      await screen.findByText('learningAsides.draftFailed')
+    ).toBeInTheDocument()
+    const conclusion = screen.getByPlaceholderText(
+      'learningAsides.conclusionPlaceholder'
+    )
+    expect(conclusion).toHaveValue(
+      'The logarithm is concave, so Jensen gives a lower bound.'
+    )
+    expect(conclusion).not.toBeDisabled()
+    expect(
+      screen.queryAllByPlaceholderText('learningAsides.openQuestionPlaceholder')
+    ).toHaveLength(0)
+  })
+
+  it('updates a resolution from what was already approved', async () => {
+    const onDraftResolution = vi.fn()
+    render(
+      <LearningAsidePanel
+        {...baseProps}
+        onDraftResolution={onDraftResolution}
+        activeAside={{
+          ...aside,
+          status: 'resolved',
+          updates: [
+            {
+              id: 'learning_update:one',
+              aside_id: aside.id,
+              conclusion: 'Approved conclusion.',
+              relevance: 'Approved relevance.',
+              open_questions: ['Approved question?'],
+              citations: [],
+              include_in_main: true,
+              version: 1,
+              created: aside.created,
+              updated: aside.updated,
+            },
+          ],
+        }}
+      />
+    )
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'learningAsides.resolveAgain' })
+    )
+
+    expect(
+      await screen.findByPlaceholderText('learningAsides.conclusionPlaceholder')
+    ).toHaveValue('Approved conclusion.')
+    expect(
+      screen.getByPlaceholderText('learningAsides.relevancePlaceholder')
+    ).toHaveValue('Approved relevance.')
+    expect(
+      screen.getByPlaceholderText('learningAsides.openQuestionPlaceholder')
+    ).toHaveValue('Approved question?')
+    expect(onDraftResolution).not.toHaveBeenCalled()
+  })
+
+  it('asks the question of an empty nested dive in one click', async () => {
+    const onSendMessage = vi.fn().mockResolvedValue(undefined)
+    const child: LearningAside = {
+      ...aside,
+      id: 'learning_aside:child',
+      parent_aside_id: aside.id,
+      title: 'Why a Gaussian prior?',
+      anchor: { type: 'message', content: 'Why a Gaussian prior?' },
+      messages: [],
+    }
+    render(
+      <LearningAsidePanel
+        {...baseProps}
+        asides={[aside, child]}
+        activeAside={child}
+        onSendMessage={onSendMessage}
+      />
+    )
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'learningAsides.askThisQuestion' })
+    )
+
+    await waitFor(() =>
+      expect(onSendMessage).toHaveBeenCalledWith(
+        'learning_aside:child',
+        'Why a Gaussian prior?'
+      )
+    )
   })
 
   it('does not offer destructive discard after an aside is resolved', () => {

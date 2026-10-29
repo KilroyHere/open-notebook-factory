@@ -67,3 +67,16 @@ export function childDiveForQuestion(
       aside.anchor.content.trim() === normalized
   )
 }
+
+/** Trimmed, non-empty, de-duplicated open questions in their original order. */
+export function normalizeOpenQuestions(questions: string[]): string[] {
+  const seen = new Set<string>()
+  const result: string[] = []
+  for (const question of questions) {
+    const trimmed = question.trim()
+    if (!trimmed || seen.has(trimmed)) continue
+    seen.add(trimmed)
+    result.push(trimmed)
+  }
+  return result
+}

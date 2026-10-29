@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, it, expect, vi } from 'vitest'
 import { ChatColumn } from './ChatColumn'
 import { useNotes } from '@/lib/hooks/use-notes'
@@ -233,5 +233,98 @@ describe('ChatColumn', () => {
     expect(onLeaveJourney).toHaveBeenCalled()
     expect(openAside).toHaveBeenCalledWith('learning_aside:b')
     expect(screen.queryByTestId('chat-panel')).not.toBeInTheDocument()
+  })
+
+  describe('Dive in', () => {
+    const parent = {
+      id: 'learning_aside:parent',
+      journey_id: 'learning_journey:one',
+      parent_session_id: 'chat_session:main',
+      chat_session_id: 'chat_session:parent',
+      title: 'Why Jensen applies',
+      status: 'resolved',
+      anchor: { type: 'message', message_id: 'ai:origin', content: 'Origin' },
+      messages: [],
+      updates: [
+        {
+          id: 'learning_update:one',
+          aside_id: 'learning_aside:parent',
+          conclusion: 'The logarithm is concave.',
+          open_questions: ['Why a Gaussian prior?'],
+          citations: [],
+          include_in_main: true,
+          version: 1,
+          created: '2026-10-29T00:00:00Z',
+          updated: '2026-10-29T00:00:00Z',
+        },
+      ],
+      created: '2026-10-29T00:00:00Z',
+      updated: '2026-10-29T00:00:00Z',
+    }
+
+    it('creates the child dive and asks its question straight away', async () => {
+      const createAside = vi.fn().mockResolvedValue({
+        ...parent,
+        id: 'learning_aside:child',
+        status: 'active',
+        updates: [],
+      })
+      const sendMessage = vi.fn().mockResolvedValue(undefined)
+      vi.mocked(useNotes).mockReturnValue(createNotesMock())
+      vi.mocked(useNotebookChat).mockReturnValue(createChatMock())
+      vi.mocked(useLearningAsides).mockReturnValue(
+        createLearningMock({
+          panelOpen: true,
+          asides: [parent],
+          activeAside: parent,
+          createAside,
+          sendMessage,
+        })
+      )
+
+      render(<ChatColumn {...baseProps} sourcesLoading={false} />)
+      fireEvent.click(
+        screen.getAllByRole('button', { name: 'learningAsides.diveIn' })[0]
+      )
+
+      await waitFor(() =>
+        expect(sendMessage).toHaveBeenCalledWith({
+          asideId: 'learning_aside:child',
+          message: 'Why a Gaussian prior?',
+        })
+      )
+      expect(createAside).toHaveBeenCalledWith({
+        type: 'message',
+        content: 'Why a Gaussian prior?',
+        parentAside: parent,
+      })
+      expect(createAside.mock.invocationCallOrder[0]).toBeLessThan(
+        sendMessage.mock.invocationCallOrder[0]
+      )
+    })
+
+    it('does not ask when the dive could not be created', async () => {
+      const createAside = vi.fn().mockRejectedValue(new Error('nope'))
+      const sendMessage = vi.fn()
+      vi.mocked(useNotes).mockReturnValue(createNotesMock())
+      vi.mocked(useNotebookChat).mockReturnValue(createChatMock())
+      vi.mocked(useLearningAsides).mockReturnValue(
+        createLearningMock({
+          panelOpen: true,
+          asides: [parent],
+          activeAside: parent,
+          createAside,
+          sendMessage,
+        })
+      )
+
+      render(<ChatColumn {...baseProps} sourcesLoading={false} />)
+      fireEvent.click(
+        screen.getAllByRole('button', { name: 'learningAsides.diveIn' })[0]
+      )
+
+      await waitFor(() => expect(createAside).toHaveBeenCalled())
+      expect(sendMessage).not.toHaveBeenCalled()
+    })
   })
 })
