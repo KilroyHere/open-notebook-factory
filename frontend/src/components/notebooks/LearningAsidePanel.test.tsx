@@ -226,4 +226,56 @@ describe('LearningAsidePanel', () => {
       screen.getByText('Why does that inequality apply here?')
     ).toBeInTheDocument()
   })
+
+  it('opens source, note, and insight citations from the resolved summary', () => {
+    const onReferenceClick = vi.fn()
+    const resolved: LearningAside = {
+      ...aside,
+      status: 'resolved',
+      updates: [
+        {
+          id: 'learning_update:one',
+          aside_id: aside.id,
+          conclusion: 'Jensen gives a lower bound because log is concave.',
+          relevance: 'This validates the first ELBO step.',
+          open_questions: [],
+          citations: [
+            'source:paper',
+            'note:margin',
+            'source_insight:lemma',
+            'chapter 2',
+          ],
+          include_in_main: true,
+          applied_message_id: 'ai:merged',
+          version: 1,
+          created: aside.created,
+          updated: aside.updated,
+        },
+      ],
+    }
+    render(
+      <LearningAsidePanel
+        {...baseProps}
+        activeAside={resolved}
+        onReferenceClick={onReferenceClick}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'common.source paper' }))
+    fireEvent.click(screen.getByRole('button', { name: 'common.note margin' }))
+    fireEvent.click(
+      screen.getByRole('button', { name: 'common.insight lemma' })
+    )
+
+    expect(onReferenceClick).toHaveBeenNthCalledWith(1, 'source', 'paper')
+    expect(onReferenceClick).toHaveBeenNthCalledWith(2, 'note', 'margin')
+    expect(onReferenceClick).toHaveBeenNthCalledWith(
+      3,
+      'source_insight',
+      'lemma'
+    )
+    expect(
+      screen.queryByRole('button', { name: /chapter 2/ })
+    ).not.toBeInTheDocument()
+  })
 })

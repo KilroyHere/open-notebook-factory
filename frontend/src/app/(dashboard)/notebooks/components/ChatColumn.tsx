@@ -1,9 +1,11 @@
 'use client'
 
 import { useMemo } from 'react'
+import { toast } from 'sonner'
 import { useNotebookChat } from '@/lib/hooks/use-notebook-chat'
 import { useLearningAsides } from '@/lib/hooks/use-learning-asides'
 import { useNotes } from '@/lib/hooks/use-notes'
+import { useModalManager } from '@/lib/hooks/use-modal-manager'
 import { ChatPanel } from '@/components/sources/ChatPanel'
 import { LearningAsidePanel } from '@/components/notebooks/LearningAsidePanel'
 import { LearningJourneyRail } from '@/components/notebooks/LearningJourneyRail'
@@ -21,10 +23,23 @@ interface ChatColumnProps {
   contextSelections: ContextSelections
   sources: SourceListResponse[]
   sourcesLoading: boolean
+  mobileSurface?: 'chat' | 'journey'
+  onLeaveJourney?: () => void
 }
 
-export function ChatColumn({ notebookId, contextSelections, sources, sourcesLoading }: ChatColumnProps) {
+export function ChatColumn({ notebookId, contextSelections, sources, sourcesLoading, mobileSurface = 'chat', onLeaveJourney }: ChatColumnProps) {
   const { t } = useTranslation()
+  const { openModal } = useModalManager()
+
+  const handleReferenceClick = (type: string, id: string) => {
+    const modalType =
+      type === 'source_insight' ? 'insight' : (type as 'source' | 'note' | 'insight')
+    try {
+      openModal(modalType, id)
+    } catch {
+      toast.error(t('common.noResults'))
+    }
+  }
 
   // Fetch notes for this notebook
   const { data: notes = [], isLoading: notesLoading } = useNotes(notebookId)
@@ -131,6 +146,29 @@ export function ChatColumn({ notebookId, contextSelections, sources, sourcesLoad
     )
   }
 
+  if (mobileSurface === 'journey') {
+    return (
+      <LearningJourneyRail
+        presentation="sheet"
+        messages={chat.messages}
+        asides={learning.asides}
+        activeAsideId={learning.activeAsideId}
+        onShowMain={() => {
+          onLeaveJourney?.()
+          showMainThread()
+        }}
+        onOpenAside={(asideId) => {
+          onLeaveJourney?.()
+          learning.openAside(asideId)
+        }}
+        onNavigateToMessage={(messageId) => {
+          onLeaveJourney?.()
+          navigateToMainMessage(messageId)
+        }}
+      />
+    )
+  }
+
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1">
       <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
@@ -174,6 +212,7 @@ export function ChatColumn({ notebookId, contextSelections, sources, sourcesLoad
               learning.updateStatus({ asideId, status })
             }
             onNavigateToMessage={navigateToMainMessage}
+            onReferenceClick={handleReferenceClick}
           />
         ) : (
           <ChatPanel

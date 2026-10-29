@@ -5,10 +5,15 @@ import { useNotes } from '@/lib/hooks/use-notes'
 import { useNotebookChat } from '@/lib/hooks/use-notebook-chat'
 import { useLearningAsides } from '@/lib/hooks/use-learning-asides'
 
+const { openModal } = vi.hoisted(() => ({ openModal: vi.fn() }))
+
 // Mock the hooks
 vi.mock('@/lib/hooks/use-notes')
 vi.mock('@/lib/hooks/use-notebook-chat')
 vi.mock('@/lib/hooks/use-learning-asides')
+vi.mock('@/lib/hooks/use-modal-manager', () => ({
+  useModalManager: () => ({ openModal }),
+}))
 vi.mock('@/components/sources/ChatPanel', () => ({
   ChatPanel: () => <div data-testid="chat-panel" />
 }))
@@ -138,5 +143,92 @@ describe('ChatColumn', () => {
 
     expect(screen.getByText('learningAsides.resumePrompt')).toBeInTheDocument()
     expect(openAside).toHaveBeenCalledWith(asideB.id)
+  })
+
+  it('opens cited evidence from a resolved aside in the existing modal', () => {
+    openModal.mockClear()
+    vi.mocked(useNotes).mockReturnValue(createNotesMock())
+    vi.mocked(useNotebookChat).mockReturnValue(createChatMock())
+    vi.mocked(useLearningAsides).mockReturnValue(
+      createLearningMock({
+        panelOpen: true,
+        activeAside: {
+          id: 'learning_aside:one',
+          journey_id: 'learning_journey:one',
+          parent_session_id: 'chat_session:main',
+          chat_session_id: 'chat_session:aside',
+          title: 'Why Jensen applies',
+          status: 'resolved',
+          anchor: {
+            type: 'message',
+            message_id: 'ai:origin',
+            content: 'Origin answer',
+          },
+          messages: [],
+          updates: [
+            {
+              id: 'learning_update:one',
+              aside_id: 'learning_aside:one',
+              conclusion: 'The logarithm is concave.',
+              open_questions: [],
+              citations: ['source:paper'],
+              include_in_main: true,
+              applied_message_id: 'ai:merged',
+              version: 1,
+              created: '2026-10-29T00:00:00Z',
+              updated: '2026-10-29T00:00:00Z',
+            },
+          ],
+          created: '2026-10-29T00:00:00Z',
+          updated: '2026-10-29T00:00:00Z',
+        },
+      })
+    )
+
+    render(<ChatColumn {...baseProps} sourcesLoading={false} />)
+    fireEvent.click(screen.getByRole('button', { name: 'common.source paper' }))
+
+    expect(openModal).toHaveBeenCalledWith('source', 'paper')
+  })
+
+  it('returns to the conversation when a journey branch is opened', () => {
+    const openAside = vi.fn()
+    const onLeaveJourney = vi.fn()
+    vi.mocked(useNotes).mockReturnValue(createNotesMock())
+    vi.mocked(useNotebookChat).mockReturnValue(createChatMock())
+    vi.mocked(useLearningAsides).mockReturnValue(
+      createLearningMock({
+        asides: [
+          {
+            id: 'learning_aside:b',
+            journey_id: 'learning_journey:one',
+            parent_session_id: 'chat_session:main',
+            chat_session_id: 'chat_session:b',
+            title: 'Current active aside',
+            status: 'active',
+            anchor: { type: 'message', content: 'Current anchor' },
+            messages: [],
+            updates: [],
+            created: '2026-10-28T00:01:00Z',
+            updated: '2026-10-28T00:01:00Z',
+          },
+        ],
+        openAside,
+      })
+    )
+
+    render(
+      <ChatColumn
+        {...baseProps}
+        sourcesLoading={false}
+        mobileSurface="journey"
+        onLeaveJourney={onLeaveJourney}
+      />
+    )
+    fireEvent.click(screen.getByText('Current active aside'))
+
+    expect(onLeaveJourney).toHaveBeenCalled()
+    expect(openAside).toHaveBeenCalledWith('learning_aside:b')
+    expect(screen.queryByTestId('chat-panel')).not.toBeInTheDocument()
   })
 })

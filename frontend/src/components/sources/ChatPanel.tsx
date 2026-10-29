@@ -23,8 +23,16 @@ import { convertReferencesToCompactMarkdown, createCompactReferenceLinkComponent
 import { useModalManager } from '@/lib/hooks/use-modal-manager'
 import { toast } from 'sonner'
 import { useTranslation } from '@/lib/hooks/use-translation'
-import { LearningThreadLinks } from '@/components/notebooks/LearningThreadLinks'
-import { chatMessageDomId } from '@/lib/utils/chat-navigation'
+import {
+  LearningMergeEvent,
+  LearningThreadLinks,
+  learningMergesForMessage,
+} from '@/components/notebooks/LearningThreadLinks'
+import {
+  chatMessageDomId,
+  focusChatMessage,
+  messageIdFromChatHash,
+} from '@/lib/utils/chat-navigation'
 import { cn } from '@/lib/utils'
 
 interface NotebookContextStats {
@@ -97,6 +105,7 @@ export function ChatPanel({
   const [sessionManagerOpen, setSessionManagerOpen] = useState(false)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const anchoredHashRef = useRef<string | null>(null)
   const { openModal } = useModalManager()
 
   // Stable reference-click handler so memoized messages don't re-render on
@@ -115,8 +124,23 @@ export function ChatPanel({
     }
   }, [openModal, t])
 
-  // Auto-scroll to bottom when new messages arrive
+  // Reveal a stable message hash once that turn is in the list. Later updates
+  // still follow the latest message instead of jumping back to the anchor.
   useEffect(() => {
+    const hash = window.location.hash
+    const anchoredId = messageIdFromChatHash(hash)
+    const hashMatchesMessage =
+      anchoredId !== null &&
+      messages.some((message) => message.id === anchoredId)
+    if (
+      hashMatchesMessage &&
+      anchoredId &&
+      anchoredHashRef.current !== hash &&
+      focusChatMessage(anchoredId)
+    ) {
+      anchoredHashRef.current = hash
+      return
+    }
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
@@ -379,6 +403,7 @@ const ChatMessage = memo(function ChatMessage({
   onOpenLearningAside,
   onNavigateToMessage
 }: ChatMessageProps) {
+  const appliedUpdates = learningMergesForMessage(learningAsides, message.id)
   return (
     <div
       id={chatMessageDomId(message.id)}
@@ -411,6 +436,15 @@ const ChatMessage = memo(function ChatMessage({
             <p className="text-sm break-all">{message.content}</p>
           )}
         </div>
+        {appliedUpdates.map(({ aside, update }) => (
+          <LearningMergeEvent
+            key={`${aside.id}:${update.id}`}
+            aside={aside}
+            update={update}
+            onOpenAside={onOpenLearningAside}
+            onReferenceClick={onReferenceClick}
+          />
+        ))}
         {message.type === 'ai' && (
           <>
             <MessageActions
@@ -426,6 +460,7 @@ const ChatMessage = memo(function ChatMessage({
                 asides={learningAsides}
                 onOpenAside={onOpenLearningAside}
                 onNavigateToMessage={onNavigateToMessage}
+                onReferenceClick={onReferenceClick}
               />
             )}
           </>

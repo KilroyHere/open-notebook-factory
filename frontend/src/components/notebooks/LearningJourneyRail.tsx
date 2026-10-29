@@ -1,11 +1,12 @@
 'use client'
 
+import { useState } from 'react'
 import {
   CheckCircle2,
   Circle,
   GitBranch,
   ListTree,
-  Map,
+  Map as MapIcon,
   MessageSquare,
   Pause,
 } from 'lucide-react'
@@ -32,6 +33,7 @@ interface LearningJourneyRailProps {
   onShowMain: () => void
   onOpenAside: (asideId: string) => void
   onNavigateToMessage: (messageId: string) => void
+  presentation?: 'rail' | 'sheet'
 }
 
 function compact(value: string, limit = 72): string {
@@ -76,6 +78,14 @@ function buildOutline(
   return { turns, loose }
 }
 
+function latestUpdate(aside: LearningAside) {
+  return aside.updates.at(-1)
+}
+
+function mergedUpdate(aside: LearningAside) {
+  return [...aside.updates].reverse().find((update) => update.applied_message_id)
+}
+
 function AsideOutlineItem({
   aside,
   active,
@@ -86,7 +96,7 @@ function AsideOutlineItem({
   onOpen: (asideId: string) => void
 }) {
   const { t } = useTranslation()
-  const update = aside.updates.at(-1)
+  const update = latestUpdate(aside)
   return (
     <button
       type="button"
@@ -117,6 +127,162 @@ function AsideOutlineItem({
   )
 }
 
+function OpenQuestions({ aside }: { aside: LearningAside }) {
+  const { t } = useTranslation()
+  if (aside.status !== 'resolved') return null
+  const questions = (latestUpdate(aside)?.open_questions ?? []).filter(
+    (question) => question.trim()
+  )
+  if (questions.length === 0) return null
+  return (
+    <div className="px-1">
+      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+        {t('learningAsides.openQuestions')}
+      </p>
+      <ul className="mt-1 space-y-1">
+        {questions.map((question) => (
+          <li key={question} className="text-xs text-muted-foreground">
+            {question}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function AsideOutlineGroup({
+  asides,
+  activeAsideId,
+  onOpenAside,
+}: {
+  asides: LearningAside[]
+  activeAsideId: string | null
+  onOpenAside: (asideId: string) => void
+}) {
+  const { t } = useTranslation()
+  const parked = asides.filter((aside) => aside.status === 'parked')
+  const nested = asides.filter((aside) => aside.status !== 'parked')
+  if (asides.length === 0) return null
+
+  return (
+    <div className="mt-1 space-y-2 border-l border-teal/40 pl-3">
+      {nested.map((aside) => (
+        <div key={aside.id} className="space-y-1.5">
+          <AsideOutlineItem
+            aside={aside}
+            active={aside.id === activeAsideId}
+            onOpen={onOpenAside}
+          />
+          <OpenQuestions aside={aside} />
+        </div>
+      ))}
+      {parked.length > 0 && (
+        <div className="space-y-2 rounded-md border bg-card p-2">
+          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+            {t('learningAsides.status.parked')}
+          </p>
+          {parked.map((aside) => (
+            <AsideOutlineItem
+              key={aside.id}
+              aside={aside}
+              active={aside.id === activeAsideId}
+              onOpen={onOpenAside}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function JourneyMap({
+  asides,
+  activeAsideId,
+  onShowMain,
+  onOpenAside,
+  onNavigateToMessage,
+}: {
+  asides: LearningAside[]
+  activeAsideId: string | null
+  onShowMain: () => void
+  onOpenAside: (asideId: string) => void
+  onNavigateToMessage: (messageId: string) => void
+}) {
+  const { t } = useTranslation()
+  return (
+    <div>
+      <button
+        type="button"
+        className="relative z-10 flex w-full items-center gap-2 rounded-md border bg-card p-3 text-left"
+        onClick={onShowMain}
+      >
+        <MessageSquare className="h-4 w-4 text-teal" />
+        <span className="text-xs font-semibold">
+          {t('learningAsides.mainThread')}
+        </span>
+      </button>
+      <div className="relative ml-5 border-l border-border pb-2 pl-5 pt-3">
+        {asides.map((aside) => {
+          const latest = latestUpdate(aside)
+          const appliedMessageId = mergedUpdate(aside)?.applied_message_id
+          const showResolution = aside.status === 'resolved' && Boolean(latest)
+          return (
+            <div key={aside.id} className="relative mb-3">
+              <span className="absolute -left-5 top-5 h-px w-5 bg-border" />
+              <button
+                type="button"
+                className={`w-full rounded-md border p-3 text-left ${
+                  aside.id === activeAsideId
+                    ? 'border-teal bg-teal-tint'
+                    : 'bg-card'
+                }`}
+                onClick={() => onOpenAside(aside.id)}
+              >
+                <div className="flex items-center gap-1.5">
+                  <GitBranch className="h-3.5 w-3.5 text-teal" />
+                  <span className="truncate text-xs font-medium">
+                    {aside.title}
+                  </span>
+                </div>
+              </button>
+              {(showResolution || appliedMessageId) && (
+                <div className="ml-4 mt-2 space-y-2 border-l border-border pl-3">
+                  {showResolution && latest && (
+                    <button
+                      type="button"
+                      className="w-full rounded-md border bg-card p-3 text-left"
+                      onClick={() => onOpenAside(aside.id)}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-fern" />
+                        <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                          {t('learningAsides.summary')}
+                        </span>
+                      </div>
+                      <p className="mt-1 line-clamp-3 text-[11px] text-muted-foreground">
+                        {latest.conclusion}
+                      </p>
+                    </button>
+                  )}
+                  {appliedMessageId && (
+                    <button
+                      type="button"
+                      className="w-full rounded-md border bg-card p-3 text-left text-xs font-medium"
+                      onClick={() => onNavigateToMessage(appliedMessageId)}
+                    >
+                      {t('learningAsides.viewMergedResponse')}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export function LearningJourneyRail({
   messages,
   asides,
@@ -124,44 +290,79 @@ export function LearningJourneyRail({
   onShowMain,
   onOpenAside,
   onNavigateToMessage,
+  presentation = 'rail',
 }: LearningJourneyRailProps) {
   const { t } = useTranslation()
   const { journeyCollapsed, toggleJourney } = useNotebookColumnsStore()
+  const [tab, setTab] = useState('outline')
+  const [mapExpanded, setMapExpanded] = useState(false)
+
   const visibleAsides = asides.filter((aside) => aside.status !== 'discarded')
   const { turns, loose } = buildOutline(messages, visibleAsides)
   const label = t('learningAsides.journey')
 
-  return (
-    <div
+  const closeMap = () => {
+    setMapExpanded(false)
+    setTab('outline')
+  }
+
+  const map = (
+    <JourneyMap
+      asides={visibleAsides}
+      activeAsideId={activeAsideId}
+      onShowMain={onShowMain}
+      onOpenAside={onOpenAside}
+      onNavigateToMessage={onNavigateToMessage}
+    />
+  )
+
+  const column = (
+    <aside
       className={cn(
-        'hidden h-full min-h-0 shrink-0 lg:block',
-        journeyCollapsed ? 'w-12' : 'w-72 xl:w-80'
+        'relative flex h-full min-h-0 w-full flex-col',
+        presentation === 'sheet' ? 'bg-card' : 'border-l bg-muted/20'
       )}
     >
-    <CollapsibleColumn
-      isCollapsed={journeyCollapsed}
-      onToggle={toggleJourney}
-      collapsedIcon={GitBranch}
-      collapsedLabel={label}
-    >
-    <aside className="flex h-full min-h-0 flex-col border-l bg-muted/20">
+      {mapExpanded && (
+        <div className="absolute inset-0 z-20 flex min-h-0 flex-col bg-card">
+          <div className="flex items-center gap-2 border-b px-4 py-3">
+            <MapIcon className="h-4 w-4 shrink-0 text-teal" />
+            <h2 className="min-w-0 flex-1 text-sm font-semibold">
+              {t('learningAsides.map')}
+            </h2>
+            <Button type="button" variant="ghost" size="sm" onClick={closeMap}>
+              <ListTree className="h-3.5 w-3.5" />
+              {t('learningAsides.outline')}
+            </Button>
+          </div>
+          <ScrollArea
+            className="min-h-0 flex-1"
+            viewportClassName="[&>div]:!block [&>div]:!w-full [&>div]:!min-w-0"
+          >
+            <div className="p-4">{map}</div>
+          </ScrollArea>
+        </div>
+      )}
       <div className="border-b px-4 py-3">
         <div className="flex items-center gap-2">
           <GitBranch className="h-4 w-4 text-teal" />
-          <h2 className="min-w-0 flex-1 text-sm font-semibold">
-            {label}
-          </h2>
-          {createCollapseButton(toggleJourney, label, 'right')}
+          <h2 className="min-w-0 flex-1 text-sm font-semibold">{label}</h2>
+          {presentation === 'rail' &&
+            createCollapseButton(toggleJourney, label, 'right')}
         </div>
       </div>
-      <Tabs defaultValue="outline" className="flex min-h-0 flex-1 flex-col">
+      <Tabs
+        value={tab}
+        onValueChange={setTab}
+        className="flex min-h-0 flex-1 flex-col"
+      >
         <TabsList className="mx-4 mt-3 grid grid-cols-2">
           <TabsTrigger value="outline" className="gap-1.5">
             <ListTree className="h-3.5 w-3.5" />
             {t('learningAsides.outline')}
           </TabsTrigger>
           <TabsTrigger value="map" className="gap-1.5">
-            <Map className="h-3.5 w-3.5" />
+            <MapIcon className="h-3.5 w-3.5" />
             {t('learningAsides.map')}
           </TabsTrigger>
         </TabsList>
@@ -173,6 +374,7 @@ export function LearningJourneyRail({
           >
             <div className="space-y-4 p-4">
               <Button
+                type="button"
                 variant={activeAsideId ? 'ghost' : 'secondary'}
                 size="sm"
                 className="w-full justify-start"
@@ -200,18 +402,11 @@ export function LearningJourneyRail({
                           </span>
                           {compact(turn.anchor.content)}
                         </button>
-                        {turn.asides.length > 0 && (
-                          <div className="mt-1 space-y-2 border-l border-teal/40 pl-3">
-                            {turn.asides.map((aside) => (
-                              <AsideOutlineItem
-                                key={aside.id}
-                                aside={aside}
-                                active={aside.id === activeAsideId}
-                                onOpen={onOpenAside}
-                              />
-                            ))}
-                          </div>
-                        )}
+                        <AsideOutlineGroup
+                          asides={turn.asides}
+                          activeAsideId={activeAsideId}
+                          onOpenAside={onOpenAside}
+                        />
                       </div>
                     ))}
                   </div>
@@ -219,16 +414,11 @@ export function LearningJourneyRail({
               )}
 
               {loose.length > 0 && (
-                <div className="space-y-2">
-                  {loose.map((aside) => (
-                    <AsideOutlineItem
-                      key={aside.id}
-                      aside={aside}
-                      active={aside.id === activeAsideId}
-                      onOpen={onOpenAside}
-                    />
-                  ))}
-                </div>
+                <AsideOutlineGroup
+                  asides={loose}
+                  activeAsideId={activeAsideId}
+                  onOpenAside={onOpenAside}
+                />
               )}
 
               {visibleAsides.length === 0 && (
@@ -241,59 +431,58 @@ export function LearningJourneyRail({
         </TabsContent>
 
         <TabsContent value="map" className="min-h-0 flex-1">
-          <ScrollArea
-            className="h-full"
-            viewportClassName="[&>div]:!block [&>div]:!w-full [&>div]:!min-w-0"
-          >
-            <div className="p-4">
-              <button
+          <div className="flex h-full min-h-0 flex-col">
+            <div className="px-4 pt-3">
+              <Button
                 type="button"
-                className="relative z-10 flex w-full items-center gap-2 rounded-md border bg-card p-3 text-left"
-                onClick={onShowMain}
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => setMapExpanded(true)}
               >
-                <MessageSquare className="h-4 w-4 text-teal" />
-                <span className="text-xs font-semibold">
-                  {t('learningAsides.mainThread')}
-                </span>
-              </button>
-              <div className="relative ml-5 border-l border-border pb-2 pl-5 pt-3">
-                {visibleAsides.map((aside) => {
-                  const update = aside.updates.at(-1)
-                  return (
-                    <div key={aside.id} className="relative mb-3">
-                      <span className="absolute -left-5 top-5 h-px w-5 bg-border" />
-                      <button
-                        type="button"
-                        className={`w-full rounded-md border p-3 text-left ${
-                          aside.id === activeAsideId
-                            ? 'border-teal bg-teal-tint'
-                            : 'bg-card'
-                        }`}
-                        onClick={() => onOpenAside(aside.id)}
-                      >
-                        <div className="flex items-center gap-1.5">
-                          <GitBranch className="h-3.5 w-3.5 text-teal" />
-                          <span className="truncate text-xs font-medium">
-                            {aside.title}
-                          </span>
-                        </div>
-                        <p className="mt-1 line-clamp-2 text-[11px] text-muted-foreground">
-                          {compact(
-                            update?.conclusion ?? aside.anchor.content,
-                            90
-                          )}
-                        </p>
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
+                <MapIcon className="h-3.5 w-3.5" />
+                {t('learningAsides.map')}
+              </Button>
             </div>
-          </ScrollArea>
+            <ScrollArea
+              className="min-h-0 flex-1"
+              viewportClassName="[&>div]:!block [&>div]:!w-full [&>div]:!min-w-0"
+            >
+              {!mapExpanded && <div className="p-4">{map}</div>}
+            </ScrollArea>
+          </div>
         </TabsContent>
       </Tabs>
     </aside>
-    </CollapsibleColumn>
+  )
+
+  if (presentation === 'sheet') {
+    return (
+      <div
+        data-presentation="sheet"
+        className="flex h-full min-h-0 w-full min-w-0 flex-col"
+      >
+        {column}
+      </div>
+    )
+  }
+
+  return (
+    <div
+      data-presentation="rail"
+      className={cn(
+        'hidden h-full min-h-0 shrink-0 lg:block',
+        journeyCollapsed ? 'w-12' : 'w-72 xl:w-80'
+      )}
+    >
+      <CollapsibleColumn
+        isCollapsed={journeyCollapsed}
+        onToggle={toggleJourney}
+        collapsedIcon={GitBranch}
+        collapsedLabel={label}
+      >
+        {column}
+      </CollapsibleColumn>
     </div>
   )
 }

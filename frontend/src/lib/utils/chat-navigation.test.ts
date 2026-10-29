@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { chatMessageDomId, focusChatMessage } from './chat-navigation'
+import {
+  chatMessageDomId,
+  focusChatMessage,
+  messageIdFromChatHash,
+} from './chat-navigation'
 
 describe('chat navigation', () => {
   beforeEach(() => {
@@ -30,5 +34,16 @@ describe('chat navigation', () => {
 
   it('returns false when the message is unavailable', () => {
     expect(focusChatMessage('missing')).toBe(false)
+  })
+
+  it('reads a message id back from its anchor hash', () => {
+    const messageId = 'ai:answer/one'
+    expect(messageIdFromChatHash(`#${chatMessageDomId(messageId)}`)).toBe(
+      messageId
+    )
+    expect(messageIdFromChatHash(chatMessageDomId(messageId))).toBe(messageId)
+    expect(messageIdFromChatHash('#session')).toBeNull()
+    expect(messageIdFromChatHash('#chat-message-')).toBeNull()
+    expect(messageIdFromChatHash('#chat-message-%')).toBeNull()
   })
 })

@@ -15,7 +15,7 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { useIsDesktop } from '@/lib/hooks/use-media-query'
 import { useTranslation } from '@/lib/hooks/use-translation'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { FileText, StickyNote, MessageSquare } from 'lucide-react'
+import { FileText, StickyNote, MessageSquare, GitBranch } from 'lucide-react'
 import {
   applyBulkSourceContext,
   applyBulkNoteContext,
@@ -52,8 +52,8 @@ export default function NotebookPage() {
   // Detect desktop to avoid double-mounting ChatColumn
   const isDesktop = useIsDesktop()
 
-  // Mobile tab state (Sources, Notes, or Chat)
-  const [mobileActiveTab, setMobileActiveTab] = useState<'sources' | 'notes' | 'chat'>('chat')
+  // Mobile tab state (Sources, Notes, Chat, or Journey)
+  const [mobileActiveTab, setMobileActiveTab] = useState<'sources' | 'notes' | 'chat' | 'journey'>('chat')
 
   // Context selection state
   const [contextSelections, setContextSelections] = useState<ContextSelections>({
@@ -159,19 +159,23 @@ export default function NotebookPage() {
           {!isDesktop && (
             <div className="flex min-h-0 flex-1 flex-col px-4 pb-4 pt-4 lg:hidden">
               <div className="mb-4">
-                <Tabs value={mobileActiveTab} onValueChange={(value) => setMobileActiveTab(value as 'sources' | 'notes' | 'chat')}>
-                  <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="sources" className="gap-2">
-                      <FileText className="h-4 w-4" />
-                      {t('navigation.sources')}
+                <Tabs value={mobileActiveTab} onValueChange={(value) => setMobileActiveTab(value as 'sources' | 'notes' | 'chat' | 'journey')}>
+                  <TabsList className="grid w-full grid-cols-4">
+                    <TabsTrigger value="sources" className="min-w-0 gap-1 px-1">
+                      <FileText className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{t('navigation.sources')}</span>
                     </TabsTrigger>
-                    <TabsTrigger value="notes" className="gap-2">
-                      <StickyNote className="h-4 w-4" />
-                      {t('common.notes')}
+                    <TabsTrigger value="notes" className="min-w-0 gap-1 px-1">
+                      <StickyNote className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{t('common.notes')}</span>
                     </TabsTrigger>
-                    <TabsTrigger value="chat" className="gap-2">
-                      <MessageSquare className="h-4 w-4" />
-                      {t('common.chat')}
+                    <TabsTrigger value="chat" className="min-w-0 gap-1 px-1">
+                      <MessageSquare className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{t('common.chat')}</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="journey" className="min-w-0 gap-1 px-1">
+                      <GitBranch className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{t('learningAsides.journey')}</span>
                     </TabsTrigger>
                   </TabsList>
                 </Tabs>
@@ -206,13 +210,17 @@ export default function NotebookPage() {
                     allowCollapse={false}
                   />
                 )}
-                {mobileActiveTab === 'chat' && (
-                  <ChatColumn
-                    notebookId={notebookId}
-                    contextSelections={contextSelections}
-                    sources={sources}
-                    sourcesLoading={sourcesLoading}
-                  />
+                {(mobileActiveTab === 'chat' || mobileActiveTab === 'journey') && (
+                  <div className="h-full min-h-0">
+                    <ChatColumn
+                      notebookId={notebookId}
+                      contextSelections={contextSelections}
+                      sources={sources}
+                      sourcesLoading={sourcesLoading}
+                      mobileSurface={mobileActiveTab === 'journey' ? 'journey' : 'chat'}
+                      onLeaveJourney={() => setMobileActiveTab('chat')}
+                    />
+                  </div>
                 )}
               </div>
             </div>

@@ -63,7 +63,7 @@ Opening a notebook shows its header, then a conversation-first workspace. On a w
 └──────────────────┴──────────────────────────────┴──────────────────┘
 ```
 
-On small screens the workspace becomes three tabs, **Sources**, **Notes** and **Chat**, with Chat selected first. The journey rail is available on wide screens.
+On small screens the workspace becomes four tabs, **Sources**, **Notes**, **Chat** and **Journey**, with Chat selected first. Journey shows the same outline and map as the wide-screen rail. Opening a branch or a message there switches back to Chat.
 
 ### Knowledge rail
 

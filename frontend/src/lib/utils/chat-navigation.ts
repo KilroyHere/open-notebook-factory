@@ -1,5 +1,19 @@
+const CHAT_MESSAGE_HASH_PREFIX = 'chat-message-'
+
 export function chatMessageDomId(messageId: string): string {
-  return `chat-message-${encodeURIComponent(messageId)}`
+  return `${CHAT_MESSAGE_HASH_PREFIX}${encodeURIComponent(messageId)}`
+}
+
+export function messageIdFromChatHash(hash: string): string | null {
+  const value = hash.startsWith('#') ? hash.slice(1) : hash
+  if (!value.startsWith(CHAT_MESSAGE_HASH_PREFIX)) return null
+  const encodedId = value.slice(CHAT_MESSAGE_HASH_PREFIX.length)
+  if (!encodedId) return null
+  try {
+    return decodeURIComponent(encodedId)
+  } catch {
+    return null
+  }
 }
 
 export function focusChatMessage(messageId: string): boolean {

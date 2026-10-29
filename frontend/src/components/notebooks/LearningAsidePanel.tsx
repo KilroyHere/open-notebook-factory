@@ -25,6 +25,7 @@ import {
 } from '@/lib/types/api'
 import { useTranslation } from '@/lib/hooks/use-translation'
 import { createLearningUpdateDraft } from '@/lib/utils/learning-asides'
+import { LearningEvidenceButtons } from '@/components/notebooks/LearningThreadLinks'
 
 interface LearningAsidePanelProps {
   open: boolean
@@ -46,6 +47,7 @@ interface LearningAsidePanelProps {
     status: Exclude<LearningAsideStatus, 'resolved'>
   ) => Promise<unknown>
   onNavigateToMessage: (messageId: string) => void
+  onReferenceClick?: (type: string, id: string) => void
 }
 
 const statusTranslationKeys: Record<LearningAsideStatus, string> = {
@@ -77,6 +79,7 @@ export function LearningAsidePanel({
   onResolve,
   onUpdateStatus,
   onNavigateToMessage,
+  onReferenceClick,
 }: LearningAsidePanelProps) {
   const { t } = useTranslation()
   const [showList, setShowList] = useState(!activeAside)
@@ -320,6 +323,11 @@ export function LearningAsidePanel({
                         </ul>
                       </div>
                     )}
+                    <LearningEvidenceButtons
+                      citations={latestUpdate.citations}
+                      onReferenceClick={onReferenceClick}
+                      className="mt-3 border-t pt-3"
+                    />
                     <div className="mt-3 flex flex-wrap gap-2 border-t pt-3">
                       <Button
                         variant="secondary"
