@@ -105,6 +105,13 @@ export function LearningAsidePanel({
       .find((message) => message.type === 'ai')?.content ?? ''
   const latestAnswerDraft = createLearningUpdateDraft(latestAnswerContent)
   const latestUpdate = activeAside?.updates.at(-1)
+  // After resolving, the way back lands on the reply that received the
+  // conclusion, or on the message the aside branched from.
+  const returnTarget =
+    [...(activeAside?.updates ?? [])]
+      .reverse()
+      .find((update) => update.applied_message_id)?.applied_message_id ??
+    activeAside?.anchor.message_id
   const parentAside = activeAside?.parent_aside_id
     ? asides.find((aside) => aside.id === activeAside.parent_aside_id)
     : undefined
@@ -362,6 +369,17 @@ export function LearningAsidePanel({
                     />
                     <div className="mt-3 flex flex-wrap gap-2 border-t pt-3">
                       <Button
+                        size="sm"
+                        onClick={() =>
+                          returnTarget
+                            ? returnToMainMessage(returnTarget)
+                            : onOpenChange(false)
+                        }
+                      >
+                        <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
+                        {t('learningAsides.returnToMain')}
+                      </Button>
+                      <Button
                         variant="secondary"
                         size="sm"
                         onClick={() => setShowTranscript((value) => !value)}
@@ -370,19 +388,6 @@ export function LearningAsidePanel({
                           ? t('learningAsides.hideTranscript')
                           : t('learningAsides.viewTranscript')}
                       </Button>
-                      {latestUpdate.applied_message_id && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            returnToMainMessage(
-                              latestUpdate.applied_message_id!
-                            )
-                          }
-                        >
-                          {t('learningAsides.viewMergedResponse')}
-                        </Button>
-                      )}
                     </div>
                   </div>
                 )}

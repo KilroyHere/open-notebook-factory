@@ -370,4 +370,73 @@ describe('LearningAsidePanel', () => {
     expect(onReferenceClick).toHaveBeenCalledWith('source', '6tsit42')
     expect(screen.getByText(/common\.references/)).toBeInTheDocument()
   })
+
+  it('offers a way back to the merged reply after resolving', async () => {
+    const onOpenChange = vi.fn()
+    const onNavigateToMessage = vi.fn()
+    const update = {
+      id: 'learning_update:one',
+      aside_id: aside.id,
+      conclusion: 'Jensen gives a lower bound.',
+      open_questions: [],
+      citations: [],
+      include_in_main: true,
+      applied_message_id: 'ai:merged',
+      version: 1,
+      created: aside.created,
+      updated: aside.updated,
+    }
+    const { rerender } = render(
+      <LearningAsidePanel
+        {...baseProps}
+        activeAside={{ ...aside, status: 'resolved', updates: [update] }}
+        onOpenChange={onOpenChange}
+        onNavigateToMessage={onNavigateToMessage}
+      />
+    )
+
+    fireEvent.click(
+      screen.getByText('learningAsides.returnToMain').closest('button')!
+    )
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+    await waitFor(() =>
+      expect(onNavigateToMessage).toHaveBeenCalledWith('ai:merged')
+    )
+    expect(onNavigateToMessage).toHaveBeenCalledTimes(1)
+
+    // Not merged into the main chat: fall back to the origin message.
+    rerender(
+      <LearningAsidePanel
+        {...baseProps}
+        activeAside={{
+          ...aside,
+          status: 'resolved',
+          updates: [{ ...update, applied_message_id: null }],
+        }}
+        onOpenChange={onOpenChange}
+        onNavigateToMessage={onNavigateToMessage}
+      />
+    )
+    fireEvent.click(
+      screen.getByText('learningAsides.returnToMain').closest('button')!
+    )
+    await waitFor(() =>
+      expect(onNavigateToMessage).toHaveBeenLastCalledWith('message:one')
+    )
+  })
+
+  it('does not leave an unresolved aside on its own', () => {
+    const onNavigateToMessage = vi.fn()
+    render(
+      <LearningAsidePanel
+        {...baseProps}
+        activeAside={aside}
+        onNavigateToMessage={onNavigateToMessage}
+      />
+    )
+    expect(
+      screen.queryByText('learningAsides.returnToMain')
+    ).not.toBeInTheDocument()
+    expect(onNavigateToMessage).not.toHaveBeenCalled()
+  })
 })
