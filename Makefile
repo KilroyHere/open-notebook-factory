@@ -194,11 +194,11 @@ status:
 	@echo "Database (SurrealDB):"
 	@docker compose ps surrealdb 2>/dev/null || echo "  ❌ Not running"
 	@echo "API Backend:"
-	@pgrep -f "run_api.py\|uvicorn api.main:app" >/dev/null && echo "  ✅ Running" || echo "  ❌ Not running"
+	@curl --fail --silent --max-time 2 "http://127.0.0.1:$${API_PORT:-5055}/health" >/dev/null && echo "  ✅ Running and healthy" || echo "  ❌ Not reachable"
 	@echo "Background Worker:"
 	@pgrep -f "surreal-commands-worker" >/dev/null && echo "  ✅ Running" || echo "  ❌ Not running"
 	@echo "Next.js Frontend:"
-	@pgrep -f "next dev" >/dev/null && echo "  ✅ Running" || echo "  ❌ Not running"
+	@curl --fail --silent --max-time 2 "http://127.0.0.1:$${PORT:-3000}" >/dev/null && echo "  ✅ Running and reachable" || echo "  ❌ Not reachable"
 
 # === Documentation Export ===
 export-docs:

@@ -93,3 +93,15 @@ def test_makefile_delegates_start_all_to_supervisor():
 
     assert "uv run python scripts/start_all.py" in start_target
     assert "run_api.py &" not in start_target
+
+
+def test_makefile_status_checks_service_health_not_process_names():
+    makefile = Path("Makefile").read_text()
+    status_target = makefile.split("status:", 1)[1].split(
+        "# === Documentation Export", 1
+    )[0]
+
+    assert "http://127.0.0.1:$${API_PORT:-5055}/health" in status_target
+    assert "http://127.0.0.1:$${PORT:-3000}" in status_target
+    assert 'pgrep -f "run_api.py' not in status_target
+    assert 'pgrep -f "next dev' not in status_target
