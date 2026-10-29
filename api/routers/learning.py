@@ -432,11 +432,16 @@ async def send_aside_message(aside_id: str, request: SendLearningAsideMessageReq
         raise InvalidInputError("Aside chat returned no messages")
 
     await session.save()
-    if aside.status != "active":
-        aside.status = "active"
-        await aside.save()
-    journey.active_session = aside.chat_session
-    await journey.save()
+    # A follow-up on a resolved aside is a clarifying question, not a reopen:
+    # it stays resolved (its accepted update is unchanged) and navigation stays
+    # on the parent. Re-resolving is the explicit way to change the conclusion.
+    # A parked aside is resumed by writing to it.
+    if aside.status != "resolved":
+        if aside.status != "active":
+            aside.status = "active"
+            await aside.save()
+        journey.active_session = aside.chat_session
+        await journey.save()
     return await _aside_response(aside)
 
 

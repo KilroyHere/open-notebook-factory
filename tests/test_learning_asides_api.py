@@ -848,3 +848,79 @@ async def test_resume_lists_only_current_resolutions_as_accepted(client):
 
     assert response.status_code == 200
     assert response.json()["accepted_findings"] == ["Revised conclusion"]
+
+
+def _send_aside_message(client, aside, journey):
+    def fake_invoke(graph, state, config, user_message):
+        return {"messages": [user_message, SimpleNamespace(id="ai:r", type="ai")]}
+
+    with (
+        patch(
+            "api.routers.learning._get_aside",
+            new_callable=AsyncMock,
+            return_value=aside,
+        ),
+        patch(
+            "api.routers.learning.LearningJourney.get",
+            new_callable=AsyncMock,
+            return_value=journey,
+        ),
+        patch(
+            "api.routers.learning.ChatSession.get",
+            new_callable=AsyncMock,
+            return_value=SimpleNamespace(model_override=None, save=AsyncMock()),
+        ),
+        patch(
+            "api.routers.learning.Notebook.get",
+            new_callable=AsyncMock,
+            return_value=SimpleNamespace(id="notebook:one"),
+        ),
+        patch(
+            "api.routers.learning.chat_graph.get_state",
+            return_value=SimpleNamespace(values={"messages": []}),
+        ),
+        patch("api.routers.learning.invoke_chat_turn", new=fake_invoke),
+        patch(
+            "api.routers.learning.LearningAside.save", new_callable=AsyncMock
+        ) as save_aside,
+        patch(
+            "api.routers.learning.LearningJourney.save", new_callable=AsyncMock
+        ) as save_journey,
+        patch(
+            "api.routers.learning._aside_response",
+            new_callable=AsyncMock,
+            side_effect=lambda aside: _aside_response(aside),
+        ),
+    ):
+        response = client.post(
+            f"/api/learning/asides/{aside.id.split(':')[1]}/messages",
+            json={"message": "One more question", "context": {}},
+        )
+    return response, save_aside, save_journey
+
+
+def test_follow_up_on_resolved_aside_keeps_it_resolved(client):
+    aside = _aside(status="resolved")
+    journey = _journey(active_session="chat_session:main")
+
+    response, save_aside, save_journey = _send_aside_message(client, aside, journey)
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "resolved"
+    assert aside.status == "resolved"
+    assert journey.active_session == "chat_session:main"
+    save_aside.assert_not_called()
+    save_journey.assert_not_called()
+
+
+def test_message_to_parked_aside_resumes_it(client):
+    aside = _aside(status="parked")
+    journey = _journey(active_session="chat_session:main")
+
+    response, save_aside, save_journey = _send_aside_message(client, aside, journey)
+
+    assert response.status_code == 200
+    assert aside.status == "active"
+    assert journey.active_session == "chat_session:child"
+    save_aside.assert_awaited_once()
+    save_journey.assert_awaited_once()
