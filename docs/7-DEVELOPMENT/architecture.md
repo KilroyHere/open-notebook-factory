@@ -42,6 +42,7 @@ The Docker image runs the API, worker and frontend under supervisord (`superviso
 | `api/*_service.py` | Shared or orchestration logic: `command_service.py` (job submission), `credentials_service.py` (credential lifecycle, discovery), `podcast_service.py` |
 | `api/models.py` | Pydantic request and response schemas |
 | `open_notebook/domain/` | Domain models on `ObjectModel` / `RecordModel` (`base.py`): `Notebook`, `Source`, `Note`, `SourceInsight`, `ChatSession`, `Transformation`, `Credential`, settings singletons |
+| `open_notebook/domain/learning.py` | Durable learning journeys, isolated chat asides and user-approved learning updates |
 | `open_notebook/ai/` | `provider_registry.py` (provider metadata), `models.py` (`Model`, `DefaultModels`, `ModelManager`), `provision.py`, `key_provider.py`, `model_discovery.py`, `connection_tester.py` |
 | `open_notebook/graphs/` | LangGraph workflows (below) |
 | `open_notebook/podcasts/` | `EpisodeProfile`, `SpeakerProfile`, `PodcastEpisode` |
@@ -62,6 +63,7 @@ Defined by the migrations in `open_notebook/database/migrations/` (read them for
 | `source_insight` | Transformation output for a source: `source`, `insight_type`, `content`, `embedding` |
 | `note` | Title, content, `note_type`, `embedding` |
 | `chat_session` | Session metadata only; messages live in the SQLite checkpoint, keyed by session id |
+| `learning_journey`, `learning_aside`, `learning_update` | Main learning path, anchored child conversations and the compact conclusions explicitly approved to return to the main context |
 | `transformation` | Prompt-based transformations: `name`, `title`, `prompt`, `apply_default`, optional `model_id` |
 | `model` | A configured model: `provider`, `name`, `type`, optional `credential` link |
 | `credential` | Provider credentials, API key encrypted ([credentials.md](credentials.md)) |

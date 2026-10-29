@@ -137,15 +137,27 @@ class Notebook(ObjectModel):
 
         return "\n\n".join(context_blocks)
 
-    async def get_chat_sessions(self) -> List["ChatSession"]:
+    async def get_chat_sessions(
+        self, include_learning_asides: bool = False
+    ) -> List["ChatSession"]:
         try:
-            srcs = await repo_query(
+            aside_filter = (
+                ""
+                if include_learning_asides
+                else """
+                    and in not in (
+                        select value chat_session from learning_aside
+                    )
                 """
+            )
+            srcs = await repo_query(
+                f"""
                 select * from (
                     select
                     <- chat_session as chat_session
                     from refers_to
                     where out=$id
+                    {aside_filter}
                     fetch chat_session
                 )
                 order by chat_session.updated desc
@@ -233,6 +245,14 @@ class Notebook(ObjectModel):
             deleted_sources = 0
             unlinked_sources = 0
             deleted_chat_sessions = 0
+
+            # Learning-aside child sessions are hidden from the normal session
+            # list. Remove their journeys first so deleting a notebook cannot
+            # leave hidden chat sessions or accepted updates behind.
+            from open_notebook.domain.learning import LearningJourney
+
+            for journey in await LearningJourney.get_for_notebook(self.id):
+                await journey.delete_with_asides()
 
             # 1. Get and delete all notes linked to this notebook
             notes = await self.get_notes()

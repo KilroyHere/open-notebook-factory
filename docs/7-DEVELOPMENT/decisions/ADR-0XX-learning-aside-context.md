@@ -1,0 +1,27 @@
+# ADR-0XX: Learning asides merge approved artifacts, not transcripts
+
+- **Status**: Accepted
+- **Date**: 2026-10
+- **Related**: Learning Asides feature
+
+## Context
+
+Learners regularly interrupt a main notebook conversation to resolve a prerequisite, inspect a claim or work through mathematics. Copying an entire side conversation back into the parent recreates the context pollution that branching is meant to prevent. Chat messages also live in LangGraph's SQLite checkpoints while durable product metadata lives in SurrealDB, so checkpoint ancestry is not a sufficient persistence model.
+
+## Decision
+
+An aside is a child `chat_session` with a SurrealDB `learning_aside` record that stores its parent, stable anchor and a snapshot of parent context at the branch point. The child transcript remains isolated. Only an explicit, editable `learning_update` approved by the user can enter the main chat context or become a note. Journey, anchor, status and update records remain in SurrealDB; chat content continues to use the existing SQLite checkpointer.
+
+## Alternatives considered
+
+- **Append the full branch transcript to the parent**: rejected because it increases tokens, imports dead ends and obscures what the learner accepted.
+- **Store branches only as LangGraph checkpoints**: rejected because source anchors, lifecycle, navigation and approved conclusions need durable queryable metadata.
+- **Save every aside as a note**: rejected because exploratory and unresolved discussion is not automatically durable knowledge.
+
+## Consequences
+
+- The main prompt stays compact and receives only accepted conclusions.
+- Branches remain auditable and can be reopened without rewriting earlier updates.
+- Stable message identifiers and source snapshots are part of the feature contract.
+- Deleting notebooks or main sessions must cascade through hidden child sessions and updates.
+- A future learner model can consume approved updates, but explanation alone must never imply mastery.

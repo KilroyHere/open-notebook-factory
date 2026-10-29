@@ -174,25 +174,14 @@ worker-restart: worker-stop
 
 # === Service Management ===
 start-all:
-	@echo "🚀 Starting Open Notebook (Database + API + Worker + Frontend)..."
-	@echo "📊 Starting SurrealDB..."
-	@docker compose up -d surrealdb
-	@sleep 3
-	@echo "🔧 Starting API backend..."
-	@uv run run_api.py &
-	@sleep 3
-	@echo "⚙️ Starting background worker..."
-	@uv run --env-file .env surreal-commands-worker --import-modules commands --max-tasks "$${OPEN_NOTEBOOK_WORKER_MAX_TASKS:-5}" &
-	@sleep 2
-	@echo "🌐 Starting Next.js frontend..."
-	@echo "✅ All services started!"
-	@echo "📱 Frontend: http://localhost:3000"
-	@echo "🔗 API: http://localhost:5055"
-	@echo "📚 API Docs: http://localhost:5055/docs"
-	cd frontend && npm run dev
+	@uv run python scripts/start_all.py
 
 stop-all:
 	@echo "🛑 Stopping all Open Notebook services..."
+	@if [ -f /tmp/open-notebook-start-all.pid ]; then \
+		kill "$$(cat /tmp/open-notebook-start-all.pid)" 2>/dev/null || true; \
+		sleep 1; \
+	fi
 	@pkill -f "next dev" || true
 	@pkill -f "surreal-commands-worker" || true
 	@pkill -f "run_api.py" || true
@@ -205,11 +194,11 @@ status:
 	@echo "Database (SurrealDB):"
 	@docker compose ps surrealdb 2>/dev/null || echo "  ❌ Not running"
 	@echo "API Backend:"
-	@pgrep -f "run_api.py\|uvicorn api.main:app" >/dev/null && echo "  ✅ Running" || echo "  ❌ Not running"
+	@curl --fail --silent --max-time 2 "http://127.0.0.1:$${API_PORT:-5055}/health" >/dev/null && echo "  ✅ Running and healthy" || echo "  ❌ Not reachable"
 	@echo "Background Worker:"
 	@pgrep -f "surreal-commands-worker" >/dev/null && echo "  ✅ Running" || echo "  ❌ Not running"
 	@echo "Next.js Frontend:"
-	@pgrep -f "next dev" >/dev/null && echo "  ✅ Running" || echo "  ❌ Not running"
+	@curl --fail --silent --max-time 2 "http://127.0.0.1:$${PORT:-3000}" >/dev/null && echo "  ✅ Running and reachable" || echo "  ❌ Not reachable"
 
 # === Documentation Export ===
 export-docs:

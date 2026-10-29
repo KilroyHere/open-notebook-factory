@@ -25,6 +25,7 @@ import { ThemeToggle } from '@/components/common/ThemeToggle'
 import { LanguageToggle } from '@/components/common/LanguageToggle'
 import type { TFunction } from 'i18next'
 import { useTranslation } from '@/lib/hooks/use-translation'
+import { useMediaQuery } from '@/lib/hooks/use-media-query'
 import { Separator } from '@/components/ui/separator'
 import {
   Book,
@@ -92,6 +93,8 @@ export function AppSidebar() {
   const pathname = usePathname()
   const { logout } = useAuth()
   const { isCollapsed, toggleCollapse } = useSidebarStore()
+  const isNarrow = useMediaQuery('(max-width: 767px)')
+  const effectiveCollapsed = isCollapsed || isNarrow
   const { openSourceDialog, openNotebookDialog, openPodcastDialog } = useCreateDialogs()
 
   // The active item is the longest href that prefixes the current path.
@@ -127,17 +130,17 @@ export function AppSidebar() {
     <TooltipProvider delayDuration={0}>
       <div
         className={cn(
-          'app-sidebar flex h-full flex-col bg-sidebar border-sidebar-border border-r transition-all duration-300',
-          isCollapsed ? 'w-16' : 'w-64'
+          'app-sidebar flex h-full max-md:w-16 flex-col overflow-hidden bg-sidebar border-sidebar-border border-r transition-all duration-300',
+          effectiveCollapsed ? 'w-16' : 'w-64'
         )}
       >
         <div
           className={cn(
             'flex h-16 items-center group',
-            isCollapsed ? 'justify-center px-2' : 'justify-between px-4'
+            effectiveCollapsed ? 'justify-center px-2' : 'justify-between px-4'
           )}
         >
-          {isCollapsed ? (
+          {effectiveCollapsed ? (
             <div className="relative flex items-center justify-center w-full">
               <LogoPebbles className="flex-col gap-[3px] transition-opacity group-hover:opacity-0" />
               <Button
@@ -173,17 +176,17 @@ export function AppSidebar() {
         <nav
           className={cn(
             'flex-1 space-y-1 py-4',
-            isCollapsed ? 'px-2' : 'px-3'
+            effectiveCollapsed ? 'px-2' : 'px-3'
           )}
         >
           <div
             className={cn(
               'mb-4',
-              isCollapsed ? 'px-0' : 'px-3'
+              effectiveCollapsed ? 'px-0' : 'px-3'
             )}
           >
             <DropdownMenu open={createMenuOpen} onOpenChange={setCreateMenuOpen}>
-              {isCollapsed ? (
+              {effectiveCollapsed ? (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <DropdownMenuTrigger asChild>
@@ -215,8 +218,8 @@ export function AppSidebar() {
               )}
 
               <DropdownMenuContent
-                align={isCollapsed ? 'end' : 'start'}
-                side={isCollapsed ? 'right' : 'bottom'}
+                align={effectiveCollapsed ? 'end' : 'start'}
+                side={effectiveCollapsed ? 'right' : 'bottom'}
                 className="w-48"
               >
                 <DropdownMenuItem
@@ -259,7 +262,7 @@ export function AppSidebar() {
                 <Separator className="my-3" />
               )}
               <div className="space-y-1">
-                {!isCollapsed && (
+                {!effectiveCollapsed && (
                   <h3 className="mb-1.5 px-3 text-[10.5px] font-bold uppercase tracking-[0.14em] text-sidebar-foreground/40">
                     {section.title}
                   </h3>
@@ -274,15 +277,15 @@ export function AppSidebar() {
                         'w-full gap-2.5 text-[13px] font-medium text-sidebar-foreground/80 sidebar-menu-item relative',
                         isActive &&
                           'bg-popover font-semibold text-sidebar-foreground ring-1 ring-inset ring-border before:absolute before:-left-1.5 before:top-[7px] before:bottom-[7px] before:w-[3px] before:rounded-[2px] before:bg-fern',
-                        isCollapsed ? 'justify-center px-2' : 'justify-start'
+                        effectiveCollapsed ? 'justify-center px-2' : 'justify-start'
                       )}
                     >
                       <item.icon className={cn('h-4 w-4 opacity-85', item.iconClass)} />
-                      {!isCollapsed && <span>{item.name}</span>}
+                      {!effectiveCollapsed && <span>{item.name}</span>}
                     </Button>
                   )
 
-                  if (isCollapsed) {
+                  if (effectiveCollapsed) {
                     return (
                       <Tooltip key={item.name}>
                         <TooltipTrigger asChild>
@@ -309,11 +312,11 @@ export function AppSidebar() {
         <div
           className={cn(
             'border-t border-sidebar-border p-3 space-y-2',
-            isCollapsed && 'px-2'
+            effectiveCollapsed && 'px-2'
           )}
         >
           {/* Command Palette hint */}
-          {!isCollapsed && (
+          {!effectiveCollapsed && (
             <div className="px-3 py-1.5 text-xs text-sidebar-foreground/60">
               <div className="flex items-center justify-between">
                  <span className="flex items-center gap-1.5">
@@ -333,10 +336,10 @@ export function AppSidebar() {
            <div
             className={cn(
               'flex flex-col gap-2',
-              isCollapsed ? 'items-center' : 'items-stretch'
+              effectiveCollapsed ? 'items-center' : 'items-stretch'
             )}
           >
-            {isCollapsed ? (
+            {effectiveCollapsed ? (
               <>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -363,7 +366,7 @@ export function AppSidebar() {
             )}
           </div>
 
-          {isCollapsed ? (
+          {effectiveCollapsed ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button

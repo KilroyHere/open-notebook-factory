@@ -234,6 +234,7 @@ export interface SendNotebookChatMessageRequest {
 
 export interface BuildContextRequest {
   notebook_id: string
+  session_id?: string
   context_config: {
     sources: Record<string, string>
     notes: Record<string, string>
@@ -241,12 +242,100 @@ export interface BuildContextRequest {
 }
 
 export interface BuildContextResponse {
-  context: {
+  context: Record<string, unknown> & {
     sources: Array<Record<string, unknown>>
     notes: Array<Record<string, unknown>>
+    learning_updates?: Array<Record<string, unknown>>
   }
   token_count: number
   char_count: number
+}
+
+export type LearningAsideStatus = 'active' | 'parked' | 'resolved' | 'discarded'
+export type LearningAsideAnchorType = 'message' | 'source' | 'citation' | 'equation'
+
+export interface LearningAsideAnchor {
+  type: LearningAsideAnchorType
+  content: string
+  message_id?: string
+  source_id?: string
+  locator?: string
+}
+
+export interface LearningUpdate {
+  id: string
+  aside_id: string
+  conclusion: string
+  relevance?: string | null
+  open_questions: string[]
+  citations: string[]
+  include_in_main: boolean
+  saved_note_id?: string | null
+  version: number
+  created: string
+  updated: string
+}
+
+export interface LearningAside {
+  id: string
+  journey_id: string
+  parent_aside_id?: string | null
+  parent_session_id: string
+  chat_session_id: string
+  title: string
+  status: LearningAsideStatus
+  anchor: LearningAsideAnchor
+  messages: NotebookChatMessage[]
+  updates: LearningUpdate[]
+  created: string
+  updated: string
+}
+
+export interface LearningJourney {
+  id: string
+  notebook_id: string
+  main_session_id: string
+  active_session_id?: string | null
+  objective?: string | null
+  status: 'active' | 'archived'
+  asides: LearningAside[]
+  updates: LearningUpdate[]
+  created: string
+  updated: string
+}
+
+export interface LearningJourneyResume {
+  journey?: LearningJourney | null
+  current_point?: string | null
+  accepted_findings: string[]
+  open_aside_ids: string[]
+  recommended_aside_id?: string | null
+  recommended_action: 'start_aside' | 'continue_main' | 'resume_aside' | 'review'
+}
+
+export interface CreateLearningAsideRequest {
+  notebook_id: string
+  parent_session_id: string
+  parent_aside_id?: string
+  title?: string
+  objective?: string
+  model_override?: string
+  anchor: LearningAsideAnchor
+}
+
+export interface SendLearningAsideMessageRequest {
+  message: string
+  context: Record<string, unknown>
+  model_override?: string
+}
+
+export interface ResolveLearningAsideRequest {
+  conclusion: string
+  relevance?: string
+  open_questions?: string[]
+  citations?: string[]
+  include_in_main: boolean
+  save_as_note: boolean
 }
 
 export interface RecentlyViewedResponse {

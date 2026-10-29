@@ -3,6 +3,7 @@
 import { useAuthStore } from '@/lib/stores/auth-store'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
+import { isAuthStatePending } from '@/lib/auth-state'
 
 export function useAuth() {
   const router = useRouter()
@@ -15,7 +16,8 @@ export function useAuth() {
     checkAuthRequired,
     error,
     hasHydrated,
-    authRequired
+    authRequired,
+    isCheckingAuth,
   } = useAuthStore()
 
   useEffect(() => {
@@ -60,7 +62,12 @@ export function useAuth() {
 
   return {
     isAuthenticated,
-    isLoading: isLoading || !hasHydrated, // Treat lack of hydration as loading
+    isLoading: isAuthStatePending({
+      isLoading,
+      hasHydrated,
+      authRequired,
+      isCheckingAuth,
+    }),
     error,
     login: handleLogin,
     logout: handleLogout

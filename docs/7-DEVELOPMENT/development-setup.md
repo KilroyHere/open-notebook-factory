@@ -21,6 +21,15 @@ The worker is not optional. Source processing, embeddings and podcasts are backg
 - **Docker** with the Compose plugin, for SurrealDB
 - **ffmpeg** if you work on podcasts or audio/video sources (the Docker image installs it)
 
+On a fresh Debian or Ubuntu machine, the repository includes an idempotent installer:
+
+```bash
+bash scripts/install-dev-prerequisites.sh
+bash scripts/install-dev-prerequisites.sh --check
+```
+
+It installs Node.js 22, uv with Python 3.12, Docker Engine with Compose v2, Git, Make and ffmpeg. Use `--without-docker` when Docker is managed separately (for example, by your organization). Other operating systems should install the prerequisites above with their native package manager; the script exits without making changes on unsupported systems.
+
 ## 1. Clone and install
 
 ```bash
@@ -60,10 +69,17 @@ The API loads `.env` itself (`load_dotenv()` in `api/main.py`); `make api` and `
 All at once, in one terminal:
 
 ```bash
-make start-all    # SurrealDB, API, worker, then the frontend in the foreground
+make start-all    # supervises all four; waits for readiness and fails with logs
 make status       # which of the four are running
 make stop-all     # stops all four (also runs `docker compose down`)
 ```
+
+`make start-all` validates `.env` before launching anything. It waits for
+SurrealDB, the API health endpoint, the worker's initial database connection
+and the frontend port instead of relying on fixed sleeps. If the API or worker
+exits, it prints the relevant log tail; complete logs are at
+`/tmp/open-notebook-api.log` and `/tmp/open-notebook-worker.log`. Pressing
+**Ctrl+C** stops all four services, including the database container.
 
 Or one terminal per process, which makes logs easier to read:
 

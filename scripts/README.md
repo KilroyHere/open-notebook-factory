@@ -1,5 +1,38 @@
 # Scripts Documentation
 
+## start_all.py
+
+Starts and supervises the source-development stack used by `make start-all`.
+It loads `.env` (overriding stale exported values), validates that host
+processes use a localhost SurrealDB URL, waits for each service to become
+ready, and stops the whole stack on `Ctrl+C`. API and worker output is kept in
+`/tmp/open-notebook-api.log` and `/tmp/open-notebook-worker.log`; if either
+process exits, the relevant log tail is printed before startup fails.
+
+```bash
+make start-all
+```
+
+## install-dev-prerequisites.sh
+
+Installs and verifies the system tools required for source development on Debian and Ubuntu:
+
+- Git, Make and curl
+- Node.js 22
+- uv and a uv-managed Python 3.12
+- Docker Engine with Compose v2
+- ffmpeg
+
+The installer is idempotent and checks existing versions before replacing anything.
+
+```bash
+bash scripts/install-dev-prerequisites.sh
+bash scripts/install-dev-prerequisites.sh --check
+bash scripts/install-dev-prerequisites.sh --without-docker --without-ffmpeg
+```
+
+Docker installation uses Docker's signed Debian/Ubuntu package repository. If it adds your user to the `docker` group, log out and back in before running Docker without `sudo`. On WSL2, install Docker Desktop and enable WSL integration instead of installing a second Docker daemon.
+
 ## export_docs.py
 
 Consolidates markdown documentation files for use with ChatGPT or other platforms with file upload limits.

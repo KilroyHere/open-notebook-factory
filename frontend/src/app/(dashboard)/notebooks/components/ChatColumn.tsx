@@ -2,14 +2,17 @@
 
 import { useMemo } from 'react'
 import { useNotebookChat } from '@/lib/hooks/use-notebook-chat'
+import { useLearningAsides } from '@/lib/hooks/use-learning-asides'
 import { useNotes } from '@/lib/hooks/use-notes'
 import { ChatPanel } from '@/components/sources/ChatPanel'
+import { LearningAsidePanel } from '@/components/notebooks/LearningAsidePanel'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { Card, CardContent } from '@/components/ui/card'
-import { AlertCircle } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { AlertCircle, GitBranch } from 'lucide-react'
 import { ContextSelections } from '../[id]/page'
 import { useTranslation } from '@/lib/hooks/use-translation'
-import { SourceListResponse } from '@/lib/types/api'
+import { NotebookChatMessage, SourceListResponse } from '@/lib/types/api'
 
 interface ChatColumnProps {
   notebookId: string
@@ -31,6 +34,24 @@ export function ChatColumn({ notebookId, contextSelections, sources, sourcesLoad
     notes,
     contextSelections
   })
+  const learning = useLearningAsides({
+    notebookId,
+    mainSessionId: chat.currentSessionId,
+    buildContext: chat.buildContext,
+    modelOverride: chat.currentSession?.model_override ?? chat.pendingModelOverride ?? undefined
+  })
+
+  const handleOpenAside = (message: NotebookChatMessage) => {
+    void learning.createAside({
+      type: 'message',
+      message_id: message.id,
+      content: message.content
+    }).catch(() => undefined)
+  }
+
+  const resumableAside = learning.asides.find(
+    (aside) => aside.id === learning.resume?.recommended_aside_id
+  )
 
   // Calculate context stats for indicator
   const contextStats = useMemo(() => {
@@ -92,7 +113,25 @@ export function ChatColumn({ notebookId, contextSelections, sources, sourcesLoad
   }
 
   return (
-    <ChatPanel
+    <div className="flex h-full min-h-0 flex-1 flex-col gap-2">
+      {resumableAside && !learning.panelOpen && (
+        <div className="flex items-center justify-between gap-3 rounded-md border bg-card px-3 py-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <GitBranch className="h-4 w-4 shrink-0 text-teal" />
+            <p className="truncate text-xs text-muted-foreground">
+              {t('learningAsides.resumePrompt', { title: resumableAside.title })}
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => learning.openAside(resumableAside.id)}
+          >
+            {t('learningAsides.resume')}
+          </Button>
+        </div>
+      )}
+      <ChatPanel
       title={t('chat.chatWithNotebook')}
       contextType="notebook"
       messages={chat.messages}
@@ -110,6 +149,30 @@ export function ChatColumn({ notebookId, contextSelections, sources, sourcesLoad
       loadingSessions={chat.loadingSessions}
       notebookContextStats={contextStats}
       notebookId={notebookId}
-    />
+      onOpenAside={handleOpenAside}
+      onOpenAsides={chat.currentSessionId ? learning.openList : undefined}
+      asideCount={learning.asides.filter((aside) => aside.status !== 'discarded').length}
+      />
+      <LearningAsidePanel
+        open={learning.panelOpen}
+        onOpenChange={learning.setPanelOpen}
+        asides={learning.asides}
+        activeAside={learning.activeAside}
+        isLoading={learning.isLoading || learning.isCreating}
+        isSending={learning.isSending}
+        isResolving={learning.isResolving}
+        isAsideLoading={learning.isAsideLoading}
+        onSelectAside={learning.openAside}
+        onSendMessage={(asideId, message) =>
+          learning.sendMessage({ asideId, message })
+        }
+        onResolve={(asideId, data) =>
+          learning.resolveAside({ asideId, data })
+        }
+        onUpdateStatus={(asideId, status) =>
+          learning.updateStatus({ asideId, status })
+        }
+      />
+    </div>
   )
 }
