@@ -182,7 +182,7 @@ With the shipped compose file, everything lives in two directories next to `dock
 | `./notebook_data` | `/app/data` (open_notebook) | Uploaded files, podcast audio, chat checkpoints, caches |
 | `./surreal_data` | `/mydata` (surrealdb) | The SurrealDB database |
 
-The single-container image keeps the database in `./surreal_single_data` instead (see `examples/docker-compose-single.yml`). Also keep `OPEN_NOTEBOOK_ENCRYPTION_KEY` somewhere safe and separate: without it, the stored provider keys in a restored database can't be decrypted.
+The local single-container compose file keeps the database in `./surreal_single_data` instead (see `docker-compose.host.yml`). Also keep `OPEN_NOTEBOOK_ENCRYPTION_KEY` somewhere safe and separate: without it, the stored provider keys in a restored database can't be decrypted.
 
 ### Backup
 

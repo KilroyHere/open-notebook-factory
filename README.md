@@ -98,6 +98,22 @@ Learn more about our project at [https://www.open-notebook.ai](https://www.open-
 
 ## 🚀 Quick Start
 
+### Host this repository locally
+
+This is the command to send someone who should run the code in this repository. They need Docker with Compose. They do not need Python, Node, or a separate database install.
+
+```bash
+git clone https://github.com/KilroyHere/open-notebook-factory.git
+cd open-notebook-factory
+docker compose -f docker-compose.host.yml up --build
+```
+
+When the build finishes, open **http://localhost:8502**. The API is at **http://localhost:5055**. Stop it with Ctrl+C. To run it in the background, add `-d`, and stop it later with `docker compose -f docker-compose.host.yml down`.
+
+The first start builds the image from this checkout, so it takes longer than pulling a published image. Chat still needs a provider: in the sidebar open **Models**, add a configuration, then **Auto-assign Defaults**.
+
+The steps below install the published Open Notebook image. They do not run the code in this repository.
+
 ### Prerequisites
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (macOS, Windows) or Docker Engine with the Compose plugin (Linux)
 - An API key from an AI provider, or a local model server such as Ollama. You add it in the UI, not in config files.

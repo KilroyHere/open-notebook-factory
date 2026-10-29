@@ -1,12 +1,12 @@
-# Try this checkout in one container.
+# Host this repository on your own machine.
 #
 # From the repository root:
-#   docker compose -f examples/docker-compose-single.yml up --build
+#   docker compose -f docker-compose.host.yml up --build
 #
 # UI:  http://localhost:8502
 # API: http://localhost:5055
 #
-# The image includes SurrealDB, the API, the worker, and the web UI.
+# One container runs SurrealDB, the API, the worker, and the web UI.
 # Ports are bound to this machine only. Replace the encryption key before
 # you save real provider credentials.
 
@@ -15,7 +15,7 @@ name: open-notebook-local
 services:
   open_notebook:
     build:
-      context: ..
+      context: .
       dockerfile: Dockerfile
       target: single
     ports:
@@ -29,6 +29,6 @@ services:
       - SURREAL_NAMESPACE=open_notebook
       - SURREAL_DATABASE=open_notebook
     volumes:
-      - ../notebook_data:/app/data
-      - ../surreal_single_data:/mydata
+      - ./notebook_data:/app/data
+      - ./surreal_single_data:/mydata
     restart: unless-stopped

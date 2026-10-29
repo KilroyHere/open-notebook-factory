@@ -75,21 +75,6 @@ templates playground.
 
 ---
 
-### `docker-compose-single.yml` - Try this checkout locally
-**Use this if:** You want to run the code in this repository without installing Python, Node, or SurrealDB on the host.
-
-From the repository root:
-
-```bash
-docker compose -f examples/docker-compose-single.yml up --build
-```
-
-That builds one container with SurrealDB, the API, the worker, and the web UI. Open **http://localhost:8502**. Stop it with Ctrl+C, or add `-d` to run in the background and `docker compose -f examples/docker-compose-single.yml down` to stop it.
-
-The published single image (`v1-latest-single`) is a separate, deprecated install path. This file builds the checkout you have.
-
----
-
 ### `docker-compose-dev.yml` - Development Setup
 **Use this if:** You're contributing to Open Notebook or developing custom features
 
@@ -111,7 +96,7 @@ See [Development Guide](../docs/7-DEVELOPMENT/index.md)
 
 ## 🔄 How to Use These Examples
 
-The single-container file is the exception: run it from this repository, as written above. Do not copy it to another folder. The build path points at this checkout.
+To host the code in this repository, use [`docker-compose.host.yml`](../docker-compose.host.yml) in the repository root. The files in this folder are optional variants (Ollama, Speaches, and so on), not the way to try this checkout.
 
 1. **Choose** the example that fits your use case
 2. **Copy** the file to your project folder:
