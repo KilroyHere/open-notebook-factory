@@ -101,6 +101,7 @@ def _update_response(update: LearningUpdate) -> LearningUpdateResponse:
         citations=update.citations,
         include_in_main=update.include_in_main,
         saved_note_id=update.saved_note,
+        applied_message_id=update.applied_message_id,
         version=update.version,
         created=_timestamp(update.created),
         updated=_timestamp(update.updated),

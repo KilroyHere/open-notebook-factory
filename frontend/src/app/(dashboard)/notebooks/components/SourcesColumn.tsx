@@ -24,6 +24,7 @@ import type { SourceBulkAction } from '@/lib/utils/source-context'
 import { CollapsibleColumn, createCollapseButton } from '@/components/notebooks/CollapsibleColumn'
 import { useNotebookColumnsStore } from '@/lib/stores/notebook-columns-store'
 import { useTranslation } from '@/lib/hooks/use-translation'
+import { cn } from '@/lib/utils'
 
 interface SourcesColumnProps {
   sources?: SourceListResponse[]
@@ -38,6 +39,8 @@ interface SourcesColumnProps {
   hasNextPage?: boolean
   isFetchingNextPage?: boolean
   fetchNextPage?: () => void
+  allowCollapse?: boolean
+  embedded?: boolean
 }
 
 export function SourcesColumn({
@@ -51,6 +54,8 @@ export function SourcesColumn({
   hasNextPage,
   isFetchingNextPage,
   fetchNextPage,
+  allowCollapse = true,
+  embedded = false,
 }: SourcesColumnProps) {
   const { t } = useTranslation()
   const [dropdownOpen, setDropdownOpen] = useState(false)
@@ -68,9 +73,13 @@ export function SourcesColumn({
 
   // Collapsible column state
   const { sourcesCollapsed, toggleSources } = useNotebookColumnsStore()
+  const sourcesLabel = t('navigation.sources')
   const collapseButton = useMemo(
-    () => createCollapseButton(toggleSources, t('navigation.sources')),
-    [toggleSources, t('navigation.sources')]
+    () =>
+      allowCollapse && !embedded
+        ? createCollapseButton(toggleSources, sourcesLabel)
+        : null,
+    [allowCollapse, embedded, sourcesLabel, toggleSources]
   )
 
   // Scroll container ref for infinite scroll
@@ -151,19 +160,24 @@ export function SourcesColumn({
   return (
     <>
       <CollapsibleColumn
-        isCollapsed={sourcesCollapsed}
+        isCollapsed={allowCollapse && !embedded && sourcesCollapsed}
         onToggle={toggleSources}
         collapsedIcon={FileText}
         collapsedLabel={t('navigation.sources')}
       >
-        <Card className="h-full flex flex-col flex-1 overflow-hidden">
+        <Card className={cn(
+          'h-full flex flex-col flex-1 overflow-hidden',
+          embedded && 'rounded-none border-0 bg-transparent shadow-none'
+        )}>
           <CardHeader className="pb-3 flex-shrink-0">
             <div className="flex items-center justify-between gap-2">
-              <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.13em] text-muted-foreground">
-                <span aria-hidden className="h-3.5 w-[3px] rounded-full bg-sage" />
-                {t('navigation.sources')}
-              </CardTitle>
-              <div className="flex items-center gap-2">
+              {!embedded && (
+                <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.13em] text-muted-foreground">
+                  <span aria-hidden className="h-3.5 w-[3px] rounded-full bg-sage" />
+                  {t('navigation.sources')}
+                </CardTitle>
+              )}
+              <div className="ml-auto flex items-center gap-2">
                 {onBulkContextModeChange && sources && sources.length > 0 && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>

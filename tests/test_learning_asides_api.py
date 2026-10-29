@@ -8,6 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from api.models import LearningAsideResponse, LearningJourneyResponse
+from api.routers.chat import _mark_learning_updates_applied
 from open_notebook.domain.learning import (
     AsideAnchor,
     LearningAside,
@@ -350,3 +351,43 @@ def test_create_aside_rejects_empty_anchor_before_domain_work(client):
     )
 
     assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_main_response_links_learning_update_back_to_message():
+    update = LearningUpdate(
+        id="learning_update:one",
+        aside="learning_aside:one",
+        conclusion="Accepted conclusion",
+        include_in_main=True,
+    )
+    journey = _journey()
+    with (
+        patch(
+            "api.routers.chat.LearningJourney.get_for_main_session",
+            new_callable=AsyncMock,
+            return_value=journey,
+        ),
+        patch(
+            "open_notebook.domain.learning.LearningJourney.get_updates",
+            new_callable=AsyncMock,
+            return_value=[update],
+        ),
+        patch(
+            "open_notebook.domain.learning.LearningUpdate.save",
+            new_callable=AsyncMock,
+        ) as save_update,
+    ):
+        await _mark_learning_updates_applied(
+            "chat_session:main",
+            {"learning_updates": [{"id": "learning_update:one"}]},
+            {
+                "messages": [
+                    SimpleNamespace(id="human:one", type="human"),
+                    SimpleNamespace(id="ai:merged-response", type="ai"),
+                ]
+            },
+        )
+
+    assert update.applied_message_id == "ai:merged-response"
+    save_update.assert_awaited_once()

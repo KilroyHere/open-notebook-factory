@@ -99,6 +99,49 @@ class BuildContextResponse(BaseModel):
     char_count: int = Field(..., description="Character count")
 
 
+async def _mark_learning_updates_applied(
+    session_id: str,
+    context: Dict[str, Any],
+    result: Dict[str, Any],
+) -> None:
+    """Link accepted updates to the first main-chat response that used them.
+
+    This is best-effort metadata: a successful model response must not become
+    a failed chat turn because a backlink could not be saved.
+    """
+    context_update_ids = {
+        str(item.get("id"))
+        for item in context.get("learning_updates", [])
+        if isinstance(item, dict) and item.get("id")
+    }
+    if not context_update_ids:
+        return
+
+    response_message_id = next(
+        (
+            str(getattr(message, "id"))
+            for message in reversed(result.get("messages", []))
+            if getattr(message, "type", None) == "ai" and getattr(message, "id", None)
+        ),
+        None,
+    )
+    if not response_message_id:
+        return
+
+    try:
+        journey = await LearningJourney.get_for_main_session(session_id)
+        if not journey:
+            return
+        for update in await journey.get_updates(include_unmerged=False):
+            if update.id in context_update_ids and update.applied_message_id is None:
+                update.applied_message_id = response_message_id
+                await update.save()
+    except Exception as exc:
+        logger.warning(
+            f"Could not link learning updates to response {response_message_id}: {exc}"
+        )
+
+
 @router.get("/chat/sessions", response_model=List[ChatSessionResponse])
 async def get_sessions(notebook_id: str = Query(..., description="Notebook ID")):
     """Get all chat sessions for a notebook."""
@@ -379,6 +422,11 @@ async def execute_chat(request: ExecuteChatRequest):
 
         # Update session timestamp
         await session.save()
+        await _mark_learning_updates_applied(
+            full_session_id,
+            request.context,
+            result,
+        )
 
         # Convert messages to response format
         messages = extract_chat_messages(result.get("messages", []))

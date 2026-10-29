@@ -12,7 +12,8 @@ import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
 import {
   SourceChatMessage,
   SourceChatContextIndicator,
-  BaseChatSession
+  BaseChatSession,
+  LearningAside
 } from '@/lib/types/api'
 import { ModelSelector } from './ModelSelector'
 import { ContextIndicator } from '@/components/common/ContextIndicator'
@@ -22,6 +23,17 @@ import { convertReferencesToCompactMarkdown, createCompactReferenceLinkComponent
 import { useModalManager } from '@/lib/hooks/use-modal-manager'
 import { toast } from 'sonner'
 import { useTranslation } from '@/lib/hooks/use-translation'
+import {
+  LearningMergeEvent,
+  LearningThreadLinks,
+  learningMergesForMessage,
+} from '@/components/notebooks/LearningThreadLinks'
+import {
+  chatMessageDomId,
+  focusChatMessage,
+  messageIdFromChatHash,
+} from '@/lib/utils/chat-navigation'
+import { cn } from '@/lib/utils'
 
 interface NotebookContextStats {
   sourcesInsights: number
@@ -57,6 +69,10 @@ interface ChatPanelProps {
   onOpenAside?: (message: SourceChatMessage) => void
   onOpenAsides?: () => void
   asideCount?: number
+  learningAsides?: LearningAside[]
+  onOpenLearningAside?: (asideId: string) => void
+  onNavigateToMessage?: (messageId: string) => void
+  workspaceMode?: boolean
 }
 
 export function ChatPanel({
@@ -79,12 +95,17 @@ export function ChatPanel({
   notebookId,
   onOpenAside,
   onOpenAsides,
-  asideCount = 0
+  asideCount = 0,
+  learningAsides = [],
+  onOpenLearningAside,
+  onNavigateToMessage,
+  workspaceMode = false
 }: ChatPanelProps) {
   const { t } = useTranslation()
   const [sessionManagerOpen, setSessionManagerOpen] = useState(false)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const anchoredHashRef = useRef<string | null>(null)
   const { openModal } = useModalManager()
 
   // Stable reference-click handler so memoized messages don't re-render on
@@ -103,14 +124,36 @@ export function ChatPanel({
     }
   }, [openModal, t])
 
-  // Auto-scroll to bottom when new messages arrive
+  // Reveal a stable message hash once that turn is in the list. Later updates
+  // still follow the latest message instead of jumping back to the anchor.
   useEffect(() => {
+    const hash = window.location.hash
+    const anchoredId = messageIdFromChatHash(hash)
+    const hashMatchesMessage =
+      anchoredId !== null &&
+      messages.some((message) => message.id === anchoredId)
+    if (
+      hashMatchesMessage &&
+      anchoredId &&
+      anchoredHashRef.current !== hash &&
+      focusChatMessage(anchoredId)
+    ) {
+      anchoredHashRef.current = hash
+      return
+    }
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
   return (
     <>
-    <Card className="flex flex-col h-full flex-1 overflow-hidden">
+    <Card
+      className={cn(
+        'flex min-h-0 flex-1 flex-col overflow-hidden',
+        workspaceMode
+          ? 'gap-0 rounded-none border-0 bg-background py-0 shadow-none'
+          : 'h-full'
+      )}
+    >
       <CardHeader className="pb-3 flex-shrink-0">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.13em] text-muted-foreground">
@@ -165,7 +208,11 @@ export function ChatPanel({
         </div>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col min-h-0 p-0">
-        <ScrollArea className="flex-1 min-h-0 px-4" ref={scrollAreaRef}>
+        <ScrollArea
+          className="min-h-0 flex-1 overflow-hidden px-4"
+          viewportClassName="[&>div]:!block [&>div]:!min-w-0 [&>div]:!w-full"
+          ref={scrollAreaRef}
+        >
           <div className="space-y-4 py-4">
             {messages.length === 0 ? (
               <div className="text-center text-muted-foreground py-8">
@@ -183,6 +230,10 @@ export function ChatPanel({
                   notebookId={notebookId}
                   onReferenceClick={handleReferenceClick}
                   onOpenAside={onOpenAside}
+                  learningAsides={learningAsides}
+                  onOpenLearningAside={onOpenLearningAside}
+                  onNavigateToMessage={onNavigateToMessage}
+                  wide={workspaceMode}
                 />
               ))
             )}
@@ -345,19 +396,30 @@ interface ChatMessageProps {
   notebookId?: string
   onReferenceClick: (type: string, id: string) => void
   onOpenAside?: (message: SourceChatMessage) => void
+  learningAsides?: LearningAside[]
+  onOpenLearningAside?: (asideId: string) => void
+  onNavigateToMessage?: (messageId: string) => void
+  wide?: boolean
 }
 
 const ChatMessage = memo(function ChatMessage({
   message,
   notebookId,
   onReferenceClick,
-  onOpenAside
+  onOpenAside,
+  learningAsides = [],
+  onOpenLearningAside,
+  onNavigateToMessage,
+  wide = false
 }: ChatMessageProps) {
+  const appliedUpdates = learningMergesForMessage(learningAsides, message.id)
   return (
     <div
+      id={chatMessageDomId(message.id)}
+      tabIndex={-1}
       className={`flex gap-3 ${
         message.type === 'human' ? 'justify-end' : 'justify-start'
-      }`}
+      } scroll-mt-6 rounded-md transition-[box-shadow] outline-none`}
     >
       {message.type === 'ai' && (
         <div className="flex-shrink-0">
@@ -366,7 +428,12 @@ const ChatMessage = memo(function ChatMessage({
           </div>
         </div>
       )}
-      <div className="flex flex-col gap-2 max-w-[80%]">
+      <div
+        className={cn(
+          'flex flex-col gap-2',
+          wide && message.type === 'ai' ? 'w-full max-w-full' : 'max-w-[80%]'
+        )}
+      >
         <div
           className={`rounded-lg px-4 py-2 border ${
             message.type === 'human'
@@ -383,14 +450,34 @@ const ChatMessage = memo(function ChatMessage({
             <p className="text-sm break-all">{message.content}</p>
           )}
         </div>
-        {message.type === 'ai' && (
-          <MessageActions
-            content={message.content}
-            notebookId={notebookId}
-            onOpenAside={
-              onOpenAside ? () => onOpenAside(message) : undefined
-            }
+        {appliedUpdates.map(({ aside, update }) => (
+          <LearningMergeEvent
+            key={`${aside.id}:${update.id}`}
+            aside={aside}
+            update={update}
+            onOpenAside={onOpenLearningAside}
+            onReferenceClick={onReferenceClick}
           />
+        ))}
+        {message.type === 'ai' && (
+          <>
+            <MessageActions
+              content={message.content}
+              notebookId={notebookId}
+              onOpenAside={
+                onOpenAside ? () => onOpenAside(message) : undefined
+              }
+            />
+            {onOpenLearningAside && onNavigateToMessage && (
+              <LearningThreadLinks
+                messageId={message.id}
+                asides={learningAsides}
+                onOpenAside={onOpenLearningAside}
+                onNavigateToMessage={onNavigateToMessage}
+                onReferenceClick={onReferenceClick}
+              />
+            )}
+          </>
         )}
       </div>
       {message.type === 'human' && (

@@ -3,7 +3,7 @@
 import { ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { ChevronLeft, LucideIcon } from 'lucide-react'
+import { ChevronLeft, ChevronRight, LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface CollapsibleColumnProps {
@@ -31,8 +31,8 @@ export function CollapsibleColumn({
             <button
               onClick={onToggle}
               className={cn(
-                'flex flex-col items-center justify-center gap-3',
-                'w-12 h-full min-h-0',
+                'flex min-h-0 flex-1 flex-col items-center justify-center gap-3',
+                'h-full w-12',
                 'border rounded-lg',
                 'bg-card hover:bg-accent/50',
                 'transition-all duration-150',
@@ -59,14 +59,19 @@ export function CollapsibleColumn({
   }
 
   return (
-    <div className="h-full min-h-0 transition-all duration-150">
+    <div className="flex h-full min-h-0 flex-1 flex-col transition-all duration-150">
       {children}
     </div>
   )
 }
 
 // Factory function to create a collapse button for card headers
-export function createCollapseButton(onToggle: () => void, label: string) {
+export function createCollapseButton(
+  onToggle: () => void,
+  label: string,
+  side: 'left' | 'right' = 'left'
+) {
+  const Icon = side === 'right' ? ChevronRight : ChevronLeft
   return (
     <div className="hidden lg:block">
       <TooltipProvider>
@@ -82,7 +87,7 @@ export function createCollapseButton(onToggle: () => void, label: string) {
               className="h-7 w-7 hover:bg-accent"
               aria-label={`Collapse ${label}`}
             >
-              <ChevronLeft className="h-4 w-4" />
+              <Icon className="h-4 w-4" />
             </Button>
           </TooltipTrigger>
           <TooltipContent>

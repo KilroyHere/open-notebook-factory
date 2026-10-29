@@ -271,6 +271,7 @@ export interface LearningUpdate {
   citations: string[]
   include_in_main: boolean
   saved_note_id?: string | null
+  applied_message_id?: string | null
   version: number
   created: string
   updated: string

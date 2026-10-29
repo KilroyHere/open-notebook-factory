@@ -1,0 +1,3 @@
+-- Migration 27: link accepted learning updates to the main response that used them.
+
+DEFINE FIELD IF NOT EXISTS applied_message_id ON TABLE learning_update TYPE option<string>;

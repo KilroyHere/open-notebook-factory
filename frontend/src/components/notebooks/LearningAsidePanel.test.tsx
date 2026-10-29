@@ -44,12 +44,13 @@ const baseProps = {
   onSendMessage: vi.fn().mockResolvedValue(undefined),
   onResolve: vi.fn().mockResolvedValue(undefined),
   onUpdateStatus: vi.fn().mockResolvedValue(undefined),
+  onNavigateToMessage: vi.fn(),
 }
 
 describe('LearningAsidePanel', () => {
   it('lists durable asides and opens the selected one', () => {
     const onSelectAside = vi.fn()
-    render(
+    const { container } = render(
       <LearningAsidePanel
         {...baseProps}
         activeAside={undefined}
@@ -60,10 +61,7 @@ describe('LearningAsidePanel', () => {
     fireEvent.click(screen.getByText('Why does Jensen apply?'))
 
     expect(onSelectAside).toHaveBeenCalledWith('learning_aside:one')
-    expect(screen.getByRole('dialog').className).toContain('max-w-[100vw]')
-    expect(screen.getByRole('dialog').className).toContain(
-      'grid-rows-[auto_minmax(0,1fr)]'
-    )
+    expect(container.querySelector('section')?.className).toContain('h-full')
     expect(
       document.querySelector('[data-slot="scroll-area-viewport"]')?.className
     ).toContain('[&>div]:!w-full')
@@ -165,5 +163,119 @@ describe('LearningAsidePanel', () => {
     expect(
       screen.getByText('learningAsides.saveAsNoteHint')
     ).toBeInTheDocument()
+  })
+
+  it('returns to and highlights the exact origin message', async () => {
+    const onOpenChange = vi.fn()
+    const onNavigateToMessage = vi.fn()
+    render(
+      <LearningAsidePanel
+        {...baseProps}
+        activeAside={aside}
+        onOpenChange={onOpenChange}
+        onNavigateToMessage={onNavigateToMessage}
+      />
+    )
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'learningAsides.backToOrigin' })
+    )
+
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+    await waitFor(() =>
+      expect(onNavigateToMessage).toHaveBeenCalledWith('message:one')
+    )
+  })
+
+  it('keeps a resolved summary and expandable transcript', () => {
+    const resolved: LearningAside = {
+      ...aside,
+      status: 'resolved',
+      updates: [
+        {
+          id: 'learning_update:one',
+          aside_id: aside.id,
+          conclusion: 'Jensen gives a lower bound because log is concave.',
+          relevance: 'This validates the first ELBO step.',
+          open_questions: ['Why choose a Gaussian prior?'],
+          citations: [],
+          include_in_main: true,
+          applied_message_id: 'ai:merged',
+          version: 1,
+          created: aside.created,
+          updated: aside.updated,
+        },
+      ],
+    }
+    render(<LearningAsidePanel {...baseProps} activeAside={resolved} />)
+
+    expect(screen.getByText('learningAsides.summary')).toBeInTheDocument()
+    expect(
+      screen.getByText('Jensen gives a lower bound because log is concave.')
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText('Why does that inequality apply here?')
+    ).not.toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'learningAsides.viewTranscript',
+      })
+    )
+    expect(
+      screen.getByText('Why does that inequality apply here?')
+    ).toBeInTheDocument()
+  })
+
+  it('opens source, note, and insight citations from the resolved summary', () => {
+    const onReferenceClick = vi.fn()
+    const resolved: LearningAside = {
+      ...aside,
+      status: 'resolved',
+      updates: [
+        {
+          id: 'learning_update:one',
+          aside_id: aside.id,
+          conclusion: 'Jensen gives a lower bound because log is concave.',
+          relevance: 'This validates the first ELBO step.',
+          open_questions: [],
+          citations: [
+            'source:paper',
+            'note:margin',
+            'source_insight:lemma',
+            'chapter 2',
+          ],
+          include_in_main: true,
+          applied_message_id: 'ai:merged',
+          version: 1,
+          created: aside.created,
+          updated: aside.updated,
+        },
+      ],
+    }
+    render(
+      <LearningAsidePanel
+        {...baseProps}
+        activeAside={resolved}
+        onReferenceClick={onReferenceClick}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'common.source paper' }))
+    fireEvent.click(screen.getByRole('button', { name: 'common.note margin' }))
+    fireEvent.click(
+      screen.getByRole('button', { name: 'common.insight lemma' })
+    )
+
+    expect(onReferenceClick).toHaveBeenNthCalledWith(1, 'source', 'paper')
+    expect(onReferenceClick).toHaveBeenNthCalledWith(2, 'note', 'margin')
+    expect(onReferenceClick).toHaveBeenNthCalledWith(
+      3,
+      'source_insight',
+      'lemma'
+    )
+    expect(
+      screen.queryByRole('button', { name: /chapter 2/ })
+    ).not.toBeInTheDocument()
   })
 })
