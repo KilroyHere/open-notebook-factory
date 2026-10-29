@@ -16,7 +16,6 @@ the frontend — do not change it here.
 
 from __future__ import annotations
 
-import re
 from typing import Any, Dict, Optional, Tuple
 
 from loguru import logger
@@ -29,7 +28,12 @@ from open_notebook.domain.notebook import (
 )
 from open_notebook.exceptions import DatabaseOperationError, NotFoundError
 
-from .token_utils import token_count
+from .token_utils import (
+    ESTIMATE_UNIT_RE,
+    estimate_token_count,
+    get_tokenizer,
+    token_count,
+)
 
 SOURCE_TRUNCATION_NOTICE = (
     "\n\n[Source content truncated to fit the context token budget.]"
@@ -89,7 +93,7 @@ def _rendered_source_context_tokens(
     if encoding is _TOKENIZER_UNSET:
         return token_count(rendered)
     if encoding is None:
-        return int(len(rendered.split()) * 1.3)
+        return estimate_token_count(rendered)
     return len(encoding.encode(rendered, disallowed_special=()))
 
 
@@ -217,9 +221,7 @@ def _truncate_source_to_token_budget(
 
     try:
         if encoding is _TOKENIZER_UNSET:
-            import tiktoken
-
-            encoding = tiktoken.get_encoding("o200k_base")
+            encoding = get_tokenizer()
         if encoding is None:
             raise ImportError
         if source_tokens is None:
@@ -238,10 +240,11 @@ def _truncate_source_to_token_budget(
         if best is not None:
             return best, True
     except (ImportError, OSError):
-        # Match token_count's offline fallback with deterministic word-boundary
-        # prefixes. Its split-based estimate is monotonic, so binary search does
-        # not need the tokenizer path's validation window.
-        word_ends = [match.end() for match in re.finditer(r"\S+", full_text)]
+        # Match token_count's offline fallback with deterministic prefixes that
+        # end on one of its estimate units (a word, or a single CJK character).
+        # That estimate is monotonic, so binary search does not need the
+        # tokenizer path's validation window.
+        word_ends = [match.end() for match in ESTIMATE_UNIT_RE.finditer(full_text)]
 
         def word_prefix(word_count: int) -> str:
             return full_text[: word_ends[word_count - 1]]
@@ -406,12 +409,7 @@ async def build_source_context(
                 }
                 insight_items.append(insight_content)
 
-            try:
-                import tiktoken
-
-                encoding = tiktoken.get_encoding("o200k_base")
-            except (ImportError, OSError):
-                encoding = None
+            encoding = get_tokenizer()
 
             rendered_source_tokens = _rendered_source_context_tokens(
                 source_context,
