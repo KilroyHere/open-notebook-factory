@@ -75,15 +75,18 @@ templates playground.
 
 ---
 
-### `docker-compose-single.yml` - Single Container (Deprecated)
-**Use this if:** You need all services in one container (not recommended)
+### `docker-compose-single.yml` - Try this checkout locally
+**Use this if:** You want to run the code in this repository without installing Python, Node, or SurrealDB on the host.
 
-**⚠️ Deprecated:** We recommend using the standard multi-container setup (`docker-compose.yml` in root) for better reliability and easier troubleshooting.
+From the repository root:
 
-**Features:**
-- Single container includes SurrealDB, API, and Frontend
-- Simpler for very constrained environments
-- Less flexible for debugging and scaling
+```bash
+docker compose -f examples/docker-compose-single.yml up --build
+```
+
+That builds one container with SurrealDB, the API, the worker, and the web UI. Open **http://localhost:8502**. Stop it with Ctrl+C, or add `-d` to run in the background and `docker compose -f examples/docker-compose-single.yml down` to stop it.
+
+The published single image (`v1-latest-single`) is a separate, deprecated install path. This file builds the checkout you have.
 
 ---
 
@@ -107,6 +110,8 @@ See [Development Guide](../docs/7-DEVELOPMENT/index.md)
 ---
 
 ## 🔄 How to Use These Examples
+
+The single-container file is the exception: run it from this repository, as written above. Do not copy it to another folder. The build path points at this checkout.
 
 1. **Choose** the example that fits your use case
 2. **Copy** the file to your project folder:

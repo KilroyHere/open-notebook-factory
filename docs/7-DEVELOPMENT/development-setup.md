@@ -129,6 +129,7 @@ Optional: `uv run pre-commit install` installs git hooks (`.pre-commit-config.ya
 
 | Command | What it does | Use it for |
 |---|---|---|
+| `docker compose -f examples/docker-compose-single.yml up --build` | Builds this checkout into one container (database, API, worker, UI) and serves it at http://localhost:8502. No `docker.env` file. | Letting someone try the current tree with Docker only |
 | `make dev` | Builds the image from your checkout with `examples/docker-compose-dev.yml` (reads `docker.env`) | Checking that a change works in the container |
 | `make full` | Same, with `examples/docker-compose-full-local.yml` | Fully local stack in Docker |
 | `make docker-build-local` | Builds the production image for your platform, no push | PRs that touch the `Dockerfile` |
