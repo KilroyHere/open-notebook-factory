@@ -127,6 +127,7 @@ async def test_draft_uses_the_aside_model_and_returns_a_cleaned_structured_draft
             model_id="model:aside",
         )
 
+    assert provision.await_args is not None
     prompt, model_id, model_type = provision.await_args.args
     assert model_id == "model:aside"
     assert model_type == "chat"
@@ -247,6 +248,7 @@ def test_draft_endpoint_uses_session_model_and_hides_internal_ids(client):
         "relevance": "It justifies the first ELBO step.",
         "open_questions": ["When is the bound tight?"],
     }
+    assert draft.await_args is not None
     kwargs = draft.await_args.kwargs
     assert kwargs["model_id"] == "model:session"
     assert kwargs["anchor"] == aside.anchor.content
@@ -302,6 +304,7 @@ def test_draft_endpoint_prefers_an_explicit_model_override(client):
         )
 
     assert response.status_code == 200
+    assert draft.await_args is not None
     assert draft.await_args.kwargs["model_id"] == "model:picked"
 
 
