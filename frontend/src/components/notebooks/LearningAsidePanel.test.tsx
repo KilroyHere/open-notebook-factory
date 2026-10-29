@@ -77,9 +77,7 @@ describe('LearningAsidePanel', () => {
       />
     )
 
-    const input = screen.getByPlaceholderText(
-      'learningAsides.askPlaceholder'
-    )
+    const input = screen.getByLabelText('learningAsides.askPlaceholder')
     fireEvent.change(input, {
       target: { value: 'Can you show the algebra?' },
     })
@@ -91,6 +89,34 @@ describe('LearningAsidePanel', () => {
       expect(onSendMessage).toHaveBeenCalledWith(
         'learning_aside:one',
         'Can you show the algebra?'
+      )
+    )
+  })
+
+  it('sends with the same Ctrl+Enter shortcut as main chat and says so', async () => {
+    const onSendMessage = vi.fn().mockResolvedValue(undefined)
+    render(
+      <LearningAsidePanel
+        {...baseProps}
+        activeAside={aside}
+        onSendMessage={onSendMessage}
+      />
+    )
+
+    const input = screen.getByLabelText('learningAsides.askPlaceholder')
+    expect(input).toHaveAttribute(
+      'placeholder',
+      'learningAsides.askPlaceholder (chat.pressToSend)'
+    )
+    fireEvent.change(input, { target: { value: 'Show the algebra' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(onSendMessage).not.toHaveBeenCalled()
+
+    fireEvent.keyDown(input, { key: 'Enter', ctrlKey: true })
+    await waitFor(() =>
+      expect(onSendMessage).toHaveBeenCalledWith(
+        'learning_aside:one',
+        'Show the algebra'
       )
     )
   })

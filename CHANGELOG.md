@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Development:** `architecture.md`, `testing.md`, `api-reference.md` and `code-standards.md` are rewritten from the code. A new playbook covers adding an AI provider. Dev setup lives on one page. The AGENTS files agree with the docs. Contributor conventions (Conventional Commits, CHANGELOG sections, pre-PR checks that match CI) are documented
 
 ### Fixed
+- **The aside composer says how to send.** It already sent on Ctrl+Enter (⌘+Enter on macOS) but gave no hint, so pressing Enter looked broken. Both composers now share one shortcut and the aside placeholder names it, like the main chat.
 - **Aside titles keep identifiers intact.** Generated titles removed every underscore, so `d_k` became `dk`. Only emphasis underscores at the edge of a word are stripped now, and LaTeX commands such as `\sqrt{d_k}` read as `sqrt d_k`.
 - **Aside answers show numbered citations.** Learning aside replies and resolved summaries rendered raw `[source:…]` IDs. They now use the same numbered references and References list as the main chat, and each citation opens its source, note or insight.
 - **Notebook chat fills the window.** The conversation was only as tall as its messages, so the reading area stopped in the middle of the screen. It now uses the height under the notebook header, with the message list scrolling and the composer staying at the bottom. Assistant replies use the full width of that column.

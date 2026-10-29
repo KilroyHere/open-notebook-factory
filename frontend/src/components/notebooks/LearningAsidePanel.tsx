@@ -25,6 +25,7 @@ import {
 } from '@/lib/types/api'
 import { useTranslation } from '@/lib/hooks/use-translation'
 import { createLearningUpdateDraft } from '@/lib/utils/learning-asides'
+import { isSendShortcut, sendShortcutHint } from '@/lib/utils/composer-shortcut'
 import {
   LearningEvidenceButtons,
   LearningQuestionList,
@@ -503,15 +504,13 @@ export function LearningAsidePanel({
                       <Textarea
                         value={input}
                         onChange={(event) => setInput(event.target.value)}
-                        placeholder={t('learningAsides.askPlaceholder')}
+                        placeholder={`${t('learningAsides.askPlaceholder')} (${t('chat.pressToSend', { key: sendShortcutHint() })})`}
+                        aria-label={t('learningAsides.askPlaceholder')}
                         className="min-h-[42px] flex-1 resize-none"
                         rows={1}
                         disabled={isSending || isAsideLoading}
                         onKeyDown={(event) => {
-                          if (
-                            event.key === 'Enter' &&
-                            (event.metaKey || event.ctrlKey)
-                          ) {
+                          if (isSendShortcut(event)) {
                             event.preventDefault()
                             void send()
                           }

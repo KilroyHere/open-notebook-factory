@@ -33,6 +33,7 @@ import {
   messageIdFromChatHash,
 } from '@/lib/utils/chat-navigation'
 import { cn } from '@/lib/utils'
+import { isSendShortcut, sendShortcutHint } from '@/lib/utils/composer-shortcut'
 
 interface NotebookContextStats {
   sourcesInsights: number
@@ -394,19 +395,13 @@ function ChatComposer({
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    // Detect platform for correct modifier key
-    const isMac = typeof navigator !== 'undefined' && navigator.userAgent.toUpperCase().indexOf('MAC') >= 0
-    const isModifierPressed = isMac ? e.metaKey : e.ctrlKey
-
-    if (e.key === 'Enter' && isModifierPressed) {
+    if (isSendShortcut(e)) {
       e.preventDefault()
       handleSend()
     }
   }
 
-  // Detect platform for placeholder text
-  const isMac = typeof navigator !== 'undefined' && navigator.userAgent.toUpperCase().indexOf('MAC') >= 0
-  const keyHint = isMac ? '⌘+Enter' : 'Ctrl+Enter'
+  const keyHint = sendShortcutHint()
 
   return (
     <div className="flex flex-shrink-0 items-end gap-2 px-2 py-2">
