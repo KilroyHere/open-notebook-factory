@@ -67,17 +67,28 @@ export function ChatColumn({ notebookId, contextSelections, sources, sourcesLoad
     }).catch(() => undefined)
   }
 
+  // Dive in opens the child dive and asks its question right away, so the
+  // learner lands on an answer instead of an empty conversation.
   const diveIntoQuestion = (parent: LearningAside, question: string) => {
-    const existing = childDiveForQuestion(learning.asides, parent.id, question)
+    const content = question.trim()
+    const existing = childDiveForQuestion(learning.asides, parent.id, content)
     if (existing) {
       learning.openAside(existing.id)
+      if (existing.messages.length === 0) {
+        void learning
+          .sendMessage({ asideId: existing.id, message: content })
+          .catch(() => undefined)
+      }
       return
     }
-    void learning.createAside({
-      type: 'message',
-      content: question.trim(),
-      parentAside: parent,
-    }).catch(() => undefined)
+    void (async () => {
+      const aside = await learning.createAside({
+        type: 'message',
+        content,
+        parentAside: parent,
+      })
+      await learning.sendMessage({ asideId: aside.id, message: content })
+    })().catch(() => undefined)
   }
 
   const parkQuestion = (parent: LearningAside, question: string) => {

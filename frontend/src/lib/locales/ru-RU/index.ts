@@ -496,6 +496,7 @@ export const ruRU = {
     addOpenQuestion: "Добавить вопрос",
     openQuestionPlaceholder: "Вопрос, достойный отдельного разбора...",
     removeOpenQuestion: "Удалить вопрос",
+    askThisQuestion: "Задать этот вопрос",
     diveIn: "Углубиться",
     parkQuestion: "Отложить вопрос",
     backToParent: "К родительскому ответвлению",

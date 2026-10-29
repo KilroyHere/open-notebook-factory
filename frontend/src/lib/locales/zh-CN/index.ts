@@ -496,6 +496,7 @@ export const zhCN = {
     addOpenQuestion: "添加问题",
     openQuestionPlaceholder: "值得单独深入探讨的问题...",
     removeOpenQuestion: "删除问题",
+    askThisQuestion: "提出这个问题",
     diveIn: "深入",
     parkQuestion: "搁置问题",
     backToParent: "返回上层分支",

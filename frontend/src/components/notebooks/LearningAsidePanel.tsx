@@ -459,9 +459,32 @@ export function LearningAsidePanel({
                 )}
                 {(showTranscript || activeAside.status !== 'resolved') &&
                   (activeAside.messages.length === 0 ? (
-                    <p className="py-8 text-center text-sm text-muted-foreground">
-                      {t('learningAsides.askHint')}
-                    </p>
+                    isSending ? null : (
+                      <div className="flex flex-col items-center gap-3 py-8 text-center">
+                        <p className="text-sm text-muted-foreground">
+                          {t('learningAsides.askHint')}
+                        </p>
+                        {activeAside.parent_aside_id &&
+                          !activeAside.anchor.message_id &&
+                          activeAside.status !== 'resolved' &&
+                          activeAside.status !== 'discarded' && (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              disabled={isAsideLoading}
+                              onClick={() =>
+                                void onSendMessage(
+                                  activeAside.id,
+                                  activeAside.anchor.content
+                                ).catch(() => undefined)
+                              }
+                            >
+                              <Send className="mr-1.5 h-3.5 w-3.5" />
+                              {t('learningAsides.askThisQuestion')}
+                            </Button>
+                          )}
+                      </div>
+                    )
                   ) : (
                     activeAside.messages.map((message) => (
                       <div

@@ -494,6 +494,7 @@ export const enUS = {
     addOpenQuestion: "Add question",
     openQuestionPlaceholder: "A question worth its own dive...",
     removeOpenQuestion: "Remove question",
+    askThisQuestion: "Ask this question",
     diveIn: "Dive in",
     parkQuestion: "Park question",
     backToParent: "Back to parent dive",

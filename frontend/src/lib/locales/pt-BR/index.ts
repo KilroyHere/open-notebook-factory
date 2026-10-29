@@ -496,6 +496,7 @@ export const ptBR = {
     addOpenQuestion: "Adicionar pergunta",
     openQuestionPlaceholder: "Uma pergunta que merece seu próprio aprofundamento...",
     removeOpenQuestion: "Remover pergunta",
+    askThisQuestion: "Fazer esta pergunta",
     diveIn: "Aprofundar",
     parkQuestion: "Estacionar pergunta",
     backToParent: "Voltar à ramificação pai",

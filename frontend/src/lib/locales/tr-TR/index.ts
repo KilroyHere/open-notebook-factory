@@ -496,6 +496,7 @@ export const trTR = {
     addOpenQuestion: "Soru ekle",
     openQuestionPlaceholder: "Ayrı bir incelemeye değer bir soru...",
     removeOpenQuestion: "Soruyu kaldır",
+    askThisQuestion: "Bu soruyu sor",
     diveIn: "Derinleş",
     parkQuestion: "Soruyu beklet",
     backToParent: "Üst dala dön",

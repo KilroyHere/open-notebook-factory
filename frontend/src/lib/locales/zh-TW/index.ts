@@ -496,6 +496,7 @@ export const zhTW = {
     addOpenQuestion: "新增問題",
     openQuestionPlaceholder: "值得單獨深入探討的問題...",
     removeOpenQuestion: "移除問題",
+    askThisQuestion: "提出這個問題",
     diveIn: "深入",
     parkQuestion: "擱置問題",
     backToParent: "返回上層分支",

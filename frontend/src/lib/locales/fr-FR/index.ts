@@ -496,6 +496,7 @@ export const frFR = {
     addOpenQuestion: "Ajouter une question",
     openQuestionPlaceholder: "Une question qui mérite sa propre exploration...",
     removeOpenQuestion: "Retirer la question",
+    askThisQuestion: "Poser cette question",
     diveIn: "Approfondir",
     parkQuestion: "Mettre la question de côté",
     backToParent: "Retour à la branche parente",

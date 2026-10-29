@@ -496,6 +496,7 @@ export const jaJP = {
     addOpenQuestion: "質問を追加",
     openQuestionPlaceholder: "個別に深掘りする価値のある質問...",
     removeOpenQuestion: "質問を削除",
+    askThisQuestion: "この質問をする",
     diveIn: "掘り下げる",
     parkQuestion: "質問を保留",
     backToParent: "親の深掘りに戻る",

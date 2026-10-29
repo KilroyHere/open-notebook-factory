@@ -499,6 +499,7 @@ export const deDE = {
     addOpenQuestion: "Frage hinzufügen",
     openQuestionPlaceholder: "Eine Frage für einen eigenen Deep Dive...",
     removeOpenQuestion: "Frage entfernen",
+    askThisQuestion: "Diese Frage stellen",
     diveIn: "Vertiefen",
     parkQuestion: "Frage parken",
     backToParent: "Zurück zur übergeordneten Vertiefung",

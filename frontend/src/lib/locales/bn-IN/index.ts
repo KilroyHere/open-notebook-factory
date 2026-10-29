@@ -496,6 +496,7 @@ export const bnIN = {
     addOpenQuestion: "প্রশ্ন যোগ করুন",
     openQuestionPlaceholder: "আলাদা আলোচনার যোগ্য একটি প্রশ্ন...",
     removeOpenQuestion: "প্রশ্ন সরান",
+    askThisQuestion: "এই প্রশ্নটি জিজ্ঞাসা করুন",
     diveIn: "গভীরে যান",
     parkQuestion: "প্রশ্নটি রেখে দিন",
     backToParent: "মূল শাখায় ফিরুন",

@@ -496,6 +496,7 @@ export const plPL = {
     addOpenQuestion: "Dodaj pytanie",
     openQuestionPlaceholder: "Pytanie warte osobnego zgłębienia...",
     removeOpenQuestion: "Usuń pytanie",
+    askThisQuestion: "Zadaj to pytanie",
     diveIn: "Pogłęb",
     parkQuestion: "Odłóż pytanie",
     backToParent: "Wróć do gałęzi nadrzędnej",

@@ -496,6 +496,7 @@ export const itIT = {
     addOpenQuestion: "Aggiungi domanda",
     openQuestionPlaceholder: "Una domanda che merita un approfondimento...",
     removeOpenQuestion: "Rimuovi domanda",
+    askThisQuestion: "Fai questa domanda",
     diveIn: "Approfondisci",
     parkQuestion: "Metti da parte",
     backToParent: "Torna al ramo principale",

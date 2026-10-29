@@ -496,6 +496,7 @@ export const caES = {
     addOpenQuestion: "Afegeix una pregunta",
     openQuestionPlaceholder: "Una pregunta que mereix la seva pròpia immersió...",
     removeOpenQuestion: "Elimina la pregunta",
+    askThisQuestion: "Fes aquesta pregunta",
     diveIn: "Aprofundir",
     parkQuestion: "Aparca la pregunta",
     backToParent: "Torna a la branca superior",

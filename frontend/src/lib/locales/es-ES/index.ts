@@ -496,6 +496,7 @@ export const esES = {
     addOpenQuestion: "Añadir pregunta",
     openQuestionPlaceholder: "Una pregunta que merece su propia inmersión...",
     removeOpenQuestion: "Quitar pregunta",
+    askThisQuestion: "Hacer esta pregunta",
     diveIn: "Profundizar",
     parkQuestion: "Aparcar pregunta",
     backToParent: "Volver a la rama superior",

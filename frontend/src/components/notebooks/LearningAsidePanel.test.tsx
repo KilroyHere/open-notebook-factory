@@ -308,6 +308,37 @@ describe('LearningAsidePanel', () => {
     expect(onDraftResolution).not.toHaveBeenCalled()
   })
 
+  it('asks the question of an empty nested dive in one click', async () => {
+    const onSendMessage = vi.fn().mockResolvedValue(undefined)
+    const child: LearningAside = {
+      ...aside,
+      id: 'learning_aside:child',
+      parent_aside_id: aside.id,
+      title: 'Why a Gaussian prior?',
+      anchor: { type: 'message', content: 'Why a Gaussian prior?' },
+      messages: [],
+    }
+    render(
+      <LearningAsidePanel
+        {...baseProps}
+        asides={[aside, child]}
+        activeAside={child}
+        onSendMessage={onSendMessage}
+      />
+    )
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'learningAsides.askThisQuestion' })
+    )
+
+    await waitFor(() =>
+      expect(onSendMessage).toHaveBeenCalledWith(
+        'learning_aside:child',
+        'Why a Gaussian prior?'
+      )
+    )
+  })
+
   it('does not offer destructive discard after an aside is resolved', () => {
     render(
       <LearningAsidePanel
