@@ -1,5 +1,18 @@
 # Scripts Documentation
 
+## start_all.py
+
+Starts and supervises the source-development stack used by `make start-all`.
+It loads `.env` (overriding stale exported values), validates that host
+processes use a localhost SurrealDB URL, waits for each service to become
+ready, and stops the whole stack on `Ctrl+C`. API and worker output is kept in
+`/tmp/open-notebook-api.log` and `/tmp/open-notebook-worker.log`; if either
+process exits, the relevant log tail is printed before startup fails.
+
+```bash
+make start-all
+```
+
 ## install-dev-prerequisites.sh
 
 Installs and verifies the system tools required for source development on Debian and Ubuntu:

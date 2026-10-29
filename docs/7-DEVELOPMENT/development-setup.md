@@ -69,10 +69,17 @@ The API loads `.env` itself (`load_dotenv()` in `api/main.py`); `make api` and `
 All at once, in one terminal:
 
 ```bash
-make start-all    # SurrealDB, API, worker, then the frontend in the foreground
+make start-all    # supervises all four; waits for readiness and fails with logs
 make status       # which of the four are running
 make stop-all     # stops all four (also runs `docker compose down`)
 ```
+
+`make start-all` validates `.env` before launching anything. It waits for
+SurrealDB, the API health endpoint, the worker's initial database connection
+and the frontend port instead of relying on fixed sleeps. If the API or worker
+exits, it prints the relevant log tail; complete logs are at
+`/tmp/open-notebook-api.log` and `/tmp/open-notebook-worker.log`. Pressing
+**Ctrl+C** stops all four services, including the database container.
 
 Or one terminal per process, which makes logs easier to read:
 
