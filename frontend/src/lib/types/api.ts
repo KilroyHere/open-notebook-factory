@@ -350,6 +350,16 @@ export interface ResolveLearningAsideRequest {
   save_as_note: boolean
 }
 
+export interface DraftLearningResolutionRequest {
+  model_override?: string
+}
+
+export interface LearningResolutionDraft {
+  conclusion: string
+  relevance: string
+  open_questions: string[]
+}
+
 export interface RecentlyViewedResponse {
   type: 'notebook' | 'source'
   id: string

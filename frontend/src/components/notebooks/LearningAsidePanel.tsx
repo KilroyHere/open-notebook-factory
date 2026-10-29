@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   ArrowLeft,
   CheckCircle2,
   GitBranch,
   Loader2,
   Pause,
+  Plus,
   RotateCcw,
   Send,
   Trash2,
@@ -15,16 +16,21 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Textarea } from '@/components/ui/textarea'
 import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
 import {
   LearningAside,
   LearningAsideStatus,
+  LearningResolutionDraft,
   ResolveLearningAsideRequest,
 } from '@/lib/types/api'
 import { useTranslation } from '@/lib/hooks/use-translation'
-import { createLearningUpdateDraft } from '@/lib/utils/learning-asides'
+import {
+  createLearningUpdateDraft,
+  normalizeOpenQuestions,
+} from '@/lib/utils/learning-asides'
 import {
   LearningEvidenceButtons,
   LearningQuestionList,
@@ -41,6 +47,8 @@ interface LearningAsidePanelProps {
   isAsideLoading: boolean
   onSelectAside: (asideId: string) => void
   onSendMessage: (asideId: string, message: string) => Promise<unknown>
+  /** Model-drafted resolution; on failure the panel uses a local draft. */
+  onDraftResolution?: (asideId: string) => Promise<LearningResolutionDraft>
   onResolve: (
     asideId: string,
     data: ResolveLearningAsideRequest
@@ -81,6 +89,7 @@ export function LearningAsidePanel({
   isAsideLoading,
   onSelectAside,
   onSendMessage,
+  onDraftResolution,
   onResolve,
   onUpdateStatus,
   onNavigateToMessage,
@@ -94,6 +103,11 @@ export function LearningAsidePanel({
   const [showResolution, setShowResolution] = useState(false)
   const [conclusion, setConclusion] = useState('')
   const [relevance, setRelevance] = useState('')
+  const [openQuestions, setOpenQuestions] = useState<string[]>([])
+  const [isDrafting, setIsDrafting] = useState(false)
+  const [draftFailed, setDraftFailed] = useState(false)
+  // Each draft request gets a number; a reply for an older one is ignored.
+  const draftRequest = useRef(0)
   const [includeInMain, setIncludeInMain] = useState(true)
   const [saveAsNote, setSaveAsNote] = useState(false)
   const [showTranscript, setShowTranscript] = useState(true)
@@ -109,16 +123,17 @@ export function LearningAsidePanel({
     : undefined
 
   useEffect(() => {
+    draftRequest.current += 1
+    setIsDrafting(false)
+    setDraftFailed(false)
     if (activeAsideId) {
       setShowList(false)
-      setConclusion(latestAnswerDraft)
-      setRelevance('')
       setShowResolution(false)
       setShowTranscript(activeAside?.status !== 'resolved')
     } else {
       setShowList(true)
     }
-  }, [activeAside?.status, activeAsideId, latestAnswerDraft])
+  }, [activeAside?.status, activeAsideId])
 
   const visibleAsides = asides.filter(
     (aside) => aside.status !== 'discarded'
@@ -134,8 +149,65 @@ export function LearningAsidePanel({
     }
   }
 
+  const openResolution = async () => {
+    if (!activeAside) return
+    const requestId = ++draftRequest.current
+    setShowResolution(true)
+    setDraftFailed(false)
+    if (activeAside.status === 'resolved' && latestUpdate) {
+      // Updating a resolution starts from what the learner already approved.
+      setConclusion(latestUpdate.conclusion)
+      setRelevance(latestUpdate.relevance ?? '')
+      setOpenQuestions(latestUpdate.open_questions)
+      return
+    }
+    if (!onDraftResolution || !latestAnswerContent.trim()) {
+      setConclusion(latestAnswerDraft)
+      setRelevance('')
+      setOpenQuestions([])
+      return
+    }
+    setConclusion('')
+    setRelevance('')
+    setOpenQuestions([])
+    setIsDrafting(true)
+    try {
+      const draft = await onDraftResolution(activeAside.id)
+      if (requestId !== draftRequest.current) return
+      setConclusion(draft.conclusion.trim() || latestAnswerDraft)
+      setRelevance(draft.relevance ?? '')
+      setOpenQuestions(normalizeOpenQuestions(draft.open_questions ?? []))
+    } catch {
+      if (requestId !== draftRequest.current) return
+      setConclusion(latestAnswerDraft)
+      setDraftFailed(true)
+    } finally {
+      if (requestId === draftRequest.current) setIsDrafting(false)
+    }
+  }
+
+  const cancelResolution = () => {
+    draftRequest.current += 1
+    setIsDrafting(false)
+    setShowResolution(false)
+  }
+
+  const updateOpenQuestion = (index: number, value: string) => {
+    setOpenQuestions((questions) =>
+      questions.map((question, position) =>
+        position === index ? value : question
+      )
+    )
+  }
+
+  const removeOpenQuestion = (index: number) => {
+    setOpenQuestions((questions) =>
+      questions.filter((_, position) => position !== index)
+    )
+  }
+
   const resolve = async () => {
-    if (!activeAside || !conclusion.trim() || isResolving) return
+    if (!activeAside || !conclusion.trim() || isResolving || isDrafting) return
     const citationMatches = `${conclusion}\n${relevance}`.match(
       /\[(?:source|note|source_insight):[^\]]+\]/g
     )
@@ -146,6 +218,7 @@ export function LearningAsidePanel({
       await onResolve(activeAside.id, {
         conclusion: conclusion.trim(),
         relevance: relevance.trim() || undefined,
+        open_questions: normalizeOpenQuestions(openQuestions),
         citations,
         include_in_main: includeInMain,
         save_as_note: saveAsNote,
@@ -427,7 +500,24 @@ export function LearningAsidePanel({
             </ScrollArea>
 
             {showResolution ? (
-              <div className="max-h-[55svh] space-y-4 overflow-y-auto border-t p-5">
+              <div
+                className="max-h-[55svh] space-y-4 overflow-y-auto border-t p-5"
+                aria-busy={isDrafting}
+              >
+                {isDrafting && (
+                  <p
+                    role="status"
+                    className="flex items-center gap-2 text-sm text-teal"
+                  >
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {t('learningAsides.drafting')}
+                  </p>
+                )}
+                {draftFailed && (
+                  <p role="status" className="text-xs text-muted-foreground">
+                    {t('learningAsides.draftFailed')}
+                  </p>
+                )}
                 <div>
                   <label className="mb-1.5 block text-sm font-medium">
                     {t('learningAsides.conclusion')}
@@ -437,6 +527,7 @@ export function LearningAsidePanel({
                     onChange={(event) => setConclusion(event.target.value)}
                     placeholder={t('learningAsides.conclusionPlaceholder')}
                     rows={5}
+                    disabled={isDrafting}
                   />
                 </div>
                 <div>
@@ -448,7 +539,58 @@ export function LearningAsidePanel({
                     onChange={(event) => setRelevance(event.target.value)}
                     placeholder={t('learningAsides.relevancePlaceholder')}
                     rows={2}
+                    disabled={isDrafting}
                   />
+                </div>
+                <div>
+                  <div className="mb-1.5 flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium">
+                      {t('learningAsides.openQuestions')}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7"
+                      disabled={isDrafting}
+                      onClick={() =>
+                        setOpenQuestions((questions) => [...questions, ''])
+                      }
+                    >
+                      <Plus className="mr-1 h-3.5 w-3.5" />
+                      {t('learningAsides.addOpenQuestion')}
+                    </Button>
+                  </div>
+                  <p className="mb-2 text-xs text-muted-foreground">
+                    {t('learningAsides.openQuestionsHint')}
+                  </p>
+                  {openQuestions.length > 0 && (
+                    <ul className="space-y-2">
+                      {openQuestions.map((question, index) => (
+                        <li key={index} className="flex items-center gap-2">
+                          <Input
+                            value={question}
+                            onChange={(event) =>
+                              updateOpenQuestion(index, event.target.value)
+                            }
+                            placeholder={t(
+                              'learningAsides.openQuestionPlaceholder'
+                            )}
+                            disabled={isDrafting}
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 shrink-0"
+                            disabled={isDrafting}
+                            onClick={() => removeOpenQuestion(index)}
+                            aria-label={t('learningAsides.removeOpenQuestion')}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
                 <label className="flex items-center gap-2 text-sm">
                   <Checkbox
@@ -474,16 +616,16 @@ export function LearningAsidePanel({
                   </p>
                 )}
                 <div className="flex justify-end gap-2">
-                  <Button
-                    variant="ghost"
-                    onClick={() => setShowResolution(false)}
-                  >
+                  <Button variant="ghost" onClick={cancelResolution}>
                     {t('common.cancel')}
                   </Button>
                   <Button
                     onClick={resolve}
                     disabled={
-                      !conclusion.trim() || isResolving || isAsideLoading
+                      !conclusion.trim() ||
+                      isResolving ||
+                      isDrafting ||
+                      isAsideLoading
                     }
                   >
                     {isResolving && (
@@ -588,7 +730,7 @@ export function LearningAsidePanel({
                       variant="secondary"
                       size="sm"
                       disabled={isAsideLoading}
-                      onClick={() => setShowResolution(true)}
+                      onClick={() => void openResolution()}
                     >
                       <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
                       {activeAside.status === 'resolved'

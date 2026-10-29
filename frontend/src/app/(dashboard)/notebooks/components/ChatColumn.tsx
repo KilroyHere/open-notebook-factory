@@ -282,6 +282,7 @@ export function ChatColumn({ notebookId, contextSelections, sources, sourcesLoad
             onSendMessage={(asideId, message) =>
               learning.sendMessage({ asideId, message })
             }
+            onDraftResolution={learning.draftResolution}
             onResolve={(asideId, data) =>
               learning.resolveAside({ asideId, data })
             }

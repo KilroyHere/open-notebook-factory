@@ -4,6 +4,7 @@ import {
   childDiveForQuestion,
   createAsideTitle,
   createLearningUpdateDraft,
+  normalizeOpenQuestions,
 } from './learning-asides'
 
 describe('learning aside text helpers', () => {
@@ -57,5 +58,17 @@ describe('learning aside text helpers', () => {
     expect(
       childDiveForQuestion([discarded], 'learning_aside:parent', 'Why a Gaussian prior?')
     ).toBeUndefined()
+  })
+
+  it('trims, drops blank and de-duplicates open questions in order', () => {
+    expect(
+      normalizeOpenQuestions([
+        ' Why a Gaussian prior? ',
+        '',
+        '   ',
+        'When is the bound tight?',
+        'Why a Gaussian prior?',
+      ])
+    ).toEqual(['Why a Gaussian prior?', 'When is the bound tight?'])
   })
 })
