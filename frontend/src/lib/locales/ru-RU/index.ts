@@ -451,6 +451,7 @@ export const ruRU = {
   learningAsides: {
     title: "Ответвления",
     open: "Открыть как ответвление",
+    goDeeper: "Углубиться",
     untitled: "Ответвление без названия",
     created: "Ответвление создано",
     createFailed: "Не удалось создать ответвление",

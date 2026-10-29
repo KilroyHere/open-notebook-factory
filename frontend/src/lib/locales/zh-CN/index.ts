@@ -451,6 +451,7 @@ export const zhCN = {
   learningAsides: {
     title: "旁支讨论",
     open: "作为旁支讨论打开",
+    goDeeper: "深入探讨",
     untitled: "未命名旁支讨论",
     created: "已创建旁支讨论",
     createFailed: "无法创建旁支讨论",

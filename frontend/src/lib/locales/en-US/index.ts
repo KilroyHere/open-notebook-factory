@@ -449,6 +449,7 @@ export const enUS = {
   learningAsides: {
     title: "Asides",
     open: "Open as an aside",
+    goDeeper: "Go deeper",
     untitled: "Untitled aside",
     created: "Aside created",
     createFailed: "Failed to create aside",

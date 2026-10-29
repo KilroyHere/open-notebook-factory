@@ -451,6 +451,7 @@ export const zhTW = {
   learningAsides: {
     title: "支線討論",
     open: "作為支線討論開啟",
+    goDeeper: "深入探討",
     untitled: "未命名支線討論",
     created: "已建立支線討論",
     createFailed: "無法建立支線討論",

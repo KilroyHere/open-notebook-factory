@@ -451,6 +451,7 @@ export const itIT = {
   learningAsides: {
     title: "Digressioni",
     open: "Apri come digressione",
+    goDeeper: "Approfondisci",
     untitled: "Digressione senza titolo",
     created: "Digressione creata",
     createFailed: "Impossibile creare la digressione",

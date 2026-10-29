@@ -451,6 +451,7 @@ export const ptBR = {
   learningAsides: {
     title: "Apartes",
     open: "Abrir como aparte",
+    goDeeper: "Aprofundar",
     untitled: "Aparte sem título",
     created: "Aparte criado",
     createFailed: "Não foi possível criar o aparte",

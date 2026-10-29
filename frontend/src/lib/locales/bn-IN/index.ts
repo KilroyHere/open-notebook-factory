@@ -451,6 +451,7 @@ export const bnIN = {
   learningAsides: {
     title: "পার্শ্ব আলোচনা",
     open: "পার্শ্ব আলোচনা হিসেবে খুলুন",
+    goDeeper: "আরও গভীরে যান",
     untitled: "শিরোনামহীন পার্শ্ব আলোচনা",
     created: "পার্শ্ব আলোচনা তৈরি হয়েছে",
     createFailed: "পার্শ্ব আলোচনা তৈরি করা যায়নি",

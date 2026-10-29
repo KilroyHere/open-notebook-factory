@@ -451,6 +451,7 @@ export const caES = {
   learningAsides: {
     title: "Incisos",
     open: "Obre com a incís",
+    goDeeper: "Aprofundeix",
     untitled: "Incís sense títol",
     created: "Incís creat",
     createFailed: "No s’ha pogut crear l’incís",

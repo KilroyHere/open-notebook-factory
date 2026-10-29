@@ -451,6 +451,7 @@ export const jaJP = {
   learningAsides: {
     title: "補足会話",
     open: "補足会話として開く",
+    goDeeper: "深掘りする",
     untitled: "無題の補足会話",
     created: "補足会話を作成しました",
     createFailed: "補足会話を作成できませんでした",

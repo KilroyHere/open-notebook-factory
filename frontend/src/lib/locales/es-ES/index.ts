@@ -451,6 +451,7 @@ export const esES = {
   learningAsides: {
     title: "Apartes",
     open: "Abrir como aparte",
+    goDeeper: "Profundizar",
     untitled: "Aparte sin título",
     created: "Aparte creado",
     createFailed: "No se pudo crear el aparte",

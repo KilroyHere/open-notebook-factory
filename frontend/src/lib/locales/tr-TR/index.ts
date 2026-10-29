@@ -451,6 +451,7 @@ export const trTR = {
   learningAsides: {
     title: "Yan konuşmalar",
     open: "Yan konuşma olarak aç",
+    goDeeper: "Derine in",
     untitled: "Adsız yan konuşma",
     created: "Yan konuşma oluşturuldu",
     createFailed: "Yan konuşma oluşturulamadı",

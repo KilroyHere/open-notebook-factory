@@ -451,6 +451,7 @@ export const plPL = {
   learningAsides: {
     title: "Dygresje",
     open: "Otwórz jako dygresję",
+    goDeeper: "Zgłęb temat",
     untitled: "Dygresja bez tytułu",
     created: "Utworzono dygresję",
     createFailed: "Nie udało się utworzyć dygresji",

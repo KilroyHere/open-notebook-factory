@@ -451,6 +451,7 @@ export const frFR = {
   learningAsides: {
     title: "Apartés",
     open: "Ouvrir en aparté",
+    goDeeper: "Approfondir",
     untitled: "Aparté sans titre",
     created: "Aparté créé",
     createFailed: "Impossible de créer l’aparté",

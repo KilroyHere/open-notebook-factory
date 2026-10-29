@@ -454,6 +454,7 @@ export const deDE = {
   learningAsides: {
     title: "Exkurse",
     open: "Als Exkurs öffnen",
+    goDeeper: "Vertiefen",
     untitled: "Unbenannter Exkurs",
     created: "Exkurs erstellt",
     createFailed: "Exkurs konnte nicht erstellt werden",
