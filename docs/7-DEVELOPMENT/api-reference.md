@@ -48,7 +48,7 @@ Use `/docs` for request and response shapes. This map shows where things are:
 | Sources | `/api/sources` (multipart create with optional file upload), `/api/sources/json`, `/api/sources/{id}/status`, `/api/sources/{id}/retry`, `/api/sources/{id}/insights`, `/api/sources/{id}/download` |
 | Notes, insights | `/api/notes`, `/api/insights/{id}`, `/api/insights/{id}/save-as-note` |
 | Chat | `/api/chat/sessions`, `/api/chat/execute`, `/api/chat/context`; source chat under `/api/sources/{id}/chat/sessions` |
-| Learning asides | `/api/learning/journeys`, `/api/learning/journeys/resume`, `/api/learning/asides`, `/api/learning/asides/{id}/messages`, `/api/learning/asides/{id}/resolve` |
+| Learning asides | `/api/learning/journeys`, `/api/learning/journeys/resume`, `/api/learning/asides`, `/api/learning/asides/{id}/messages`, `/api/learning/asides/{id}/draft-resolution`, `/api/learning/asides/{id}/resolve` |
 | Search and Ask | `/api/search`, `/api/search/ask` (streaming), `/api/search/ask/simple` |
 | Transformations | `/api/transformations`, `/api/transformations/execute`, `/api/transformations/default-prompt` |
 | Models and providers | `/api/models`, `/api/models/defaults`, `/api/models/sync`, `/api/models/auto-assign`, `/api/providers` |

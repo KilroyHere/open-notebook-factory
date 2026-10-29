@@ -176,6 +176,16 @@ class ResolveLearningAsideRequest(BaseModel):
         return stripped
 
 
+class DraftLearningResolutionRequest(BaseModel):
+    model_override: Optional[str] = None
+
+
+class LearningResolutionDraftResponse(BaseModel):
+    conclusion: str
+    relevance: str = ""
+    open_questions: List[str] = Field(default_factory=list)
+
+
 class LearningAsideMessageResponse(BaseModel):
     id: str
     type: str
