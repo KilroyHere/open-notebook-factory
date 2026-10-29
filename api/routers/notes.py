@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, Query
 from loguru import logger
 
 from api.models import NoteCreate, NoteResponse, NoteUpdate
+from api.routers._chat_shared import normalize_record_id
 from open_notebook.domain.notebook import Note
 from open_notebook.exceptions import (
     InvalidInputError,
@@ -24,7 +25,7 @@ async def get_notes(
             # Get notes for a specific notebook
             from open_notebook.domain.notebook import Notebook
 
-            notebook = await Notebook.get(notebook_id)
+            notebook = await Notebook.get(normalize_record_id("notebook", notebook_id))
             notes = await notebook.get_notes()
         else:
             # Get all notes

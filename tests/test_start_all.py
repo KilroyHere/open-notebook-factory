@@ -1,6 +1,8 @@
 """Tests for the supervised development-stack launcher."""
 
 import socket
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -105,3 +107,127 @@ def test_makefile_status_checks_service_health_not_process_names():
     assert "http://127.0.0.1:$${PORT:-3000}" in status_target
     assert 'pgrep -f "run_api.py' not in status_target
     assert 'pgrep -f "next dev' not in status_target
+
+
+def test_database_compose_command_does_not_force_a_pull():
+    command = start_all.database_compose_command()
+
+    assert command[:4] == ["docker", "compose", "up", "-d"]
+    assert command[command.index("--pull") + 1] == "missing"
+    assert command[-1] == "surrealdb"
+
+
+def test_makefile_database_target_does_not_force_a_pull():
+    makefile = Path("Makefile").read_text()
+    database_target = makefile.split("\ndatabase:", 1)[1].split("\nrun:", 1)[0]
+
+    assert "docker compose up -d --pull missing surrealdb" in database_target
+
+
+def test_start_database_reuses_reachable_surrealdb():
+    calls = []
+
+    started = start_all.start_database(
+        "127.0.0.1",
+        8000,
+        {},
+        run=lambda *args, **kwargs: calls.append(args),
+        is_reachable=lambda host, port: True,
+        port_open=lambda host, port: True,
+    )
+
+    assert started is False
+    assert calls == []
+
+
+def test_start_database_runs_compose_when_not_reachable():
+    calls = []
+
+    started = start_all.start_database(
+        "127.0.0.1",
+        8000,
+        {"SURREAL_URL": "ws://localhost:8000/rpc"},
+        run=lambda command, **kwargs: calls.append((command, kwargs)),
+        is_reachable=lambda host, port: False,
+        port_open=lambda host, port: False,
+    )
+
+    assert started is True
+    assert len(calls) == 1
+    command, kwargs = calls[0]
+    assert command == start_all.database_compose_command()
+    assert kwargs["check"] is True
+    assert kwargs["env"] == {"SURREAL_URL": "ws://localhost:8000/rpc"}
+
+
+def test_start_database_explains_compose_failure():
+    def failing_run(command, **kwargs):
+        raise start_all.subprocess.CalledProcessError(1, command)
+
+    with pytest.raises(start_all.StartupError, match="rate limiting") as error:
+        start_all.start_database(
+            "127.0.0.1",
+            8000,
+            {},
+            run=failing_run,
+            is_reachable=lambda host, port: False,
+            port_open=lambda host, port: False,
+        )
+
+    assert "--pull missing" in str(error.value)
+
+
+def test_start_database_explains_missing_docker():
+    def missing_docker(command, **kwargs):
+        raise FileNotFoundError("docker")
+
+    with pytest.raises(start_all.StartupError, match="Docker is not installed"):
+        start_all.start_database(
+            "127.0.0.1",
+            8000,
+            {},
+            run=missing_docker,
+            is_reachable=lambda host, port: False,
+            port_open=lambda host, port: False,
+        )
+
+
+def test_start_database_rejects_foreign_service_on_database_port():
+    calls = []
+
+    with pytest.raises(start_all.StartupError, match="not answering as SurrealDB"):
+        start_all.start_database(
+            "127.0.0.1",
+            8000,
+            {},
+            run=lambda *args, **kwargs: calls.append(args),
+            is_reachable=lambda host, port: False,
+            port_open=lambda host, port: True,
+        )
+
+    assert calls == []
+
+
+def test_surrealdb_is_reachable_checks_health_endpoint():
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200 if self.path == "/health" else 404)
+            self.end_headers()
+
+        def log_message(self, *args):
+            pass
+
+    server = HTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        port = server.server_address[1]
+        assert start_all.surrealdb_is_reachable("127.0.0.1", port) is True
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        free_port = probe.getsockname()[1]
+    assert start_all.surrealdb_is_reachable("127.0.0.1", free_port) is False

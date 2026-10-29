@@ -29,3 +29,17 @@ else:
 # Add the project root to the Python path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
+
+
+import pytest  # noqa: E402
+
+from open_notebook.utils.token_utils import reset_tokenizer_cache  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def _reset_tokenizer_cache():
+    """Tests patch tiktoken.get_encoding; don't let one test's cached load
+    failure (see token_utils.get_tokenizer) leak into the next."""
+    reset_tokenizer_cache()
+    yield
+    reset_tokenizer_cache()

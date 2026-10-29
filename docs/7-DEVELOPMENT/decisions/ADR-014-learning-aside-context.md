@@ -1,4 +1,4 @@
-# ADR-0XX: Learning asides merge approved artifacts, not transcripts
+# ADR-014: Learning asides merge approved artifacts, not transcripts
 
 - **Status**: Accepted
 - **Date**: 2026-10
