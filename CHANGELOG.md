@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **Try a checkout with one Compose command.** From the repository root, `docker compose -f examples/docker-compose-single.yml up --build` builds this tree into one container (database, API, worker, and UI) and opens it at http://localhost:8502. It does not need a `docker.env` file.
+- **Host this repository with one Compose command.** From a clone, `docker compose -f docker-compose.host.yml up --build` builds this tree into one container (database, API, worker, and UI) and opens it at http://localhost:8502. It does not need a `docker.env` file.
 - **Chat outline sections keep their names.** Each human turn becomes a topic section on that journey. Rename it or pin it, and the outline keeps that name after a reload. Pinned sections stay at the top. Nested dives remain under the turn they came from.
 - **Open questions can start a nested dive.** From a resolved aside, Dive in opens a child conversation on the same journey, and Park question saves that child without leaving the thread you are reading. The outline and map nest the child under its parent branch, and the dive breadcrumb returns to that parent.
 - **Learning asides keep prerequisite questions out of the main notebook chat.** Open any assistant answer as a durable side conversation, follow the tangent independently, park or resume it later, and explicitly resolve its useful conclusion back into the main chat context or save it as a note. Asides retain their originating message, remain hidden from the normal session list, and surface a resume prompt when a learner returns.
