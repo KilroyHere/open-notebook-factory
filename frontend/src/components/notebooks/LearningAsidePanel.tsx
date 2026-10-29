@@ -29,6 +29,8 @@ import {
   ResolveLearningAsideRequest,
 } from '@/lib/types/api'
 import { useTranslation } from '@/lib/hooks/use-translation'
+import { useMediaQuery } from '@/lib/hooks/use-media-query'
+import { createLearningUpdateDraft } from '@/lib/utils/learning-asides'
 
 interface LearningAsidePanelProps {
   open: boolean
@@ -38,6 +40,7 @@ interface LearningAsidePanelProps {
   isLoading: boolean
   isSending: boolean
   isResolving: boolean
+  isAsideLoading: boolean
   onSelectAside: (asideId: string) => void
   onSendMessage: (asideId: string, message: string) => Promise<unknown>
   onResolve: (
@@ -73,12 +76,14 @@ export function LearningAsidePanel({
   isLoading,
   isSending,
   isResolving,
+  isAsideLoading,
   onSelectAside,
   onSendMessage,
   onResolve,
   onUpdateStatus,
 }: LearningAsidePanelProps) {
   const { t } = useTranslation()
+  const isNarrow = useMediaQuery('(max-width: 767px)')
   const [showList, setShowList] = useState(!activeAside)
   const [input, setInput] = useState('')
   const [showResolution, setShowResolution] = useState(false)
@@ -91,17 +96,18 @@ export function LearningAsidePanel({
     [...(activeAside?.messages ?? [])]
       .reverse()
       .find((message) => message.type === 'ai')?.content ?? ''
+  const latestAnswerDraft = createLearningUpdateDraft(latestAnswerContent)
 
   useEffect(() => {
     if (activeAsideId) {
       setShowList(false)
-      setConclusion(latestAnswerContent)
+      setConclusion(latestAnswerDraft)
       setRelevance('')
       setShowResolution(false)
     } else {
       setShowList(true)
     }
-  }, [activeAsideId, latestAnswerContent])
+  }, [activeAsideId, latestAnswerDraft])
 
   const visibleAsides = asides.filter(
     (aside) => aside.status !== 'discarded'
@@ -140,13 +146,17 @@ export function LearningAsidePanel({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange} modal={isNarrow}>
       <DialogContent
-        className="left-auto right-0 top-0 h-svh w-full translate-x-0 translate-y-0 gap-0 rounded-none border-y-0 border-r-0 p-0 sm:max-w-[520px]"
+        className="left-auto right-0 top-0 h-svh w-screen max-w-[100vw] translate-x-0 translate-y-0 gap-0 overflow-x-hidden rounded-none border-y-0 border-r-0 p-0 sm:w-[520px] sm:max-w-[520px]"
         showCloseButton
+        showOverlay={isNarrow}
+        onInteractOutside={(event) => {
+          if (!isNarrow) event.preventDefault()
+        }}
       >
         <DialogHeader className="border-b px-5 py-4 pr-12 text-left">
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2">
             {!showList && (
               <Button
                 variant="ghost"
@@ -159,7 +169,7 @@ export function LearningAsidePanel({
               </Button>
             )}
             <GitBranch className="h-4 w-4 text-teal" />
-            <DialogTitle>
+            <DialogTitle className="min-w-0 break-words pr-2">
               {showList
                 ? t('learningAsides.title')
                 : activeAside?.title ?? t('learningAsides.untitled')}
@@ -168,8 +178,8 @@ export function LearningAsidePanel({
         </DialogHeader>
 
         {showList ? (
-          <ScrollArea className="min-h-0 flex-1">
-            <div className="space-y-3 p-5">
+          <ScrollArea className="min-h-0 min-w-0 flex-1 overflow-x-hidden">
+            <div className="min-w-0 max-w-full space-y-3 overflow-x-hidden p-5">
               <p className="text-sm text-muted-foreground">
                 {t('learningAsides.listDescription')}
               </p>
@@ -186,19 +196,19 @@ export function LearningAsidePanel({
                   <button
                     key={aside.id}
                     type="button"
-                    className="w-full rounded-md border bg-card p-4 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="min-w-0 w-full max-w-full overflow-hidden rounded-md border bg-card p-4 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     onClick={() => onSelectAside(aside.id)}
                   >
-                    <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 max-w-full items-start justify-between gap-3 overflow-hidden">
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium">
                           {aside.title}
                         </p>
-                        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                        <p className="mt-1 line-clamp-2 break-words text-xs text-muted-foreground">
                           {aside.anchor.content}
                         </p>
                       </div>
-                      <Badge variant={statusVariant(aside.status)}>
+                      <Badge className="shrink-0" variant={statusVariant(aside.status)}>
                         {t(statusTranslationKeys[aside.status])}
                       </Badge>
                     </div>
@@ -208,18 +218,18 @@ export function LearningAsidePanel({
             </div>
           </ScrollArea>
         ) : activeAside ? (
-          <div className="flex min-h-0 flex-1 flex-col">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden">
             <div className="border-b bg-muted/30 px-5 py-3">
               <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 {t('learningAsides.anchor')}
               </p>
-              <p className="line-clamp-3 text-sm">
+              <p className="line-clamp-3 break-words text-sm">
                 {activeAside.anchor.content}
               </p>
             </div>
 
-            <ScrollArea className="min-h-0 flex-1">
-              <div className="space-y-4 p-5">
+            <ScrollArea className="min-h-0 min-w-0 flex-1 overflow-x-hidden">
+              <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden p-5">
                 {activeAside.messages.length === 0 ? (
                   <p className="py-8 text-center text-sm text-muted-foreground">
                     {t('learningAsides.askHint')}
@@ -235,7 +245,7 @@ export function LearningAsidePanel({
                       }`}
                     >
                       <div
-                        className={`max-w-[88%] rounded-md border px-3 py-2 text-sm ${
+                        className={`min-w-0 max-w-[88%] overflow-hidden break-words rounded-md border px-3 py-2 text-sm [&_*]:max-w-full ${
                           message.type === 'human' ? 'bg-muted' : 'bg-card'
                         }`}
                       >
@@ -258,7 +268,7 @@ export function LearningAsidePanel({
             </ScrollArea>
 
             {showResolution ? (
-              <div className="space-y-4 border-t p-5">
+              <div className="max-h-[55svh] space-y-4 overflow-y-auto border-t p-5">
                 <div>
                   <label className="mb-1.5 block text-sm font-medium">
                     {t('learningAsides.conclusion')}
@@ -308,7 +318,9 @@ export function LearningAsidePanel({
                   </Button>
                   <Button
                     onClick={resolve}
-                    disabled={!conclusion.trim() || isResolving}
+                    disabled={
+                      !conclusion.trim() || isResolving || isAsideLoading
+                    }
                   >
                     {isResolving && (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -328,7 +340,7 @@ export function LearningAsidePanel({
                         placeholder={t('learningAsides.askPlaceholder')}
                         className="min-h-[42px] flex-1 resize-none"
                         rows={1}
-                        disabled={isSending}
+                        disabled={isSending || isAsideLoading}
                         onKeyDown={(event) => {
                           if (
                             event.key === 'Enter' &&
@@ -343,7 +355,7 @@ export function LearningAsidePanel({
                         size="icon"
                         className="h-[42px] w-[42px]"
                         onClick={() => void send()}
-                        disabled={!input.trim() || isSending}
+                        disabled={!input.trim() || isSending || isAsideLoading}
                         aria-label={t('learningAsides.send')}
                       >
                         {isSending ? (
@@ -360,6 +372,7 @@ export function LearningAsidePanel({
                       <Button
                         variant="ghost"
                         size="sm"
+                        disabled={isAsideLoading}
                         onClick={() =>
                           void onUpdateStatus(
                             activeAside.id,
@@ -375,6 +388,7 @@ export function LearningAsidePanel({
                       <Button
                         variant="ghost"
                         size="sm"
+                        disabled={isAsideLoading}
                         onClick={() =>
                           void onUpdateStatus(
                             activeAside.id,
@@ -386,10 +400,12 @@ export function LearningAsidePanel({
                         {t('learningAsides.reopen')}
                       </Button>
                     )}
-                    {activeAside.status !== 'discarded' && (
+                    {activeAside.status !== 'discarded' &&
+                      activeAside.status !== 'resolved' && (
                       <Button
                         variant="ghost"
                         size="sm"
+                        disabled={isAsideLoading}
                         className="text-destructive hover:text-destructive"
                         onClick={() =>
                           void onUpdateStatus(
@@ -407,6 +423,7 @@ export function LearningAsidePanel({
                     <Button
                       variant="secondary"
                       size="sm"
+                      disabled={isAsideLoading}
                       onClick={() => setShowResolution(true)}
                     >
                       <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />

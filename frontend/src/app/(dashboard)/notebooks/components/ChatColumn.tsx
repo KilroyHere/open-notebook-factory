@@ -49,8 +49,8 @@ export function ChatColumn({ notebookId, contextSelections, sources, sourcesLoad
     }).catch(() => undefined)
   }
 
-  const resumableAside = learning.asides.find((aside) =>
-    learning.resume?.open_aside_ids.includes(aside.id)
+  const resumableAside = learning.asides.find(
+    (aside) => aside.id === learning.resume?.recommended_aside_id
   )
 
   // Calculate context stats for indicator
@@ -161,6 +161,7 @@ export function ChatColumn({ notebookId, contextSelections, sources, sourcesLoad
         isLoading={learning.isLoading || learning.isCreating}
         isSending={learning.isSending}
         isResolving={learning.isResolving}
+        isAsideLoading={learning.isAsideLoading}
         onSelectAside={learning.openAside}
         onSendMessage={(asideId, message) =>
           learning.sendMessage({ asideId, message })

@@ -4,6 +4,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { usePathname } from 'next/navigation'
 import { AppSidebar } from './AppSidebar'
 import { useSidebarStore } from '@/lib/stores/sidebar-store'
+import { useMediaQuery } from '@/lib/hooks/use-media-query'
 
 // Mock Tooltip components to avoid Radix UI async issues in tests
 vi.mock('@/components/ui/tooltip', () => ({
@@ -12,10 +13,12 @@ vi.mock('@/components/ui/tooltip', () => ({
   TooltipTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   TooltipContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }))
+vi.mock('@/lib/hooks/use-media-query')
 
 describe('AppSidebar', () => {
   afterEach(() => {
     vi.mocked(usePathname).mockReturnValue('')
+    vi.mocked(useMediaQuery).mockReturnValue(false)
   })
 
   it('highlights only Models (not Settings) on the Models page', () => {
@@ -81,5 +84,18 @@ describe('AppSidebar', () => {
 
     // In collapsed mode, app name shouldn't be visible (as text)
     expect(screen.queryByText('common.appName')).toBeNull()
+  })
+
+  it('forces the compact sidebar on narrow screens', () => {
+    vi.mocked(useSidebarStore).mockReturnValue({
+      isCollapsed: false,
+      toggleCollapse: vi.fn(),
+    } as any)
+    vi.mocked(useMediaQuery).mockReturnValue(true)
+
+    const { container } = render(<AppSidebar />)
+
+    expect(screen.queryByText('common.appName')).toBeNull()
+    expect(container.querySelector('.app-sidebar')?.className).toContain('w-16')
   })
 })

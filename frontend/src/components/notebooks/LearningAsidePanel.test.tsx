@@ -39,6 +39,7 @@ const baseProps = {
   isLoading: false,
   isSending: false,
   isResolving: false,
+  isAsideLoading: false,
   onSelectAside: vi.fn(),
   onSendMessage: vi.fn().mockResolvedValue(undefined),
   onResolve: vi.fn().mockResolvedValue(undefined),
@@ -59,6 +60,7 @@ describe('LearningAsidePanel', () => {
     fireEvent.click(screen.getByText('Why does Jensen apply?'))
 
     expect(onSelectAside).toHaveBeenCalledWith('learning_aside:one')
+    expect(screen.getByRole('dialog').className).toContain('max-w-[100vw]')
   })
 
   it('sends a focused follow-up message', async () => {
@@ -127,5 +129,21 @@ describe('LearningAsidePanel', () => {
         save_as_note: false,
       })
     )
+  })
+
+  it('does not offer destructive discard after an aside is resolved', () => {
+    render(
+      <LearningAsidePanel
+        {...baseProps}
+        activeAside={{ ...aside, status: 'resolved' }}
+      />
+    )
+
+    expect(
+      screen.queryByRole('button', { name: 'learningAsides.discard' })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'learningAsides.resolveAgain' })
+    ).toBeInTheDocument()
   })
 })

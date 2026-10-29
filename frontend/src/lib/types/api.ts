@@ -309,6 +309,7 @@ export interface LearningJourneyResume {
   current_point?: string | null
   accepted_findings: string[]
   open_aside_ids: string[]
+  recommended_aside_id?: string | null
   recommended_action: 'start_aside' | 'continue_main' | 'resume_aside' | 'review'
 }
 

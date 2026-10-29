@@ -188,7 +188,7 @@ async def get_journey_resume(
             for aside in open_asides
             if aside.chat_session_id == response.active_session_id
         ),
-        open_asides[0] if open_asides else None,
+        open_asides[-1] if open_asides else None,
     )
     accepted_findings = [
         update.conclusion for update in response.updates if update.include_in_main
@@ -209,6 +209,7 @@ async def get_journey_resume(
         current_point=current_point,
         accepted_findings=accepted_findings,
         open_aside_ids=[aside.id for aside in open_asides],
+        recommended_aside_id=active_aside.id if active_aside else None,
         recommended_action=recommended_action,
     )
 

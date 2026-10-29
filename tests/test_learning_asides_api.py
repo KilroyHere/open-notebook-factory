@@ -287,6 +287,7 @@ async def test_resume_offers_parked_aside_when_main_session_is_active(client):
     assert response.json()["recommended_action"] == "resume_aside"
     assert response.json()["current_point"] == aside.title
     assert response.json()["open_aside_ids"] == ["learning_aside:aside"]
+    assert response.json()["recommended_aside_id"] == aside.id
 
 
 @pytest.mark.asyncio

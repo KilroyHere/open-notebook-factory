@@ -230,6 +230,7 @@ class LearningJourneyResumeResponse(BaseModel):
     current_point: Optional[str] = None
     accepted_findings: List[str] = Field(default_factory=list)
     open_aside_ids: List[str] = Field(default_factory=list)
+    recommended_aside_id: Optional[str] = None
     recommended_action: Literal[
         "start_aside", "continue_main", "resume_aside", "review"
     ] = "start_aside"

@@ -61,6 +61,12 @@ Use an aside when an answer raises a prerequisite or tangent that you want to ex
 
 The complete aside transcript stays isolated. Only the conclusion you approve is added to future main-chat context. The **Asides** button lists active, parked and resolved asides; when you return to a notebook with unfinished work, a resume prompt takes you back to it. Aside sessions do not appear in the normal **Chat Sessions** list.
 
+On a desktop, the aside is a non-modal side pane, so you can continue reading
+and using the main conversation while it is open. On a narrow screen it becomes
+a full-width panel and the app navigation stays compact. If several branches
+are unfinished, **Resume** returns to the active branch (or the most recently
+parked one), not simply the oldest aside.
+
 ## Choosing the Model
 
 The model button next to the message box opens **Model Configuration**. Pick a model to use for this session instead of your **Chat Model** default, or click **Reset to Default**. Only language models you have added in **Manage → Models** are listed.

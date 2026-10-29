@@ -12,6 +12,7 @@ import {
 } from '@/lib/types/api'
 import { useTranslation } from '@/lib/hooks/use-translation'
 import { getApiErrorMessage } from '@/lib/utils/error-handler'
+import { createAsideTitle } from '@/lib/utils/learning-asides'
 
 interface UseLearningAsidesParams {
   notebookId: string
@@ -89,8 +90,7 @@ export function useLearningAsides({
         throw new Error('A main chat session is required before opening an aside')
       }
       const title =
-        anchor.content.split(/[.!?]\s/)[0]?.slice(0, 80) ||
-        t('learningAsides.untitled')
+        createAsideTitle(anchor.content) || t('learningAsides.untitled')
       return learningApi.createAside({
         notebook_id: notebookId,
         parent_session_id: mainSessionId,
@@ -225,7 +225,7 @@ export function useLearningAsides({
   }, [])
 
   const activeAside = useMemo(() => {
-    if (asideQuery.data) return asideQuery.data
+    if (asideQuery.data?.id === activeAsideId) return asideQuery.data
     return journeyQuery.data?.asides.find((aside) => aside.id === activeAsideId)
   }, [activeAsideId, asideQuery.data, journeyQuery.data])
 
@@ -240,6 +240,7 @@ export function useLearningAsides({
     isCreating: createMutation.isPending,
     isSending: sendMutation.isPending,
     isResolving: resolveMutation.isPending,
+    isAsideLoading: !!activeAsideId && asideQuery.isFetching,
     setPanelOpen,
     openAside,
     openList,
