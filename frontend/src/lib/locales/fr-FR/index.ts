@@ -478,6 +478,7 @@ export const frFR = {
     relevancePlaceholder: "Expliquez ce qui doit revenir dans le fil principal...",
     includeInMain: "Utiliser cette conclusion dans la conversation principale",
     saveAsNote: "Enregistrer aussi la conclusion comme note",
+    saveAsNoteHint: "Les notes enregistrées rejoignent le contexte du carnet et peuvent être disponibles dans d’autres sessions de chat.",
     resume: "Reprendre",
     resumePrompt: "Ouvrir l’aparté : {{title}}",
     status: {

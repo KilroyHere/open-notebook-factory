@@ -478,6 +478,7 @@ export const trTR = {
     relevancePlaceholder: "Ana yola neyin taşınması gerektiğini açıklayın...",
     includeInMain: "Bu sonucu ana konuşmada kullan",
     saveAsNote: "Sonucu ayrıca not olarak kaydet",
+    saveAsNoteHint: "Kaydedilen notlar defter bağlamına eklenir ve diğer sohbet oturumlarında kullanılabilir.",
     resume: "Devam et",
     resumePrompt: "Yan konuşmayı aç: {{title}}",
     status: {

@@ -478,6 +478,7 @@ export const plPL = {
     relevancePlaceholder: "Wyjaśnij, co powinno wrócić do głównego wątku...",
     includeInMain: "Użyj tego wniosku w głównej rozmowie",
     saveAsNote: "Zapisz również wniosek jako notatkę",
+    saveAsNoteHint: "Zapisane notatki stają się kontekstem notatnika i mogą być dostępne w innych sesjach czatu.",
     resume: "Wznów",
     resumePrompt: "Otwórz dygresję: {{title}}",
     status: {

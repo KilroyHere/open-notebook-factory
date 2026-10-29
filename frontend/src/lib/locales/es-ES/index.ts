@@ -478,6 +478,7 @@ export const esES = {
     relevancePlaceholder: "Explica qué debe volver al hilo principal...",
     includeInMain: "Usar esta conclusión en la conversación principal",
     saveAsNote: "Guardar también la conclusión como nota",
+    saveAsNoteHint: "Las notas guardadas pasan a formar parte del contexto del cuaderno y pueden estar disponibles en otras sesiones de chat.",
     resume: "Continuar",
     resumePrompt: "Abrir aparte: {{title}}",
     status: {

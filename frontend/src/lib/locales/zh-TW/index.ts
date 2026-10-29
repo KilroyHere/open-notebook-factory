@@ -478,6 +478,7 @@ export const zhTW = {
     relevancePlaceholder: "說明哪些內容應帶回主線...",
     includeInMain: "在主對話中使用此結論",
     saveAsNote: "同時將結論儲存為筆記",
+    saveAsNoteHint: "儲存的筆記會成為筆記本內容，並可能在其他聊天工作階段中使用。",
     resume: "繼續",
     resumePrompt: "開啟支線討論：{{title}}",
     status: {

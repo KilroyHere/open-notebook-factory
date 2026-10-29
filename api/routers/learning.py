@@ -328,7 +328,10 @@ async def send_aside_message(aside_id: str, request: SendLearningAsideMessageReq
         "parent_conversation_at_branch": parent_transcript,
         "instruction": (
             "Answer this isolated learning aside. Preserve source citations and "
-            "focus on the prerequisite or tangent without redirecting the main path."
+            "focus on the prerequisite or tangent without redirecting the main path. "
+            "Never expose or cite internal learning_aside, learning_update, "
+            "chat_session, or message IDs. Only cite source, note, or "
+            "source_insight IDs that appear in the selected research context."
         ),
     }
     state_values["context"] = context

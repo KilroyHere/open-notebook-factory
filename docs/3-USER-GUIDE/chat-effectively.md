@@ -61,6 +61,10 @@ Use an aside when an answer raises a prerequisite or tangent that you want to ex
 
 The complete aside transcript stays isolated. Only the conclusion you approve is added to future main-chat context. The **Asides** button lists active, parked and resolved asides; when you return to a notebook with unfinished work, a resume prompt takes you back to it. Aside sessions do not appear in the normal **Chat Sessions** list.
 
+If you also save the conclusion as a note, it behaves like any other notebook
+note: sessions that include notes in their context can use it. Leave that
+option off when the finding should remain private to the current journey.
+
 On a desktop, the aside is a non-modal side pane, so you can continue reading
 and using the main conversation while it is open. On a narrow screen it becomes
 a full-width panel and the app navigation stays compact. If several branches

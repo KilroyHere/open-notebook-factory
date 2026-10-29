@@ -309,6 +309,11 @@ export function LearningAsidePanel({
                   />
                   {t('learningAsides.saveAsNote')}
                 </label>
+                {saveAsNote && (
+                  <p className="pl-6 text-xs text-muted-foreground">
+                    {t('learningAsides.saveAsNoteHint')}
+                  </p>
+                )}
                 <div className="flex justify-end gap-2">
                   <Button
                     variant="ghost"

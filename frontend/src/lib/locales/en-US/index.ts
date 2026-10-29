@@ -476,6 +476,7 @@ export const enUS = {
     relevancePlaceholder: "Explain what should carry back to the main path...",
     includeInMain: "Use this conclusion in the main conversation",
     saveAsNote: "Also save the conclusion as a note",
+    saveAsNoteHint: "Saved notes become notebook context and may be available in other chat sessions.",
     resume: "Resume",
     resumePrompt: "Open aside: {{title}}",
     status: {

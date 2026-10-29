@@ -481,6 +481,7 @@ export const deDE = {
     relevancePlaceholder: "Erkläre, was in den Hauptpfad übernommen werden soll...",
     includeInMain: "Diese Erkenntnis im Hauptgespräch verwenden",
     saveAsNote: "Erkenntnis auch als Notiz speichern",
+    saveAsNoteHint: "Gespeicherte Notizen werden Teil des Notebook-Kontexts und können in anderen Chat-Sitzungen verfügbar sein.",
     resume: "Fortsetzen",
     resumePrompt: "Exkurs öffnen: {{title}}",
     status: {

@@ -146,4 +146,18 @@ describe('LearningAsidePanel', () => {
       screen.getByRole('button', { name: 'learningAsides.resolveAgain' })
     ).toBeInTheDocument()
   })
+
+  it('explains that saved notes become shared notebook context', async () => {
+    render(<LearningAsidePanel {...baseProps} activeAside={aside} />)
+    fireEvent.click(
+      screen.getByRole('button', { name: 'learningAsides.resolve' })
+    )
+
+    const saveAsNote = await screen.findByText('learningAsides.saveAsNote')
+    fireEvent.click(saveAsNote)
+
+    expect(
+      screen.getByText('learningAsides.saveAsNoteHint')
+    ).toBeInTheDocument()
+  })
 })

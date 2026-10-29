@@ -478,6 +478,7 @@ export const ptBR = {
     relevancePlaceholder: "Explique o que deve voltar ao caminho principal...",
     includeInMain: "Usar esta conclusão na conversa principal",
     saveAsNote: "Salvar também a conclusão como nota",
+    saveAsNoteHint: "As notas salvas passam a fazer parte do contexto do caderno e podem ficar disponíveis em outras sessões de chat.",
     resume: "Retomar",
     resumePrompt: "Abrir aparte: {{title}}",
     status: {

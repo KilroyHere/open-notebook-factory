@@ -478,6 +478,7 @@ export const caES = {
     relevancePlaceholder: "Explica què ha de tornar al fil principal...",
     includeInMain: "Utilitza aquesta conclusió a la conversa principal",
     saveAsNote: "Desa també la conclusió com a nota",
+    saveAsNoteHint: "Les notes desades passen a formar part del context del quadern i poden estar disponibles en altres sessions de xat.",
     resume: "Reprèn",
     resumePrompt: "Obre l’incís: {{title}}",
     status: {

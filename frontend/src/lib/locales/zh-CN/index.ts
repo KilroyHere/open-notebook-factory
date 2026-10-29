@@ -478,6 +478,7 @@ export const zhCN = {
     relevancePlaceholder: "说明哪些内容应带回主线...",
     includeInMain: "在主对话中使用此结论",
     saveAsNote: "同时将结论保存为笔记",
+    saveAsNoteHint: "保存的笔记会成为笔记本上下文，并可能在其他聊天会话中使用。",
     resume: "继续",
     resumePrompt: "打开旁支讨论：{{title}}",
     status: {

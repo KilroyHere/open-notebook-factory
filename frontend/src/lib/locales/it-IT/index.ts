@@ -478,6 +478,7 @@ export const itIT = {
     relevancePlaceholder: "Spiega cosa riportare nel percorso principale...",
     includeInMain: "Usa questa conclusione nella conversazione principale",
     saveAsNote: "Salva anche la conclusione come nota",
+    saveAsNoteHint: "Le note salvate entrano nel contesto del taccuino e possono essere disponibili in altre sessioni di chat.",
     resume: "Riprendi",
     resumePrompt: "Apri digressione: {{title}}",
     status: {

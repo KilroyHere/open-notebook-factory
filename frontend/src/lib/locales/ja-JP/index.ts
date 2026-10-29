@@ -478,6 +478,7 @@ export const jaJP = {
     relevancePlaceholder: "メインの流れに戻す内容を説明してください...",
     includeInMain: "この結論をメインの会話で使用する",
     saveAsNote: "結論をノートにも保存する",
+    saveAsNoteHint: "保存したノートはノートブックのコンテキストとなり、他のチャットセッションでも利用される場合があります。",
     resume: "再開",
     resumePrompt: "補足会話を開く：{{title}}",
     status: {
