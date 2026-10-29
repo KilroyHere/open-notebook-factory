@@ -148,7 +148,7 @@ export function LearningAsidePanel({
   return (
     <Dialog open={open} onOpenChange={onOpenChange} modal={isNarrow}>
       <DialogContent
-        className="left-auto right-0 top-0 h-svh w-screen max-w-[100vw] translate-x-0 translate-y-0 gap-0 overflow-x-hidden rounded-none border-y-0 border-r-0 p-0 sm:w-[520px] sm:max-w-[520px]"
+        className="left-auto right-0 top-0 h-svh w-screen max-w-[100vw] grid-rows-[auto_minmax(0,1fr)] translate-x-0 translate-y-0 gap-0 overflow-x-hidden rounded-none border-y-0 border-r-0 p-0 sm:w-[520px] sm:max-w-[520px]"
         showCloseButton
         showOverlay={isNarrow}
         onInteractOutside={(event) => {

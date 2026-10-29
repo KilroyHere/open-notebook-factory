@@ -61,6 +61,9 @@ describe('LearningAsidePanel', () => {
 
     expect(onSelectAside).toHaveBeenCalledWith('learning_aside:one')
     expect(screen.getByRole('dialog').className).toContain('max-w-[100vw]')
+    expect(screen.getByRole('dialog').className).toContain(
+      'grid-rows-[auto_minmax(0,1fr)]'
+    )
     expect(
       document.querySelector('[data-slot="scroll-area-viewport"]')?.className
     ).toContain('[&>div]:!w-full')
