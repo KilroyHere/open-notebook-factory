@@ -32,7 +32,7 @@ export function KnowledgeRail({ sources, notes }: KnowledgeRailProps) {
   return (
     <div
       className={cn(
-        'hidden h-full min-h-0 shrink-0 lg:block',
+        'hidden min-h-0 shrink-0 flex-col lg:flex',
         knowledgeCollapsed ? 'w-12' : 'w-80 xl:w-96'
       )}
     >
@@ -42,7 +42,7 @@ export function KnowledgeRail({ sources, notes }: KnowledgeRailProps) {
         collapsedIcon={Library}
         collapsedLabel={label}
       >
-        <div className="flex h-full min-h-0 flex-col border-r bg-card">
+        <div className="flex h-full min-h-0 flex-1 flex-col border-r bg-card">
           <Tabs
             defaultValue="sources"
             className="h-full min-h-0 gap-0"

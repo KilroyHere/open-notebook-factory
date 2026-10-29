@@ -46,7 +46,7 @@ The workspace pages have a sidebar on the left (it can be collapsed to icons). T
 
 ## The Notebook Page
 
-Opening a notebook shows its header, then a conversation-first workspace. On a wide screen the chat fills the center. Sources and notes share a collapsible **Knowledge** rail on the left, and the **Learning journey** rail on the right holds the chat outline and an aside map. Both rails can be collapsed so the conversation uses the full width.
+Opening a notebook shows its header, then a conversation-first workspace. On a wide screen the chat fills the center and the remaining window height, so the message list scrolls and the composer stays at the bottom. Sources and notes share a collapsible **Knowledge** rail on the left, and the **Learning journey** rail on the right holds the chat outline and an aside map. Both rails can be collapsed so the conversation uses the full width.
 
 ```
 ┌────────────────────────────────────────────────────────────────────┐

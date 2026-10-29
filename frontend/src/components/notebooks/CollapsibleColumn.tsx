@@ -31,8 +31,8 @@ export function CollapsibleColumn({
             <button
               onClick={onToggle}
               className={cn(
-                'flex flex-col items-center justify-center gap-3',
-                'w-12 h-full min-h-0',
+                'flex min-h-0 flex-1 flex-col items-center justify-center gap-3',
+                'h-full w-12',
                 'border rounded-lg',
                 'bg-card hover:bg-accent/50',
                 'transition-all duration-150',
@@ -59,7 +59,7 @@ export function CollapsibleColumn({
   }
 
   return (
-    <div className="h-full min-h-0 transition-all duration-150">
+    <div className="flex h-full min-h-0 flex-1 flex-col transition-all duration-150">
       {children}
     </div>
   )

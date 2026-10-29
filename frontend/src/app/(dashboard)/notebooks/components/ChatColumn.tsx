@@ -170,8 +170,8 @@ export function ChatColumn({ notebookId, contextSelections, sources, sourcesLoad
   }
 
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-1">
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
+    <div className="flex min-h-0 min-w-0 flex-1">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         {resumableAside && !learning.panelOpen && (
           <div className="flex items-center justify-between gap-3 border-b bg-card px-3 py-2">
             <div className="flex min-w-0 items-center gap-2">

@@ -149,7 +149,7 @@ export default function NotebookPage() {
 
   return (
     <AppShell>
-      <div className="flex flex-col flex-1 min-h-0">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className="flex-shrink-0 px-6 pt-4">
           <NotebookHeader notebook={notebook} />
         </div>
@@ -211,7 +211,7 @@ export default function NotebookPage() {
                   />
                 )}
                 {(mobileActiveTab === 'chat' || mobileActiveTab === 'journey') && (
-                  <div className="h-full min-h-0">
+                  <div className="flex h-full min-h-0 flex-col">
                     <ChatColumn
                       notebookId={notebookId}
                       contextSelections={contextSelections}
@@ -226,7 +226,7 @@ export default function NotebookPage() {
             </div>
           )}
 
-          <div className="hidden min-h-0 flex-1 lg:flex">
+          <div className="hidden min-h-0 flex-1 items-stretch overflow-hidden lg:flex">
             <KnowledgeRail
               sources={{
                 sources,
@@ -250,7 +250,7 @@ export default function NotebookPage() {
                 onBulkContextModeChange: handleBulkNoteContext,
               }}
             />
-            <div className="min-h-0 min-w-0 flex-1">
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
               <ChatColumn
                 notebookId={notebookId}
                 contextSelections={contextSelections}

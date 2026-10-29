@@ -319,7 +319,7 @@ export function LearningJourneyRail({
   const column = (
     <aside
       className={cn(
-        'relative flex h-full min-h-0 w-full flex-col',
+        'relative flex h-full min-h-0 w-full flex-1 flex-col',
         presentation === 'sheet' ? 'bg-card' : 'border-l bg-muted/20'
       )}
     >
@@ -471,7 +471,7 @@ export function LearningJourneyRail({
     <div
       data-presentation="rail"
       className={cn(
-        'hidden h-full min-h-0 shrink-0 lg:block',
+        'hidden min-h-0 shrink-0 flex-col lg:flex',
         journeyCollapsed ? 'w-12' : 'w-72 xl:w-80'
       )}
     >
