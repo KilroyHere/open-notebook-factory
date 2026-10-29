@@ -273,6 +273,8 @@ export interface LearningUpdate {
   saved_note_id?: string | null
   applied_message_id?: string | null
   version: number
+  /** A newer resolution of the same aside replaced this one in main context. */
+  superseded?: boolean
   created: string
   updated: string
 }

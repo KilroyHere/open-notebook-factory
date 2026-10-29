@@ -194,6 +194,13 @@ class LearningUpdateResponse(BaseModel):
     saved_note_id: Optional[str] = None
     applied_message_id: Optional[str] = None
     version: int
+    superseded: bool = Field(
+        default=False,
+        description=(
+            "True when a newer resolution of the same aside exists; superseded "
+            "versions are kept for audit but never enter main chat context"
+        ),
+    )
     created: str
     updated: str
 

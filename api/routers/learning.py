@@ -34,6 +34,7 @@ from open_notebook.domain.learning import (
     LearningJourney,
     LearningSection,
     LearningUpdate,
+    latest_update_versions,
 )
 from open_notebook.domain.notebook import ChatSession, Note, Notebook
 from open_notebook.exceptions import InvalidInputError, NotFoundError
@@ -99,7 +100,9 @@ async def _snapshot_parent_context(
     return snapshot[-100:]
 
 
-def _update_response(update: LearningUpdate) -> LearningUpdateResponse:
+def _update_response(
+    update: LearningUpdate, superseded: bool = False
+) -> LearningUpdateResponse:
     return LearningUpdateResponse(
         id=update.id or "",
         aside_id=update.aside,
@@ -111,9 +114,18 @@ def _update_response(update: LearningUpdate) -> LearningUpdateResponse:
         saved_note_id=update.saved_note,
         applied_message_id=update.applied_message_id,
         version=update.version,
+        superseded=superseded,
         created=_timestamp(update.created),
         updated=_timestamp(update.updated),
     )
+
+
+def _update_responses(updates: List[LearningUpdate]) -> List[LearningUpdateResponse]:
+    current = {id(update) for update in latest_update_versions(updates)}
+    return [
+        _update_response(update, superseded=id(update) not in current)
+        for update in updates
+    ]
 
 
 async def _aside_response(aside: LearningAside) -> LearningAsideResponse:
@@ -126,7 +138,7 @@ async def _aside_response(aside: LearningAside) -> LearningAsideResponse:
         )
         for message in await _raw_session_messages(aside.chat_session)
     ]
-    updates = [_update_response(update) for update in await aside.get_updates()]
+    updates = _update_responses(await aside.get_updates())
     return LearningAsideResponse(
         id=aside.id or "",
         journey_id=aside.journey,
@@ -160,7 +172,7 @@ async def _journey_response(journey: LearningJourney) -> LearningJourneyResponse
         await _aside_response(aside)
         for aside in await journey.get_asides(include_discarded=True)
     ]
-    updates = [_update_response(update) for update in await journey.get_updates()]
+    updates = _update_responses(await journey.get_updates())
     sections = [
         _section_response(section)
         for section in await LearningSection.get_for_journey(journey.id or "")
@@ -217,7 +229,9 @@ async def get_journey_resume(
         open_asides[-1] if open_asides else None,
     )
     accepted_findings = [
-        update.conclusion for update in response.updates if update.include_in_main
+        update.conclusion
+        for update in response.updates
+        if update.include_in_main and not update.superseded
     ]
     current_point: Optional[str]
     if active_aside:

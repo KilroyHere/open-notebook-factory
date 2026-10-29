@@ -143,16 +143,23 @@ class LearningJourney(ObjectModel):
         aside_ids = [ensure_record_id(aside.id) for aside in asides if aside.id]
         if not aside_ids:
             return []
-        query = "SELECT * FROM learning_update WHERE $asides CONTAINS aside"
-        if not include_unmerged:
-            query += " AND include_in_main = true"
-        query += " ORDER BY created ASC"
+        query = (
+            "SELECT * FROM learning_update WHERE $asides CONTAINS aside "
+            "ORDER BY created ASC"
+        )
         try:
             rows = await repo_query(query, {"asides": aside_ids})
-            return [LearningUpdate(**row) for row in rows]
+            updates = [LearningUpdate(**row) for row in rows]
         except Exception as exc:
             logger.exception(f"Failed to list learning updates for journey {self.id}")
             raise DatabaseOperationError("Failed to list learning updates") from exc
+        if include_unmerged:
+            return updates
+        return [
+            update
+            for update in latest_update_versions(updates)
+            if update.include_in_main
+        ]
 
     async def delete_with_asides(self) -> bool:
         """Delete a journey, its updates, asides, and child chat sessions."""
@@ -268,6 +275,23 @@ class LearningUpdate(ObjectModel):
             "citations": self.citations,
             "applied_message_id": self.applied_message_id,
         }
+
+
+def latest_update_versions(updates: List["LearningUpdate"]) -> List["LearningUpdate"]:
+    """Keep only the newest version of each aside's resolution.
+
+    Re-resolving an aside stores a new version; earlier versions stay for audit
+    but are superseded and must not reach the main chat context. The latest
+    version decides alone, so a re-resolution that is not included in main
+    removes that aside's conclusion from main context. Input order is kept.
+    """
+    latest: Dict[str, "LearningUpdate"] = {}
+    for update in updates:
+        current = latest.get(update.aside)
+        if current is None or update.version >= current.version:
+            latest[update.aside] = update
+    keep = {id(update) for update in latest.values()}
+    return [update for update in updates if id(update) in keep]
 
 
 class LearningSection(ObjectModel):

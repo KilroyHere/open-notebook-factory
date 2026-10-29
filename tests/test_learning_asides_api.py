@@ -744,3 +744,107 @@ async def test_execute_chat_sends_updates_to_model_without_ids(client):
     # The backlink still receives the IDs from the original request context.
     assert mark_applied.await_args is not None
     assert mark_applied.await_args.args[1] == request_context
+
+
+@pytest.mark.asyncio
+async def test_aside_response_marks_older_resolutions_superseded():
+    from api.routers.learning import _aside_response as real_aside_response
+
+    aside = _aside(status="resolved")
+    updates = [
+        LearningUpdate(
+            id="learning_update:first",
+            aside=aside.id or "",
+            conclusion="Earlier conclusion",
+            version=1,
+            applied_message_id="ai:old-reply",
+        ),
+        LearningUpdate(
+            id="learning_update:second",
+            aside=aside.id or "",
+            conclusion="Revised conclusion",
+            version=2,
+        ),
+    ]
+    with (
+        patch(
+            "api.routers.learning._raw_session_messages",
+            new_callable=AsyncMock,
+            return_value=[],
+        ),
+        patch(
+            "api.routers.learning.LearningAside.get_updates",
+            new_callable=AsyncMock,
+            return_value=updates,
+        ),
+    ):
+        response = await real_aside_response(aside)
+
+    assert [update.superseded for update in response.updates] == [True, False]
+    # The superseded version keeps its historical backlink.
+    assert response.updates[0].applied_message_id == "ai:old-reply"
+    assert response.updates[1].applied_message_id is None
+
+
+@pytest.mark.asyncio
+async def test_resume_lists_only_current_resolutions_as_accepted(client):
+    from api.routers.learning import _update_responses
+
+    journey = _journey()
+    aside = _aside(status="resolved")
+    updates = _update_responses(
+        [
+            LearningUpdate(
+                id="learning_update:first",
+                aside=aside.id or "",
+                conclusion="Earlier conclusion",
+                version=1,
+                created=NOW,
+                updated=NOW,
+            ),
+            LearningUpdate(
+                id="learning_update:second",
+                aside=aside.id or "",
+                conclusion="Revised conclusion",
+                version=2,
+                created=NOW,
+                updated=NOW,
+            ),
+        ]
+    )
+    journey_response = LearningJourneyResponse(
+        id=journey.id or "",
+        notebook_id=journey.notebook,
+        main_session_id=journey.main_session,
+        active_session_id=journey.active_session,
+        objective=journey.objective,
+        status="active",
+        asides=[_aside_response(aside)],
+        updates=updates,
+        created=str(NOW),
+        updated=str(NOW),
+    )
+    with (
+        patch(
+            "api.routers.learning._verify_notebook_session",
+            new_callable=AsyncMock,
+            return_value=("chat_session:main", SimpleNamespace(), SimpleNamespace()),
+        ),
+        patch(
+            "api.routers.learning.LearningJourney.get_for_main_session",
+            new_callable=AsyncMock,
+            return_value=journey,
+        ),
+        patch(
+            "api.routers.learning._journey_response",
+            new_callable=AsyncMock,
+            return_value=journey_response,
+        ),
+    ):
+        response = client.get(
+            "/api/learning/journeys/resume",
+            params={"notebook_id": "notebook:one", "main_session_id": "main"},
+        )
+
+    assert response.status_code == 200
+    assert response.json()["accepted_findings"] == ["Revised conclusion"]
