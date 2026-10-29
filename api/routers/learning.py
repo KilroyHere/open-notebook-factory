@@ -22,7 +22,11 @@ from api.models import (
     UpdateLearningAsideRequest,
     UpdateLearningSectionRequest,
 )
-from api.routers._chat_shared import normalize_record_id
+from api.routers._chat_shared import (
+    INTERNAL_ID_INSTRUCTION,
+    model_facing_context,
+    normalize_record_id,
+)
 from open_notebook.database.repository import ensure_record_id, repo_query
 from open_notebook.domain.learning import (
     AsideAnchor,
@@ -375,7 +379,7 @@ async def send_aside_message(aside_id: str, request: SendLearningAsideMessageReq
         f"{item.get('role', 'unknown').upper()}: {item.get('content', '')}"
         for item in aside.context_snapshot
     )
-    context = dict(request.context)
+    context = model_facing_context(request.context)
     context["learning_aside"] = {
         "title": aside.title,
         "anchor": aside.anchor.model_dump(),
@@ -383,9 +387,7 @@ async def send_aside_message(aside_id: str, request: SendLearningAsideMessageReq
         "instruction": (
             "Answer this isolated learning aside. Preserve source citations and "
             "focus on the prerequisite or tangent without redirecting the main path. "
-            "Never expose or cite internal learning_aside, learning_update, "
-            "chat_session, or message IDs. Only cite source, note, or "
-            "source_insight IDs that appear in the selected research context."
+            + INTERNAL_ID_INSTRUCTION
         ),
     }
     state_values["context"] = context

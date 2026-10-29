@@ -13,6 +13,7 @@ from api.routers._chat_shared import (
     SuccessResponse,
     extract_chat_messages,
     get_session_or_404,
+    model_facing_context,
 )
 from open_notebook.database.repository import ensure_record_id, repo_query
 from open_notebook.domain.learning import LearningJourney
@@ -390,7 +391,9 @@ async def execute_chat(request: ExecuteChatRequest):
         # Prepare state for execution
         state_values = current_state.values if current_state else {}
         state_values["messages"] = state_values.get("messages", [])
-        state_values["context"] = request.context
+        # The model sees learning updates without their record IDs; the raw
+        # request context (with IDs) is kept for the applied-message backlink.
+        state_values["context"] = model_facing_context(request.context)
         state_values["notebook"] = notebook
         state_values["model_override"] = model_override
 

@@ -2,6 +2,7 @@
 
 from datetime import datetime, timezone
 from types import SimpleNamespace
+from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -635,3 +636,111 @@ async def test_main_response_links_learning_update_back_to_message():
 
     assert update.applied_message_id == "ai:merged-response"
     save_update.assert_awaited_once()
+
+
+def test_model_facing_context_hides_learning_update_ids():
+    from api.routers._chat_shared import model_facing_context
+
+    raw: dict[str, Any] = {
+        "sources": [{"id": "source:paper"}],
+        "learning_updates": [
+            {
+                "id": "learning_update:4blhghrdah77x4j3ap02",
+                "conclusion": "Jensen gives a lower bound.",
+                "relevance": "First derivation step.",
+                "open_questions": [],
+                "citations": ["source:paper"],
+                "applied_message_id": "ai:earlier",
+            }
+        ],
+    }
+
+    prepared = model_facing_context(raw)
+
+    assert prepared["learning_updates"] == [
+        {
+            "conclusion": "Jensen gives a lower bound.",
+            "relevance": "First derivation step.",
+            "citations": ["source:paper"],
+        }
+    ]
+    assert "learning_update:" not in str(prepared["learning_updates"])
+    assert "Never expose or cite" in prepared["learning_updates_instruction"]
+    assert prepared["sources"] == raw["sources"]
+    # The caller's context keeps the IDs for the applied-message backlink.
+    assert raw["learning_updates"][0]["id"] == "learning_update:4blhghrdah77x4j3ap02"
+
+
+def test_model_facing_context_without_updates_adds_no_instruction():
+    from api.routers._chat_shared import model_facing_context
+
+    assert model_facing_context({"sources": []}) == {"sources": []}
+
+
+def test_main_chat_prompt_forbids_citing_learning_ids():
+    from ai_prompter import Prompter
+
+    rendered = Prompter(prompt_template="chat/system").render(
+        data={"messages": [], "context": {"learning_updates": []}}
+    )
+    assert "learning_update:" in rendered
+    assert "Never cite or mention internal record IDs" in rendered
+
+
+@pytest.mark.asyncio
+async def test_execute_chat_sends_updates_to_model_without_ids(client):
+    captured = {}
+
+    def fake_invoke(graph, state, config, user_message):
+        captured["context"] = state["context"]
+        return {
+            "messages": [
+                user_message,
+                SimpleNamespace(id="ai:reply", type="ai", content="Answer"),
+            ]
+        }
+
+    session = SimpleNamespace(model_override=None, save=AsyncMock())
+    request_context = {
+        "learning_updates": [
+            {"id": "learning_update:one", "conclusion": "Accepted conclusion"}
+        ]
+    }
+    with (
+        patch(
+            "api.routers.chat.get_session_or_404",
+            new_callable=AsyncMock,
+            return_value=("chat_session:main", session),
+        ),
+        patch("api.routers.chat.repo_query", new_callable=AsyncMock, return_value=[]),
+        patch(
+            "api.routers.chat.chat_graph.get_state",
+            return_value=SimpleNamespace(values={"messages": []}),
+        ),
+        patch("api.routers.chat.invoke_chat_turn", new=fake_invoke),
+        patch(
+            "api.routers.chat._mark_learning_updates_applied",
+            new_callable=AsyncMock,
+        ) as mark_applied,
+        patch(
+            "api.routers.chat.extract_chat_messages",
+            return_value=[],
+        ),
+    ):
+        response = client.post(
+            "/api/chat/execute",
+            json={
+                "session_id": "chat_session:main",
+                "message": "Continue",
+                "context": request_context,
+            },
+        )
+
+    assert response.status_code == 200
+    assert captured["context"]["learning_updates"] == [
+        {"conclusion": "Accepted conclusion"}
+    ]
+    assert "learning_updates_instruction" in captured["context"]
+    # The backlink still receives the IDs from the original request context.
+    assert mark_applied.await_args is not None
+    assert mark_applied.await_args.args[1] == request_context
