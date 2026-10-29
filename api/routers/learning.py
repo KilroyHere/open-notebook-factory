@@ -128,17 +128,34 @@ def _update_responses(updates: List[LearningUpdate]) -> List[LearningUpdateRespo
     ]
 
 
-async def _aside_response(aside: LearningAside) -> LearningAsideResponse:
-    messages = [
-        LearningAsideMessageResponse(
-            id=str(getattr(message, "id", "") or ""),
-            type=str(getattr(message, "type", "unknown")),
-            content=extract_text_content(getattr(message, "content", "")),
-            timestamp=None,
-        )
-        for message in await _raw_session_messages(aside.chat_session)
-    ]
-    updates = _update_responses(await aside.get_updates())
+async def _aside_response(
+    aside: LearningAside,
+    *,
+    include_messages: bool = True,
+    updates: Optional[List[LearningUpdate]] = None,
+) -> LearningAsideResponse:
+    """Serialize an aside.
+
+    ``include_messages=False`` skips the LangGraph checkpoint read and returns
+    ``messages=[]``: the journey listing only needs aside metadata, and the
+    aside detail endpoint is the source of a transcript. ``updates`` lets a
+    caller that already loaded them avoid a query per aside.
+    """
+    messages = (
+        [
+            LearningAsideMessageResponse(
+                id=str(getattr(message, "id", "") or ""),
+                type=str(getattr(message, "type", "unknown")),
+                content=extract_text_content(getattr(message, "content", "")),
+                timestamp=None,
+            )
+            for message in await _raw_session_messages(aside.chat_session)
+        ]
+        if include_messages
+        else []
+    )
+    if updates is None:
+        updates = await aside.get_updates()
     return LearningAsideResponse(
         id=aside.id or "",
         journey_id=aside.journey,
@@ -149,7 +166,7 @@ async def _aside_response(aside: LearningAside) -> LearningAsideResponse:
         status=aside.status,
         anchor=aside.anchor.model_dump(),
         messages=messages,
-        updates=updates,
+        updates=_update_responses(updates),
         created=_timestamp(aside.created),
         updated=_timestamp(aside.updated),
     )
@@ -167,12 +184,26 @@ def _section_response(section: LearningSection) -> LearningSectionResponse:
     )
 
 
-async def _journey_response(journey: LearningJourney) -> LearningJourneyResponse:
-    asides = [
-        await _aside_response(aside)
-        for aside in await journey.get_asides(include_discarded=True)
-    ]
-    updates = _update_responses(await journey.get_updates())
+async def _journey_response(
+    journey: LearningJourney, include_messages: bool = False
+) -> LearningJourneyResponse:
+    """Serialize a journey; aside transcripts are only loaded on request."""
+    all_updates = await journey.get_updates()
+    updates_by_aside: Dict[str, List[LearningUpdate]] = {}
+    for update in all_updates:
+        updates_by_aside.setdefault(update.aside, []).append(update)
+    asides = []
+    for aside in await journey.get_asides(include_discarded=True):
+        aside_updates = sorted(
+            updates_by_aside.get(aside.id or "", []),
+            key=lambda update: update.version,
+        )
+        asides.append(
+            await _aside_response(
+                aside, include_messages=include_messages, updates=aside_updates
+            )
+        )
+    updates = _update_responses(all_updates)
     sections = [
         _section_response(section)
         for section in await LearningSection.get_for_journey(journey.id or "")
@@ -200,10 +231,19 @@ async def _get_aside(aside_id: str) -> LearningAside:
 async def get_journey(
     notebook_id: str = Query(...),
     main_session_id: str = Query(...),
+    include_messages: bool = Query(
+        False,
+        description=(
+            "Load every aside's transcript. Off by default: asides are listed "
+            "with messages=[]; GET /learning/asides/{id} returns one transcript"
+        ),
+    ),
 ):
     full_session_id, _, _ = await _verify_notebook_session(notebook_id, main_session_id)
     journey = await LearningJourney.get_for_main_session(full_session_id)
-    return await _journey_response(journey) if journey else None
+    if not journey:
+        return None
+    return await _journey_response(journey, include_messages=include_messages)
 
 
 @router.get("/journeys/resume", response_model=LearningJourneyResumeResponse)

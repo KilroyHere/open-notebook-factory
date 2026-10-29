@@ -386,8 +386,13 @@ export function LearningAsidePanel({
                 )}
                 {(showTranscript || activeAside.status !== 'resolved') &&
                   (activeAside.messages.length === 0 ? (
+                    // Journey listings carry asides without transcripts; the
+                    // detail query fills them in, so wait before calling the
+                    // aside empty.
                     <p className="py-8 text-center text-sm text-muted-foreground">
-                      {t('learningAsides.askHint')}
+                      {isAsideLoading
+                        ? t('common.loading')
+                        : t('learningAsides.askHint')}
                     </p>
                   ) : (
                     activeAside.messages.map((message) => (

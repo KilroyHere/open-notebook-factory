@@ -288,6 +288,10 @@ export interface LearningAside {
   title: string
   status: LearningAsideStatus
   anchor: LearningAsideAnchor
+  /**
+   * The aside transcript. Only GET/POST on a single aside fill it; asides
+   * inside a journey response arrive with an empty list.
+   */
   messages: NotebookChatMessage[]
   updates: LearningUpdate[]
   created: string

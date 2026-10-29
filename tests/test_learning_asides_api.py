@@ -1098,3 +1098,83 @@ def test_nested_dive_message_carries_learning_path(client):
     assert aside_context["learning_path"] == "LEARNING PATH"
     assert "MIDDLE TRANSCRIPT" in aside_context["parent_conversation_at_branch"]
     assert "nested dive" in aside_context["instruction"]
+
+
+def _get_journey_with_asides(client, params):
+    journey = _journey()
+    asides = [
+        _aside(id="learning_aside:one", chat_session="chat_session:one"),
+        _aside(id="learning_aside:two", chat_session="chat_session:two"),
+    ]
+    updates = [
+        LearningUpdate(
+            id="learning_update:two",
+            aside="learning_aside:two",
+            conclusion="Two",
+            created=NOW,
+            updated=NOW,
+        )
+    ]
+    with (
+        patch(
+            "api.routers.learning._verify_notebook_session",
+            new_callable=AsyncMock,
+            return_value=("chat_session:main", SimpleNamespace(), SimpleNamespace()),
+        ),
+        patch(
+            "api.routers.learning.LearningJourney.get_for_main_session",
+            new_callable=AsyncMock,
+            return_value=journey,
+        ),
+        patch(
+            "api.routers.learning.LearningJourney.get_asides",
+            new_callable=AsyncMock,
+            return_value=asides,
+        ),
+        patch(
+            "api.routers.learning.LearningJourney.get_updates",
+            new_callable=AsyncMock,
+            return_value=updates,
+        ),
+        patch(
+            "api.routers.learning.LearningAside.get_updates",
+            new_callable=AsyncMock,
+        ) as per_aside_updates,
+        patch(
+            "api.routers.learning.LearningSection.get_for_journey",
+            new_callable=AsyncMock,
+            return_value=[],
+        ),
+        patch(
+            "api.routers.learning._raw_session_messages",
+            new_callable=AsyncMock,
+            return_value=[SimpleNamespace(id="ai:1", type="ai", content="Hello")],
+        ) as raw_messages,
+    ):
+        response = client.get(
+            "/api/learning/journeys",
+            params={"notebook_id": "notebook:one", "main_session_id": "main", **params},
+        )
+    return response, raw_messages, per_aside_updates
+
+
+def test_journey_listing_does_not_load_aside_transcripts(client):
+    response, raw_messages, per_aside_updates = _get_journey_with_asides(client, {})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert [aside["messages"] for aside in body["asides"]] == [[], []]
+    assert [len(aside["updates"]) for aside in body["asides"]] == [0, 1]
+    raw_messages.assert_not_called()
+    # Updates are loaded once for the journey, not once per aside.
+    per_aside_updates.assert_not_called()
+
+
+def test_journey_listing_can_still_include_transcripts(client):
+    response, raw_messages, _ = _get_journey_with_asides(
+        client, {"include_messages": "true"}
+    )
+
+    assert response.status_code == 200
+    assert response.json()["asides"][0]["messages"][0]["content"] == "Hello"
+    assert raw_messages.await_count == 2
