@@ -178,7 +178,10 @@ export function LearningAsidePanel({
         </DialogHeader>
 
         {showList ? (
-          <ScrollArea className="min-h-0 min-w-0 flex-1 overflow-x-hidden">
+          <ScrollArea
+            className="min-h-0 min-w-0 flex-1 overflow-x-hidden"
+            viewportClassName="[&>div]:!block [&>div]:!w-full [&>div]:!min-w-0"
+          >
             <div className="min-w-0 max-w-full space-y-3 overflow-x-hidden p-5">
               <p className="text-sm text-muted-foreground">
                 {t('learningAsides.listDescription')}
@@ -228,7 +231,10 @@ export function LearningAsidePanel({
               </p>
             </div>
 
-            <ScrollArea className="min-h-0 min-w-0 flex-1 overflow-x-hidden">
+            <ScrollArea
+              className="min-h-0 min-w-0 flex-1 overflow-x-hidden"
+              viewportClassName="[&>div]:!block [&>div]:!w-full [&>div]:!min-w-0"
+            >
               <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden p-5">
                 {activeAside.messages.length === 0 ? (
                   <p className="py-8 text-center text-sm text-muted-foreground">

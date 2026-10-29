@@ -61,6 +61,9 @@ describe('LearningAsidePanel', () => {
 
     expect(onSelectAside).toHaveBeenCalledWith('learning_aside:one')
     expect(screen.getByRole('dialog').className).toContain('max-w-[100vw]')
+    expect(
+      document.querySelector('[data-slot="scroll-area-viewport"]')?.className
+    ).toContain('[&>div]:!w-full')
   })
 
   it('sends a focused follow-up message', async () => {

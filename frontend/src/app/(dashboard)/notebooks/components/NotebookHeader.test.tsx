@@ -47,4 +47,18 @@ describe('NotebookHeader', () => {
       })
     )
   })
+
+  it('stacks and wraps header actions on narrow screens', () => {
+    render(<NotebookHeader notebook={notebook} />)
+
+    const archiveButton = screen.getByRole('button', {
+      name: 'notebooks.archive',
+    })
+    const actions = archiveButton.parentElement
+    const headerRow = actions?.parentElement
+
+    expect(actions?.className).toContain('flex-wrap')
+    expect(headerRow?.className).toContain('flex-col')
+    expect(headerRow?.className).toContain('sm:flex-row')
+  })
 })
