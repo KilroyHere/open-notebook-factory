@@ -50,16 +50,16 @@ Opening a notebook shows its header, then a conversation-first workspace. On a w
 
 ```
 ┌────────────────────────────────────────────────────────────────────┐
-│ Notebook name   (click to edit)            [Archive]   [Delete]    │
-│ Description     (click to edit)                                    │
+│ Notebook name (click to edit)              [Archive] [Delete]      │
+│ Description (one line, click to edit)                              │
 ├──────────────────┬──────────────────────────────┬──────────────────┤
-│ KNOWLEDGE        │ CHAT WITH NOTEBOOK           │ LEARNING JOURNEY │
-│ [Sources] [Notes]│ [Asides] [Sessions]          │ [Outline] [Map]  │
-│ [Context] [Add]  │                              │                  │
-│ ┌──────────────┐ │  messages, with numbered     │ 1. question      │
-│ │ paper.pdf    │ │  references and aside        │    └ deep dive   │
-│ │ File · 2  ◐ ⋮│ │  summaries                   │                  │
-│ └──────────────┘ │ [Model] [Ask anything...]    │                  │
+│ KNOWLEDGE        │                              │ LEARNING JOURNEY │
+│ [Sources] [Notes]│  messages, with numbered     │ [Outline] [Map]  │
+│ [Context] [Add]  │  references and aside        │                  │
+│ ┌──────────────┐ │  summaries                   │ 1. question      │
+│ │ paper.pdf    │ │                              │    └ deep dive   │
+│ │ File · 2  ◐ ⋮│ │ [Asides] [Current session]   │                  │
+│ └──────────────┘ │ [Ask anything...] [Model]    │                  │
 └──────────────────┴──────────────────────────────┴──────────────────┘
 ```
 
@@ -84,7 +84,7 @@ The left rail has **Sources** and **Notes** tabs. Collapse it from the header to
 
 ### Chat column
 
-Notebook chat with the sources and notes in context. **Sessions** opens your saved chat sessions, the model button picks a model for the session, and the panel shows how much content is in context. Send with **Ctrl+Enter** (**⌘+Enter** on Mac). See [Chat Effectively](chat-effectively.md).
+Notebook chat with the sources and notes in context. The button labeled with the current session title opens **Chat Sessions**. The model button sits on the message row and picks a model for the session. Context counts appear under the messages only when sources or notes are included. Send with **Ctrl+Enter** (**⌘+Enter** on Mac). See [Chat Effectively](chat-effectively.md).
 
 ---
 
@@ -103,7 +103,7 @@ Clicking a source opens it with three tabs:
 ## Other Pages
 
 - **Sources** (library): a table of all sources with type, insight count and embedding status. **New Source** adds a source without opening a notebook.
-- **Notebooks**: **New Notebook**, a search box, **Recently Viewed**, and the **Active Notebooks** and **Archived Notebooks** lists.
+- **Notebooks**: **New Notebook**, a search box, **Recently Viewed** (notebooks only), and the **Active Notebooks** and **Archived Notebooks** lists.
 - **Settings**: Content Processing (document and URL engines, OCR and other Docling options; see [Content Processing Engines](content-processing-engines.md)), Embedding and Search (**Default Embedding Option**: Ask, Always or Never), and File Management (**Auto Delete Files**: whether uploaded files are deleted after processing).
 - **Advanced**: **System Info** shows your version and whether an update is available. **Rebuild Embeddings** re-embeds content after you change the embedding model (mode *Existing* or *All*); it runs in the background.
 

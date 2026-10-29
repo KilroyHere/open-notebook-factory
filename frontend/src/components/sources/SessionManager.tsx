@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
@@ -13,11 +12,11 @@ import {
   Edit2,
   Check,
   X,
-  Clock
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { getDateLocale } from '@/lib/utils/date-locale'
 import { useTranslation } from '@/lib/hooks/use-translation'
+import { cn } from '@/lib/utils'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -103,42 +102,45 @@ export function SessionManager({
 
   return (
     <>
-      <Card className="h-full flex flex-col">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center justify-between">
-            <span className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5" />
-              {t('chat.sessions')}
-            </span>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setIsCreating(true)}
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex-1 p-0 min-h-0">
-          <ScrollArea className="h-full px-4">
+      <div className="flex max-h-[70vh] flex-col">
+        <div className="flex items-center justify-between gap-3 border-b py-3 pl-4 pr-12">
+          <h2 className="flex min-w-0 items-center gap-2 text-sm font-semibold">
+            <MessageSquare className="h-4 w-4 shrink-0 text-teal" />
+            {t('chat.sessionsTitle')}
+          </h2>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setIsCreating(true)}
+          >
+            <Plus className="h-4 w-4" />
+            {t('common.create')}
+          </Button>
+        </div>
+        <ScrollArea className="min-h-0 flex-1">
+          <div className="space-y-2 p-3">
             {isCreating && (
-              <div className="p-3 border rounded-lg mb-3">
+              <form
+                className="space-y-2 rounded-md border p-3"
+                onSubmit={(event) => {
+                  event.preventDefault()
+                  handleCreateSession()
+                }}
+              >
                 <Input
                   value={newSessionTitle}
                   onChange={(e) => setNewSessionTitle(e.target.value)}
                   placeholder={t('chat.sessionTitlePlaceholder')}
-                  className="mb-2"
+                  aria-label={t('chat.sessionTitlePlaceholder')}
                   autoFocus
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') handleCreateSession()
-                  }}
                 />
                 <div className="flex gap-2">
-                  <Button size="sm" onClick={handleCreateSession}>
+                  <Button size="sm" type="submit">
                     {t('common.create')}
                   </Button>
                   <Button
                     size="sm"
+                    type="button"
                     variant="outline"
                     onClick={() => {
                       setIsCreating(false)
@@ -148,106 +150,125 @@ export function SessionManager({
                     {t('common.cancel')}
                   </Button>
                 </div>
-              </div>
+              </form>
             )}
 
             {loadingSessions ? (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="py-8 text-center text-sm text-muted-foreground">
                 {t('common.loading')}
               </div>
             ) : sessions.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <div className="py-8 text-center text-muted-foreground">
                 <p className="text-sm">{t('chat.noSessions')}</p>
-                <p className="text-xs mt-2">{t('chat.createToStart')}</p>
+                <p className="mt-1 text-xs">{t('chat.createToStart')}</p>
               </div>
             ) : (
-              <div className="space-y-2 pb-4">
-                {sessions.map((session) => (
+              sessions.map((session) => {
+                const current = currentSessionId === session.id
+                const details = [
+                  formatDistanceToNow(new Date(session.created), {
+                    addSuffix: true,
+                    locale: getDateLocale(language),
+                  }),
+                  session.message_count
+                    ? t('chat.messagesCount', { count: session.message_count })
+                    : null,
+                  session.model_override
+                    ? getModelName(session.model_override)
+                    : null,
+                ].filter(Boolean)
+                return (
                   <div
                     key={session.id}
-                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                      currentSessionId === session.id
-                        ? 'bg-primary/10 border-primary'
-                        : 'hover:bg-muted'
-                    }`}
-                    onClick={() => onSelectSession(session.id)}
+                    className={cn(
+                      'flex items-start gap-2 rounded-md border p-2',
+                      current ? 'border-teal bg-teal-tint' : 'bg-card'
+                    )}
                   >
                     {editingId === session.id ? (
-                      <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
+                      <form
+                        className="min-w-0 flex-1 space-y-2"
+                        onSubmit={(event) => {
+                          event.preventDefault()
+                          handleSaveEdit()
+                        }}
+                      >
                         <Input
                           value={editTitle}
                           onChange={(e) => setEditTitle(e.target.value)}
-                          onKeyPress={(e) => {
-                            if (e.key === 'Enter') handleSaveEdit()
+                          onKeyDown={(e) => {
                             if (e.key === 'Escape') handleCancelEdit()
                           }}
+                          aria-label={t('common.edit')}
                           autoFocus
                         />
                         <div className="flex gap-2">
-                          <Button size="sm" onClick={handleSaveEdit}>
-                            <Check className="h-3 w-3" />
+                          <Button size="sm" type="submit">
+                            <Check className="h-3.5 w-3.5" />
+                            {t('common.save')}
                           </Button>
                           <Button
                             size="sm"
+                            type="button"
                             variant="outline"
                             onClick={handleCancelEdit}
                           >
-                            <X className="h-3 w-3" />
+                            <X className="h-3.5 w-3.5" />
+                            {t('common.cancel')}
                           </Button>
                         </div>
-                      </div>
+                      </form>
                     ) : (
                       <>
-                        <div className="flex items-start justify-between mb-1">
-                          <h4 className="font-medium text-sm">
-                            {session.title}
-                          </h4>
-                          <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-6 w-6 p-0"
-                              onClick={() => handleStartEdit(session)}
-                            >
-                              <Edit2 className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-6 w-6 p-0"
-                              onClick={() => setDeleteConfirmId(session.id)}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
+                        <button
+                          type="button"
+                          className="min-w-0 flex-1 rounded-sm px-1 py-0.5 text-left"
+                          aria-current={current ? 'true' : undefined}
+                          onClick={() => onSelectSession(session.id)}
+                        >
+                          <span className="flex min-w-0 items-center gap-2">
+                            <span className="truncate text-sm font-medium">
+                              {session.title}
+                            </span>
+                            {current && (
+                              <Badge variant="outline" className="shrink-0">
+                                {t('common.current')}
+                              </Badge>
+                            )}
+                          </span>
+                          <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                            {details.join(' · ')}
+                          </span>
+                        </button>
+                        <div className="flex shrink-0">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 px-2"
+                            aria-label={t('common.edit')}
+                            onClick={() => handleStartEdit(session)}
+                          >
+                            <Edit2 className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 px-2 text-destructive hover:text-destructive"
+                            aria-label={t('chat.deleteSession')}
+                            onClick={() => setDeleteConfirmId(session.id)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <Clock className="h-3 w-3" />
-                          {formatDistanceToNow(new Date(session.created), {
-                            addSuffix: true,
-                            locale: getDateLocale(language)
-                          })}
-                        </div>
-                        {session.message_count != null && session.message_count > 0 && (
-                          <Badge variant="secondary" className="mt-2 text-xs">
-                            {t('chat.messagesCount', { count: session.message_count })}
-                          </Badge>
-                        )}
-                        {session.model_override && (
-                          <Badge variant="outline" className="mt-2 ml-2 text-xs">
-                            {getModelName(session.model_override)}
-                          </Badge>
-                        )}
                       </>
                     )}
                   </div>
-                ))}
-              </div>
+                )
+              })
             )}
-          </ScrollArea>
-        </CardContent>
-      </Card>
+          </div>
+        </ScrollArea>
+      </div>
 
       <AlertDialog open={!!deleteConfirmId} onOpenChange={() => setDeleteConfirmId(null)}>
         <AlertDialogContent>

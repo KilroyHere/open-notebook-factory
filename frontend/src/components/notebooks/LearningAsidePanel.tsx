@@ -253,8 +253,8 @@ export function LearningAsidePanel({
           </ScrollArea>
         ) : activeAside ? (
           <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden">
-            <div className="border-b bg-muted/30 px-5 py-3">
-              <div className="mb-2 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+            <div className="border-b bg-muted/30 px-4 py-2">
+              <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
                 <button
                   type="button"
                   className="hover:text-foreground hover:underline"
@@ -276,38 +276,35 @@ export function LearningAsidePanel({
                 )}
                 <span aria-hidden>/</span>
                 <span className="truncate">{activeAside.title}</span>
+                {parentAside && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2"
+                    onClick={() => onSelectAside(parentAside.id)}
+                  >
+                    <ArrowLeft className="mr-1 h-3.5 w-3.5" />
+                    {t('learningAsides.backToParent')}
+                  </Button>
+                )}
+                {activeAside.anchor.message_id && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2"
+                    onClick={() =>
+                      returnToMainMessage(activeAside.anchor.message_id!)
+                    }
+                  >
+                    <ArrowLeft className="mr-1 h-3.5 w-3.5" />
+                    {t('learningAsides.backToOrigin')}
+                  </Button>
+                )}
               </div>
-              <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                {t('learningAsides.anchor')}
-              </p>
-              <p className="line-clamp-3 break-words text-sm">
-                {activeAside.anchor.content}
-              </p>
-              {(parentAside || activeAside.anchor.message_id) && (
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {parentAside && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onSelectAside(parentAside.id)}
-                    >
-                      <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
-                      {t('learningAsides.backToParent')}
-                    </Button>
-                  )}
-                  {activeAside.anchor.message_id && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() =>
-                        returnToMainMessage(activeAside.anchor.message_id!)
-                      }
-                    >
-                      <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
-                      {t('learningAsides.backToOrigin')}
-                    </Button>
-                  )}
-                </div>
+              {!activeAside.anchor.message_id && (
+                <p className="mt-1 line-clamp-2 break-words text-xs text-muted-foreground">
+                  {activeAside.anchor.content}
+                </p>
               )}
             </div>
 

@@ -198,6 +198,8 @@ describe('LearningAsidePanel', () => {
     expect(
       screen.queryByRole('button', { name: 'learningAsides.backToOrigin' })
     ).not.toBeInTheDocument()
+    expect(screen.getByText('A follow-up question')).toBeInTheDocument()
+    expect(screen.queryByText('learningAsides.anchor')).not.toBeInTheDocument()
   })
 
   it('returns to and highlights the exact origin message', async () => {
@@ -211,6 +213,9 @@ describe('LearningAsidePanel', () => {
         onNavigateToMessage={onNavigateToMessage}
       />
     )
+
+    expect(screen.queryByText(aside.anchor.content)).not.toBeInTheDocument()
+    expect(screen.queryByText('learningAsides.anchor')).not.toBeInTheDocument()
 
     fireEvent.click(
       screen.getByRole('button', { name: 'learningAsides.backToOrigin' })

@@ -7,8 +7,6 @@ import { Badge } from '@/components/ui/badge'
 import { Archive, ArchiveRestore, Trash2 } from 'lucide-react'
 import { useUpdateNotebook } from '@/lib/hooks/use-notebooks'
 import { NotebookDeleteDialog } from './NotebookDeleteDialog'
-import { formatDistanceToNow } from 'date-fns'
-import { getDateLocale } from '@/lib/utils/date-locale'
 import { InlineEdit } from '@/components/common/InlineEdit'
 import { useTranslation } from '@/lib/hooks/use-translation'
 
@@ -17,8 +15,7 @@ interface NotebookHeaderProps {
 }
 
 export function NotebookHeader({ notebook }: NotebookHeaderProps) {
-  const { t, language } = useTranslation()
-  const dfLocale = getDateLocale(language)
+  const { t } = useTranslation()
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   
   const updateNotebook = useUpdateNotebook()
@@ -50,72 +47,71 @@ export function NotebookHeader({ notebook }: NotebookHeaderProps) {
 
   return (
     <>
-      <div className="border-b pb-6">
-        <div className="space-y-2">
-          <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex min-w-0 flex-1 items-center gap-3">
+      <div className="border-b pb-2">
+        <div className="space-y-1">
+          <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
               <InlineEdit
                 id="notebook-name"
                 name="notebook-name"
                 value={notebook.name}
                 onSave={handleUpdateName}
-                className="break-words font-display text-2xl font-bold tracking-tight"
-                inputClassName="font-display text-2xl font-bold tracking-tight"
+                className="break-words font-display text-lg font-bold tracking-tight"
+                inputClassName="font-display text-lg font-bold tracking-tight"
                 placeholder={t('notebooks.namePlaceholder')}
               />
               {notebook.archived && (
                 <Badge variant="secondary">{t('notebooks.archived')}</Badge>
               )}
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1">
               <Button
                 variant="outline"
                 size="sm"
+                className="h-8 px-2"
+                aria-label={
+                  notebook.archived
+                    ? t('notebooks.unarchive')
+                    : t('notebooks.archive')
+                }
+                title={
+                  notebook.archived
+                    ? t('notebooks.unarchive')
+                    : t('notebooks.archive')
+                }
                 onClick={handleArchiveToggle}
               >
                 {notebook.archived ? (
-                  <>
-                    <ArchiveRestore className="h-4 w-4 mr-2" />
-                    {t('notebooks.unarchive')}
-                  </>
+                  <ArchiveRestore className="h-4 w-4" />
                 ) : (
-                  <>
-                    <Archive className="h-4 w-4 mr-2" />
-                    {t('notebooks.archive')}
-                  </>
+                  <Archive className="h-4 w-4" />
                 )}
               </Button>
               <Button
                 variant="outline"
                 size="sm"
+                className="h-8 px-2 text-destructive hover:text-destructive"
+                aria-label={t('common.delete')}
+                title={t('common.delete')}
                 onClick={() => setShowDeleteDialog(true)}
-                className="text-destructive hover:text-destructive"
               >
-                <Trash2 className="h-4 w-4 mr-2" />
-                {t('common.delete')}
+                <Trash2 className="h-4 w-4" />
               </Button>
             </div>
           </div>
 
-          {/* Signature: one short flat fern underline — one hue, no show */}
-          <div aria-hidden className="h-[3px] w-14 rounded-[1px] bg-fern" />
+          <div aria-hidden className="h-[3px] w-10 rounded-[1px] bg-fern" />
 
           <InlineEdit
             id="notebook-description"
             name="notebook-description"
             value={notebook.description || ''}
             onSave={handleUpdateDescription}
-            className="text-muted-foreground"
-            inputClassName="text-muted-foreground"
+            className="line-clamp-1 text-xs text-muted-foreground"
+            inputClassName="text-xs text-muted-foreground"
             placeholder={t('notebooks.addDescription')}
-            multiline
             emptyText={t('notebooks.addDescription')}
           />
-          
-          <div className="text-xs text-muted-foreground">
-            {t('common.created', { time: formatDistanceToNow(new Date(notebook.created), { addSuffix: true, locale: dfLocale }) })} • 
-            {t('common.updated', { time: formatDistanceToNow(new Date(notebook.updated), { addSuffix: true, locale: dfLocale }) })}
-          </div>
         </div>
       </div>
 

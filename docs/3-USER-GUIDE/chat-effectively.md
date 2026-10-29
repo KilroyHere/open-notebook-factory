@@ -48,14 +48,14 @@ Things to know:
 
 ## Sessions
 
-A session is one conversation; its messages are saved and reloaded when you come back. Click **Sessions** to open **Chat Sessions**, where you can create a session (give it a title), switch to another one, rename it or delete it. Each session remembers the conversation, not the context selection.
+A session is one conversation; its messages are saved and reloaded when you come back. The chat control shows the title of the session you are in. Click it to open **Chat Sessions**, where the open session is marked **Current**. From there you can create a session (give it a title), switch to another one, rename it or delete it. Each session remembers the conversation, not the context selection.
 
 ## Learning Asides
 
 Use an aside when an answer raises a prerequisite or tangent that you want to explore without filling the main conversation with the detour.
 
 1. Under an assistant answer, click **Open as an aside**.
-2. Ask follow-up questions in the center conversation. The aside retains the selected answer and the parent conversation up to that point. **Back to origin message** returns you to the message that started it.
+2. Ask follow-up questions in the center conversation. The aside retains the selected answer and the parent conversation up to that point. **Back to origin message** returns you to the message that started it. When that link is available, the aside does not also quote the starting passage. A dive opened from a question, with no origin message, still shows the question.
 3. **Park** it to return later, **Discard** it if the tangent was not useful, or **Resolve aside** when you have an answer.
 4. Before resolving, edit the proposed conclusion and decide whether to use it in the main conversation, save it as a note, or both.
 
@@ -69,7 +69,7 @@ On a wide screen the aside takes the center conversation, with the knowledge and
 
 ## Choosing the Model
 
-The model button next to the message box opens **Model Configuration**. Pick a model to use for this session instead of your **Chat Model** default, or click **Reset to Default**. Only language models you have added in **Manage → Models** are listed.
+The model button on the message row opens **Model Configuration**. Pick a model to use for this session instead of your **Chat Model** default, or click **Reset to Default**. Only language models you have added in **Manage → Models** are listed.
 
 ---
 
