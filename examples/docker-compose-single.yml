@@ -1,24 +1,34 @@
+# Try this checkout in one container.
+#
+# From the repository root:
+#   docker compose -f examples/docker-compose-single.yml up --build
+#
+# UI:  http://localhost:8502
+# API: http://localhost:5055
+#
+# The image includes SurrealDB, the API, the worker, and the web UI.
+# Ports are bound to this machine only. Replace the encryption key before
+# you save real provider credentials.
+
+name: open-notebook-local
+
 services:
-  open_notebook_single:
-    # image: lfnovo/open_notebook:v1-latest-single
+  open_notebook:
     build:
-      context: .
+      context: ..
       dockerfile: Dockerfile
       target: single
     ports:
-      - "8502:8502"  # Next.js Frontend
-      - "5055:5055"  # REST API
-    env_file:
-      - ./docker.env
+      - "127.0.0.1:8502:8502"
+      - "127.0.0.1:5055:5055"
     environment:
-      # Override for single-container mode: SurrealDB runs on localhost inside the same container
+      - OPEN_NOTEBOOK_ENCRYPTION_KEY=change-me-to-a-secret-string
       - SURREAL_URL=ws://localhost:8000/rpc
+      - SURREAL_USER=root
+      - SURREAL_PASSWORD=root
+      - SURREAL_NAMESPACE=open_notebook
+      - SURREAL_DATABASE=open_notebook
     volumes:
-      - ./notebook_data:/app/data          # Application data
-      - ./surreal_single_data:/mydata      # SurrealDB data
-    restart: always
-    # Single container includes all services: SurrealDB, API, Worker, and Next.js Frontend
-    # Access:
-    # - Next.js UI: http://localhost:8502
-    # - REST API: http://localhost:5055
-    # - API Documentation: http://localhost:5055/docs
+      - ../notebook_data:/app/data
+      - ../surreal_single_data:/mydata
+    restart: unless-stopped
