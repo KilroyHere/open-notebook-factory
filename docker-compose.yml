@@ -21,6 +21,8 @@ services:
     environment:
       - SURREAL_EXPERIMENTAL_GRAPHQL=true
     restart: always
+    # Kept so `docker compose up -d` upgrades user installs. Source development
+    # (`make database`, `make start-all`) overrides it with `--pull missing`.
     pull_policy: always
 
   open_notebook:

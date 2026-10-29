@@ -81,6 +81,16 @@ exits, it prints the relevant log tail; complete logs are at
 `/tmp/open-notebook-api.log` and `/tmp/open-notebook-worker.log`. Pressing
 **Ctrl+C** stops all four services, including the database container.
 
+If a SurrealDB already answers at the `SURREAL_URL` host and port (its
+`/health` endpoint), `make start-all` reuses it and leaves it running on
+**Ctrl+C**. Otherwise it starts the `surrealdb` compose service with
+`docker compose up -d --pull missing`: `docker-compose.yml` sets
+`pull_policy: always` so user installs upgrade on `docker compose up -d`, but
+the development path only pulls when the image is not already local, so Docker
+Hub rate limiting (HTTP 429) doesn't block a start. `make database` uses the
+same flag. If something else is listening on the database port, or Docker
+fails, the script stops with a message saying what to fix.
+
 Or one terminal per process, which makes logs easier to read:
 
 ```bash

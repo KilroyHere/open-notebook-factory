@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import IO, Mapping, Optional, Protocol
 from urllib.error import URLError
 from urllib.parse import urlparse
-from urllib.request import urlopen
+from urllib.request import ProxyHandler, build_opener, urlopen
 
 from dotenv import dotenv_values
 
@@ -164,6 +164,84 @@ def start_logged_process(
     return process, log_handle
 
 
+def surrealdb_is_reachable(host: str, port: int, timeout: float = 1.0) -> bool:
+    """Return True when a SurrealDB server answers its health check.
+
+    Probes ``http://host:port/health`` (served by SurrealDB on the same port
+    as the RPC endpoint) without any configured HTTP proxy, so a database
+    already running on the host is detected regardless of how it was started.
+    """
+    opener = build_opener(ProxyHandler({}))
+    netloc = f"[{host}]:{port}" if ":" in host else f"{host}:{port}"
+    try:
+        with opener.open(f"http://{netloc}/health", timeout=timeout) as response:
+            return response.status == 200
+    except (OSError, URLError, ValueError):
+        return False
+
+
+def database_compose_command() -> list[str]:
+    """Compose command that starts SurrealDB without forcing an image pull.
+
+    `docker-compose.yml` sets `pull_policy: always` so end users get image
+    upgrades on `docker compose up`. For source development that turns every
+    start into a registry request, which fails under Docker Hub rate limiting
+    (HTTP 429) even when the image is already local, so the dev path
+    overrides it with `--pull missing`.
+    """
+    return ["docker", "compose", "up", "-d", "--pull", "missing", "surrealdb"]
+
+
+def start_database(
+    database_host: str,
+    database_port: int,
+    environment: Mapping[str, str],
+    run=subprocess.run,
+    is_reachable=surrealdb_is_reachable,
+    port_open=port_is_open,
+) -> bool:
+    """Make sure SurrealDB is available; return True if this call started it.
+
+    A SurrealDB that is already reachable at the configured host-side URL is
+    reused as-is (and left running on shutdown). Otherwise the compose service
+    is started without forcing a pull.
+    """
+    if is_reachable(database_host, database_port):
+        print(
+            f"SurrealDB is already running on {database_host}:{database_port}; "
+            "reusing it."
+        )
+        return False
+    if port_open(database_host, database_port):
+        raise StartupError(
+            f"Port {database_port} is in use but is not answering as SurrealDB "
+            f"(http://{database_host}:{database_port}/health). Stop whatever is "
+            "listening there, or point SURREAL_URL in .env at your SurrealDB."
+        )
+
+    print("Starting SurrealDB...")
+    command = database_compose_command()
+    try:
+        run(command, cwd=ROOT, env=dict(environment), check=True)
+    except FileNotFoundError as error:
+        raise StartupError(
+            "Docker is not installed or not on PATH, and no SurrealDB is "
+            f"reachable on {database_host}:{database_port}. Install Docker, or "
+            "start SurrealDB yourself and set SURREAL_URL in .env."
+        ) from error
+    except subprocess.CalledProcessError as error:
+        raise StartupError(
+            f"`{' '.join(command)}` failed with status {error.returncode}. "
+            "Check that the Docker daemon is running (`docker info`). If the "
+            "image pull was refused (e.g. Docker Hub rate limiting, HTTP 429), "
+            "retry later or run `docker pull surrealdb/surrealdb:v2` once you "
+            "can; an image that is already local is used without pulling. You "
+            "can also start SurrealDB yourself on "
+            f"{database_host}:{database_port} and rerun `make start-all`."
+        ) from error
+    return True
+
+
 def ensure_port_available(port: int, service: str) -> None:
     if port_is_open("127.0.0.1", port):
         raise StartupError(
@@ -206,21 +284,18 @@ def main() -> int:
         environment["PYTHONUNBUFFERED"] = "1"
         api_port = int(environment.get("API_PORT", "5055"))
         frontend_port = int(environment.get("PORT", "3000"))
-        database_port = urlparse(environment["SURREAL_URL"]).port or 8000
+        database_url = urlparse(environment["SURREAL_URL"])
+        database_port = database_url.port or 8000
+        database_host = database_url.hostname or "127.0.0.1"
+        if database_host == "localhost":
+            database_host = "127.0.0.1"
 
         ensure_port_available(api_port, "the API")
         ensure_port_available(frontend_port, "the frontend")
         PID_FILE.write_text(str(os.getpid()))
 
-        print("Starting SurrealDB...")
-        subprocess.run(
-            ["docker", "compose", "up", "-d", "surrealdb"],
-            cwd=ROOT,
-            env=environment,
-            check=True,
-        )
-        database_started = True
-        wait_for_port("127.0.0.1", database_port, "SurrealDB")
+        database_started = start_database(database_host, database_port, environment)
+        wait_for_port(database_host, database_port, "SurrealDB")
         print(f"SurrealDB is ready on port {database_port}.")
 
         print("Starting API...")

@@ -14,7 +14,7 @@ GHCR_IMAGE := ghcr.io/lfnovo/open-notebook
 PLATFORMS := linux/amd64,linux/arm64
 
 database:
-	docker compose up -d surrealdb
+	docker compose up -d --pull missing surrealdb
 
 run:
 	@echo "⚠️  Warning: Starting frontend only. For full functionality, use 'make start-all'"
