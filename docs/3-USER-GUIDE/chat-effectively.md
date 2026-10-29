@@ -55,21 +55,17 @@ A session is one conversation; its messages are saved and reloaded when you come
 Use an aside when an answer raises a prerequisite or tangent that you want to explore without filling the main conversation with the detour.
 
 1. Under an assistant answer, click **Open as an aside**.
-2. Ask follow-up questions in the side panel. The aside retains the selected answer and the parent conversation up to that point.
+2. Ask follow-up questions in the center conversation. The aside retains the selected answer and the parent conversation up to that point. **Back to origin message** returns you to the message that started it.
 3. **Park** it to return later, **Discard** it if the tangent was not useful, or **Resolve aside** when you have an answer.
 4. Before resolving, edit the proposed conclusion and decide whether to use it in the main conversation, save it as a note, or both.
 
-The complete aside transcript stays isolated. Only the conclusion you approve is added to future main-chat context. The **Asides** button lists active, parked and resolved asides; when you return to a notebook with unfinished work, a resume prompt takes you back to it. Aside sessions do not appear in the normal **Chat Sessions** list.
+The complete aside transcript stays isolated. Only the conclusion you approve is added to future main-chat context. A resolved aside leaves its summary under the origin message, with **View transcript** and, after the main chat uses that conclusion, **View merged response**. The **Asides** button lists active, parked and resolved asides. On a wide screen the **Learning journey** rail's **Outline** nests each aside under the chat turn it came from, and **Map** shows the same branches from the main thread. When you return to a notebook with unfinished work, a resume prompt takes you back to it. Aside sessions do not appear in the normal **Chat Sessions** list.
 
 If you also save the conclusion as a note, it behaves like any other notebook
 note: sessions that include notes in their context can use it. Leave that
 option off when the finding should remain private to the current journey.
 
-On a desktop, the aside is a non-modal side pane, so you can continue reading
-and using the main conversation while it is open. On a narrow screen it becomes
-a full-width panel and the app navigation stays compact. If several branches
-are unfinished, **Resume** returns to the active branch (or the most recently
-parked one), not simply the oldest aside.
+On a wide screen the aside takes the center conversation, with the knowledge and journey rails still available. **Return to main thread** in the aside, or **Main thread** in the journey rail, brings the original chat back. On a narrow screen the aside is the Chat tab and the app navigation stays compact. If several branches are unfinished, **Resume** returns to the active branch (or the most recently parked one), not simply the oldest aside.
 
 ## Choosing the Model
 

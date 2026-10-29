@@ -192,6 +192,7 @@ class LearningUpdateResponse(BaseModel):
     citations: List[str]
     include_in_main: bool
     saved_note_id: Optional[str] = None
+    applied_message_id: Optional[str] = None
     version: int
     created: str
     updated: str

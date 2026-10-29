@@ -40,9 +40,10 @@ class TestMigration26:
 
         manager = AsyncMigrationManager()
 
-        assert len(manager.up_migrations) == 26
+        assert len(manager.up_migrations) == 27
         assert len(manager.up_migrations) == len(manager.down_migrations)
         assert "learning_journey" in manager.up_migrations[25].sql
+        assert "applied_message_id" in manager.up_migrations[26].sql
 
 
 @pytest.mark.asyncio
@@ -53,6 +54,7 @@ async def test_learning_queries_use_non_reserved_bind_parameters():
         await db.query((MIGRATIONS_DIR / "1.surrealql").read_text())
         await db.query((MIGRATIONS_DIR / "3.surrealql").read_text())
         await db.query((MIGRATIONS_DIR / "26.surrealql").read_text())
+        await db.query((MIGRATIONS_DIR / "27.surrealql").read_text())
         await db.query(
             """
             CREATE notebook:one SET name = 'One', description = '';
@@ -203,6 +205,7 @@ class TestLearningModels:
             "relevance": "This explains the second term in the objective.",
             "open_questions": ["Why a Gaussian prior?"],
             "citations": ["source:paper"],
+            "applied_message_id": None,
         }
 
 

@@ -12,7 +12,8 @@ import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
 import {
   SourceChatMessage,
   SourceChatContextIndicator,
-  BaseChatSession
+  BaseChatSession,
+  LearningAside
 } from '@/lib/types/api'
 import { ModelSelector } from './ModelSelector'
 import { ContextIndicator } from '@/components/common/ContextIndicator'
@@ -22,6 +23,9 @@ import { convertReferencesToCompactMarkdown, createCompactReferenceLinkComponent
 import { useModalManager } from '@/lib/hooks/use-modal-manager'
 import { toast } from 'sonner'
 import { useTranslation } from '@/lib/hooks/use-translation'
+import { LearningThreadLinks } from '@/components/notebooks/LearningThreadLinks'
+import { chatMessageDomId } from '@/lib/utils/chat-navigation'
+import { cn } from '@/lib/utils'
 
 interface NotebookContextStats {
   sourcesInsights: number
@@ -57,6 +61,10 @@ interface ChatPanelProps {
   onOpenAside?: (message: SourceChatMessage) => void
   onOpenAsides?: () => void
   asideCount?: number
+  learningAsides?: LearningAside[]
+  onOpenLearningAside?: (asideId: string) => void
+  onNavigateToMessage?: (messageId: string) => void
+  workspaceMode?: boolean
 }
 
 export function ChatPanel({
@@ -79,7 +87,11 @@ export function ChatPanel({
   notebookId,
   onOpenAside,
   onOpenAsides,
-  asideCount = 0
+  asideCount = 0,
+  learningAsides = [],
+  onOpenLearningAside,
+  onNavigateToMessage,
+  workspaceMode = false
 }: ChatPanelProps) {
   const { t } = useTranslation()
   const [sessionManagerOpen, setSessionManagerOpen] = useState(false)
@@ -110,7 +122,12 @@ export function ChatPanel({
 
   return (
     <>
-    <Card className="flex flex-col h-full flex-1 overflow-hidden">
+    <Card
+      className={cn(
+        'flex h-full flex-1 flex-col overflow-hidden',
+        workspaceMode && 'rounded-none border-0 bg-background shadow-none'
+      )}
+    >
       <CardHeader className="pb-3 flex-shrink-0">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.13em] text-muted-foreground">
@@ -183,6 +200,9 @@ export function ChatPanel({
                   notebookId={notebookId}
                   onReferenceClick={handleReferenceClick}
                   onOpenAside={onOpenAside}
+                  learningAsides={learningAsides}
+                  onOpenLearningAside={onOpenLearningAside}
+                  onNavigateToMessage={onNavigateToMessage}
                 />
               ))
             )}
@@ -345,19 +365,27 @@ interface ChatMessageProps {
   notebookId?: string
   onReferenceClick: (type: string, id: string) => void
   onOpenAside?: (message: SourceChatMessage) => void
+  learningAsides?: LearningAside[]
+  onOpenLearningAside?: (asideId: string) => void
+  onNavigateToMessage?: (messageId: string) => void
 }
 
 const ChatMessage = memo(function ChatMessage({
   message,
   notebookId,
   onReferenceClick,
-  onOpenAside
+  onOpenAside,
+  learningAsides = [],
+  onOpenLearningAside,
+  onNavigateToMessage
 }: ChatMessageProps) {
   return (
     <div
+      id={chatMessageDomId(message.id)}
+      tabIndex={-1}
       className={`flex gap-3 ${
         message.type === 'human' ? 'justify-end' : 'justify-start'
-      }`}
+      } scroll-mt-6 rounded-md transition-[box-shadow] outline-none`}
     >
       {message.type === 'ai' && (
         <div className="flex-shrink-0">
@@ -384,13 +412,23 @@ const ChatMessage = memo(function ChatMessage({
           )}
         </div>
         {message.type === 'ai' && (
-          <MessageActions
-            content={message.content}
-            notebookId={notebookId}
-            onOpenAside={
-              onOpenAside ? () => onOpenAside(message) : undefined
-            }
-          />
+          <>
+            <MessageActions
+              content={message.content}
+              notebookId={notebookId}
+              onOpenAside={
+                onOpenAside ? () => onOpenAside(message) : undefined
+              }
+            />
+            {onOpenLearningAside && onNavigateToMessage && (
+              <LearningThreadLinks
+                messageId={message.id}
+                asides={learningAsides}
+                onOpenAside={onOpenLearningAside}
+                onNavigateToMessage={onNavigateToMessage}
+              />
+            )}
+          </>
         )}
       </div>
       {message.type === 'human' && (

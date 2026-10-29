@@ -10,16 +10,11 @@ import {
   RotateCcw,
   Send,
   Trash2,
+  X,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Textarea } from '@/components/ui/textarea'
 import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
@@ -29,7 +24,6 @@ import {
   ResolveLearningAsideRequest,
 } from '@/lib/types/api'
 import { useTranslation } from '@/lib/hooks/use-translation'
-import { useMediaQuery } from '@/lib/hooks/use-media-query'
 import { createLearningUpdateDraft } from '@/lib/utils/learning-asides'
 
 interface LearningAsidePanelProps {
@@ -51,6 +45,7 @@ interface LearningAsidePanelProps {
     asideId: string,
     status: Exclude<LearningAsideStatus, 'resolved'>
   ) => Promise<unknown>
+  onNavigateToMessage: (messageId: string) => void
 }
 
 const statusTranslationKeys: Record<LearningAsideStatus, string> = {
@@ -81,9 +76,9 @@ export function LearningAsidePanel({
   onSendMessage,
   onResolve,
   onUpdateStatus,
+  onNavigateToMessage,
 }: LearningAsidePanelProps) {
   const { t } = useTranslation()
-  const isNarrow = useMediaQuery('(max-width: 767px)')
   const [showList, setShowList] = useState(!activeAside)
   const [input, setInput] = useState('')
   const [showResolution, setShowResolution] = useState(false)
@@ -91,12 +86,14 @@ export function LearningAsidePanel({
   const [relevance, setRelevance] = useState('')
   const [includeInMain, setIncludeInMain] = useState(true)
   const [saveAsNote, setSaveAsNote] = useState(false)
+  const [showTranscript, setShowTranscript] = useState(true)
   const activeAsideId = activeAside?.id
   const latestAnswerContent =
     [...(activeAside?.messages ?? [])]
       .reverse()
       .find((message) => message.type === 'ai')?.content ?? ''
   const latestAnswerDraft = createLearningUpdateDraft(latestAnswerContent)
+  const latestUpdate = activeAside?.updates.at(-1)
 
   useEffect(() => {
     if (activeAsideId) {
@@ -104,10 +101,11 @@ export function LearningAsidePanel({
       setConclusion(latestAnswerDraft)
       setRelevance('')
       setShowResolution(false)
+      setShowTranscript(activeAside?.status !== 'resolved')
     } else {
       setShowList(true)
     }
-  }, [activeAsideId, latestAnswerDraft])
+  }, [activeAside?.status, activeAsideId, latestAnswerDraft])
 
   const visibleAsides = asides.filter(
     (aside) => aside.status !== 'discarded'
@@ -145,17 +143,16 @@ export function LearningAsidePanel({
     }
   }
 
+  const returnToMainMessage = (messageId: string) => {
+    onOpenChange(false)
+    window.setTimeout(() => onNavigateToMessage(messageId), 0)
+  }
+
+  if (!open) return null
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} modal={isNarrow}>
-      <DialogContent
-        className="left-auto right-0 top-0 h-svh w-screen max-w-[100vw] grid-rows-[auto_minmax(0,1fr)] translate-x-0 translate-y-0 gap-0 overflow-x-hidden rounded-none border-y-0 border-r-0 p-0 sm:w-[520px] sm:max-w-[520px]"
-        showCloseButton
-        showOverlay={isNarrow}
-        onInteractOutside={(event) => {
-          if (!isNarrow) event.preventDefault()
-        }}
-      >
-        <DialogHeader className="border-b px-5 py-4 pr-12 text-left">
+    <section className="grid h-full min-h-0 min-w-0 flex-1 grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-background">
+        <header className="flex min-w-0 items-center justify-between gap-3 border-b px-5 py-3">
           <div className="flex min-w-0 items-center gap-2">
             {!showList && (
               <Button
@@ -168,14 +165,33 @@ export function LearningAsidePanel({
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             )}
+            {showList && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onOpenChange(false)}
+              >
+                <ArrowLeft className="mr-1.5 h-4 w-4" />
+                {t('learningAsides.mainThread')}
+              </Button>
+            )}
             <GitBranch className="h-4 w-4 text-teal" />
-            <DialogTitle className="min-w-0 break-words pr-2">
+            <h2 className="min-w-0 break-words text-sm font-semibold">
               {showList
-                ? t('learningAsides.title')
+                ? t('learningAsides.journey')
                 : activeAside?.title ?? t('learningAsides.untitled')}
-            </DialogTitle>
+            </h2>
           </div>
-        </DialogHeader>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 shrink-0"
+            onClick={() => onOpenChange(false)}
+            aria-label={t('learningAsides.returnToMain')}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </header>
 
         {showList ? (
           <ScrollArea
@@ -208,7 +224,9 @@ export function LearningAsidePanel({
                           {aside.title}
                         </p>
                         <p className="mt-1 line-clamp-2 break-words text-xs text-muted-foreground">
-                          {aside.anchor.content}
+                          {aside.status === 'resolved' && aside.updates.at(-1)
+                            ? aside.updates.at(-1)!.conclusion
+                            : aside.anchor.content}
                         </p>
                       </div>
                       <Badge className="shrink-0" variant={statusVariant(aside.status)}>
@@ -223,12 +241,38 @@ export function LearningAsidePanel({
         ) : activeAside ? (
           <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden">
             <div className="border-b bg-muted/30 px-5 py-3">
+              <div className="mb-2 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+                <button
+                  type="button"
+                  className="hover:text-foreground hover:underline"
+                  onClick={() => onOpenChange(false)}
+                >
+                  {t('learningAsides.mainThread')}
+                </button>
+                <span aria-hidden>/</span>
+                <span>{t('learningAsides.origin')}</span>
+                <span aria-hidden>/</span>
+                <span className="truncate">{activeAside.title}</span>
+              </div>
               <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 {t('learningAsides.anchor')}
               </p>
               <p className="line-clamp-3 break-words text-sm">
                 {activeAside.anchor.content}
               </p>
+              {activeAside.anchor.message_id && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() =>
+                    returnToMainMessage(activeAside.anchor.message_id!)
+                  }
+                >
+                  <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
+                  {t('learningAsides.backToOrigin')}
+                </Button>
+              )}
             </div>
 
             <ScrollArea
@@ -236,34 +280,105 @@ export function LearningAsidePanel({
               viewportClassName="[&>div]:!block [&>div]:!w-full [&>div]:!min-w-0"
             >
               <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden p-5">
-                {activeAside.messages.length === 0 ? (
-                  <p className="py-8 text-center text-sm text-muted-foreground">
-                    {t('learningAsides.askHint')}
-                  </p>
-                ) : (
-                  activeAside.messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex ${
-                        message.type === 'human'
-                          ? 'justify-end'
-                          : 'justify-start'
-                      }`}
-                    >
+                {activeAside.status === 'resolved' && latestUpdate && (
+                  <div className="rounded-md border bg-card p-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-fern" />
+                        <h3 className="text-sm font-semibold">
+                          {t('learningAsides.summary')}
+                        </h3>
+                      </div>
+                      <Badge variant="outline">
+                        {t('learningAsides.status.resolved')}
+                      </Badge>
+                    </div>
+                    <div className="mt-3">
+                      <MarkdownRenderer>
+                        {latestUpdate.conclusion}
+                      </MarkdownRenderer>
+                    </div>
+                    {latestUpdate.relevance && (
+                      <div className="mt-3 border-t pt-3">
+                        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                          {t('learningAsides.whyItMatters')}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {latestUpdate.relevance}
+                        </p>
+                      </div>
+                    )}
+                    {latestUpdate.open_questions.length > 0 && (
+                      <div className="mt-3 border-t pt-3">
+                        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                          {t('learningAsides.openQuestions')}
+                        </p>
+                        <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                          {latestUpdate.open_questions.map((question) => (
+                            <li key={question}>{question}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    <div className="mt-3 flex flex-wrap gap-2 border-t pt-3">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setShowTranscript((value) => !value)}
+                      >
+                        {showTranscript
+                          ? t('learningAsides.hideTranscript')
+                          : t('learningAsides.viewTranscript')}
+                      </Button>
+                      {latestUpdate.applied_message_id && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            returnToMainMessage(
+                              latestUpdate.applied_message_id!
+                            )
+                          }
+                        >
+                          {t('learningAsides.viewMergedResponse')}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {(showTranscript || activeAside.status !== 'resolved') &&
+                  (activeAside.messages.length === 0 ? (
+                    <p className="py-8 text-center text-sm text-muted-foreground">
+                      {t('learningAsides.askHint')}
+                    </p>
+                  ) : (
+                    activeAside.messages.map((message) => (
                       <div
-                        className={`min-w-0 max-w-[88%] overflow-hidden break-words rounded-md border px-3 py-2 text-sm [&_*]:max-w-full ${
-                          message.type === 'human' ? 'bg-muted' : 'bg-card'
+                        key={message.id}
+                        className={`flex ${
+                          message.type === 'human'
+                            ? 'justify-end'
+                            : 'justify-start'
                         }`}
                       >
-                        {message.type === 'ai' ? (
-                          <MarkdownRenderer>{message.content}</MarkdownRenderer>
-                        ) : (
-                          <p className="whitespace-pre-wrap">{message.content}</p>
-                        )}
+                        <div
+                          className={`min-w-0 max-w-[88%] overflow-hidden break-words rounded-md border px-3 py-2 text-sm [&_*]:max-w-full ${
+                            message.type === 'human' ? 'bg-muted' : 'bg-card'
+                          }`}
+                        >
+                          {message.type === 'ai' ? (
+                            <MarkdownRenderer>
+                              {message.content}
+                            </MarkdownRenderer>
+                          ) : (
+                            <p className="whitespace-pre-wrap">
+                              {message.content}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))
-                )}
+                    ))
+                  ))}
                 {isSending && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -452,7 +567,6 @@ export function LearningAsidePanel({
             <Loader2 className="h-5 w-5 animate-spin" />
           </div>
         )}
-      </DialogContent>
-    </Dialog>
+    </section>
   )
 }

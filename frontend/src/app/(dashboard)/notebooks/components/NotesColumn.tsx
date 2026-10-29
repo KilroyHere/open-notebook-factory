@@ -25,6 +25,7 @@ import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { CollapsibleColumn, createCollapseButton } from '@/components/notebooks/CollapsibleColumn'
 import { useNotebookColumnsStore } from '@/lib/stores/notebook-columns-store'
 import { useTranslation } from '@/lib/hooks/use-translation'
+import { cn } from '@/lib/utils'
 
 interface NotesColumnProps {
   notes?: NoteResponse[]
@@ -33,6 +34,8 @@ interface NotesColumnProps {
   contextSelections?: Record<string, NoteContextMode>
   onContextModeChange?: (noteId: string, mode: NoteContextMode) => void
   onBulkContextModeChange?: (action: NoteContextDefault) => void
+  allowCollapse?: boolean
+  embedded?: boolean
 }
 
 export function NotesColumn({
@@ -41,7 +44,9 @@ export function NotesColumn({
   notebookId,
   contextSelections,
   onContextModeChange,
-  onBulkContextModeChange
+  onBulkContextModeChange,
+  allowCollapse = true,
+  embedded = false,
 }: NotesColumnProps) {
   const { t, language } = useTranslation()
   const [editorOpen, setEditorOpen] = useState(false)
@@ -55,8 +60,11 @@ export function NotesColumn({
   const { notesCollapsed, toggleNotes } = useNotebookColumnsStore()
   const notesLabel = t('common.notes')
   const collapseButton = useMemo(
-    () => createCollapseButton(toggleNotes, notesLabel),
-    [toggleNotes, notesLabel]
+    () =>
+      allowCollapse && !embedded
+        ? createCollapseButton(toggleNotes, notesLabel)
+        : null,
+    [allowCollapse, embedded, toggleNotes, notesLabel]
   )
 
   const handleDeleteClick = (noteId: string) => {
@@ -84,19 +92,24 @@ export function NotesColumn({
   return (
     <>
       <CollapsibleColumn
-        isCollapsed={notesCollapsed}
+        isCollapsed={allowCollapse && !embedded && notesCollapsed}
         onToggle={toggleNotes}
         collapsedIcon={StickyNote}
         collapsedLabel={notesLabel}
       >
-        <Card className="h-full flex flex-col flex-1 overflow-hidden">
+        <Card className={cn(
+          'h-full flex flex-col flex-1 overflow-hidden',
+          embedded && 'rounded-none border-0 bg-transparent shadow-none'
+        )}>
           <CardHeader className="pb-3 flex-shrink-0">
             <div className="flex items-center justify-between gap-2">
-              <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.13em] text-muted-foreground">
-                <span aria-hidden className="h-3.5 w-[3px] rounded-full bg-gold" />
-                {notesLabel}
-              </CardTitle>
-              <div className="flex items-center gap-2">
+              {!embedded && (
+                <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.13em] text-muted-foreground">
+                  <span aria-hidden className="h-3.5 w-[3px] rounded-full bg-gold" />
+                  {notesLabel}
+                </CardTitle>
+              )}
+              <div className="ml-auto flex items-center gap-2">
                 {onBulkContextModeChange && notes && notes.length > 0 && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
