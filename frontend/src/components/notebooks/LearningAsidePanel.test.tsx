@@ -318,4 +318,30 @@ describe('LearningAsidePanel', () => {
       screen.queryByRole('button', { name: /chapter 2/ })
     ).not.toBeInTheDocument()
   })
+  it('renders aside citations as numbered references like main chat', () => {
+    const onReferenceClick = vi.fn()
+    const cited: LearningAside = {
+      ...aside,
+      messages: [
+        aside.messages[0],
+        {
+          id: 'ai:cited',
+          type: 'ai',
+          content: 'Scaled attention divides by the key size [source:6tsit42].',
+        },
+      ],
+    }
+    render(
+      <LearningAsidePanel
+        {...baseProps}
+        activeAside={cited}
+        onReferenceClick={onReferenceClick}
+      />
+    )
+
+    expect(screen.queryByText(/\[source:6tsit42\]/)).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '1' }))
+    expect(onReferenceClick).toHaveBeenCalledWith('source', '6tsit42')
+    expect(screen.getByText(/common\.references/)).toBeInTheDocument()
+  })
 })

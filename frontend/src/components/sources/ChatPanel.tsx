@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Bot, User, Send, Loader2, FileText, Lightbulb, StickyNote, MessageSquare, GitBranch } from 'lucide-react'
-import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
+import { ReferencedMarkdown } from '@/components/common/ReferencedMarkdown'
 import {
   SourceChatMessage,
   SourceChatContextIndicator,
@@ -19,7 +19,6 @@ import { ModelSelector } from './ModelSelector'
 import { ContextIndicator } from '@/components/common/ContextIndicator'
 import { SessionManager } from '@/components/sources/SessionManager'
 import { MessageActions } from '@/components/sources/MessageActions'
-import { convertReferencesToCompactMarkdown, createCompactReferenceLinkComponent } from '@/lib/utils/source-references'
 import { useModalManager } from '@/lib/hooks/use-modal-manager'
 import { toast } from 'sonner'
 import { useTranslation } from '@/lib/hooks/use-translation'
@@ -504,7 +503,7 @@ const ChatMessage = memo(function ChatMessage({
           }`}
         >
           {message.type === 'ai' ? (
-            <AIMessageContent
+            <ReferencedMarkdown
               content={message.content}
               onReferenceClick={onReferenceClick}
             />
@@ -557,27 +556,3 @@ const ChatMessage = memo(function ChatMessage({
     </div>
   )
 })
-
-// Helper component to render AI messages with clickable references
-function AIMessageContent({
-  content,
-  onReferenceClick
-}: {
-  content: string
-  onReferenceClick: (type: string, id: string) => void
-}) {
-  const { t } = useTranslation()
-  // Convert references to compact markdown with numbered citations
-  const markdownWithCompactRefs = convertReferencesToCompactMarkdown(content, t('common.references'))
-
-  // Create custom link component for compact references
-  const LinkComponent = createCompactReferenceLinkComponent(onReferenceClick)
-
-  return (
-    <MarkdownRenderer components={{
-      a: LinkComponent
-    }}>
-      {markdownWithCompactRefs}
-    </MarkdownRenderer>
-  )
-}

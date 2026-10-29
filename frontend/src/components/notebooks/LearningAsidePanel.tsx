@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Textarea } from '@/components/ui/textarea'
-import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
+import { ReferencedMarkdown } from '@/components/common/ReferencedMarkdown'
 import {
   LearningAside,
   LearningAsideStatus,
@@ -327,9 +327,10 @@ export function LearningAsidePanel({
                       </Badge>
                     </div>
                     <div className="mt-3">
-                      <MarkdownRenderer>
-                        {latestUpdate.conclusion}
-                      </MarkdownRenderer>
+                      <ReferencedMarkdown
+                        content={latestUpdate.conclusion}
+                        onReferenceClick={onReferenceClick}
+                      />
                     </div>
                     {latestUpdate.relevance && (
                       <div className="mt-3 border-t pt-3">
@@ -405,9 +406,10 @@ export function LearningAsidePanel({
                           }`}
                         >
                           {message.type === 'ai' ? (
-                            <MarkdownRenderer>
-                              {message.content}
-                            </MarkdownRenderer>
+                            <ReferencedMarkdown
+                              content={message.content}
+                              onReferenceClick={onReferenceClick}
+                            />
                           ) : (
                             <p className="whitespace-pre-wrap">
                               {message.content}
