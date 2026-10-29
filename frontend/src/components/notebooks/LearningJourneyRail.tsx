@@ -28,7 +28,10 @@ import {
 } from '@/lib/types/api'
 import { useNotebookColumnsStore } from '@/lib/stores/notebook-columns-store'
 import { useTranslation } from '@/lib/hooks/use-translation'
-import { childDiveForQuestion } from '@/lib/utils/learning-asides'
+import {
+  childDiveForQuestion,
+  toPlainTextPreview,
+} from '@/lib/utils/learning-asides'
 import { cn } from '@/lib/utils'
 
 interface LearningJourneyRailProps {
@@ -58,7 +61,7 @@ function childAsides(asides: LearningAside[], parentId: string): LearningAside[]
 }
 
 function compact(value: string, limit = 72): string {
-  const normalized = value.replace(/\s+/g, ' ').trim()
+  const normalized = toPlainTextPreview(value)
   return normalized.length > limit
     ? `${normalized.slice(0, limit).trimEnd()}…`
     : normalized
@@ -142,7 +145,7 @@ function AsideOutlineItem({
         </Badge>
       </div>
       <p className="mt-1.5 line-clamp-2 text-xs text-muted-foreground">
-        {update?.conclusion ?? aside.anchor.content}
+        {toPlainTextPreview(update?.conclusion ?? aside.anchor.content)}
       </p>
     </button>
   )
@@ -299,7 +302,7 @@ function MapBranch({
                 </span>
               </div>
               <p className="mt-1 line-clamp-3 text-[11px] text-muted-foreground">
-                {latest.conclusion}
+                {toPlainTextPreview(latest.conclusion)}
               </p>
             </button>
           )}

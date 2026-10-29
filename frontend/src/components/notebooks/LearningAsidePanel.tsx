@@ -17,14 +17,18 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Textarea } from '@/components/ui/textarea'
-import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
+import { ReferencedMarkdown } from '@/components/common/ReferencedMarkdown'
 import {
   LearningAside,
   LearningAsideStatus,
   ResolveLearningAsideRequest,
 } from '@/lib/types/api'
 import { useTranslation } from '@/lib/hooks/use-translation'
-import { createLearningUpdateDraft } from '@/lib/utils/learning-asides'
+import {
+  createLearningUpdateDraft,
+  toPlainTextPreview,
+} from '@/lib/utils/learning-asides'
+import { isSendShortcut, sendShortcutHint } from '@/lib/utils/composer-shortcut'
 import {
   LearningEvidenceButtons,
   LearningQuestionList,
@@ -104,6 +108,13 @@ export function LearningAsidePanel({
       .find((message) => message.type === 'ai')?.content ?? ''
   const latestAnswerDraft = createLearningUpdateDraft(latestAnswerContent)
   const latestUpdate = activeAside?.updates.at(-1)
+  // After resolving, the way back lands on the reply that received the
+  // conclusion, or on the message the aside branched from.
+  const returnTarget =
+    [...(activeAside?.updates ?? [])]
+      .reverse()
+      .find((update) => update.applied_message_id)?.applied_message_id ??
+    activeAside?.anchor.message_id
   const parentAside = activeAside?.parent_aside_id
     ? asides.find((aside) => aside.id === activeAside.parent_aside_id)
     : undefined
@@ -237,9 +248,11 @@ export function LearningAsidePanel({
                           {aside.title}
                         </p>
                         <p className="mt-1 line-clamp-2 break-words text-xs text-muted-foreground">
-                          {aside.status === 'resolved' && aside.updates.at(-1)
-                            ? aside.updates.at(-1)!.conclusion
-                            : aside.anchor.content}
+                          {toPlainTextPreview(
+                            aside.status === 'resolved' && aside.updates.at(-1)
+                              ? aside.updates.at(-1)!.conclusion
+                              : aside.anchor.content
+                          )}
                         </p>
                       </div>
                       <Badge className="shrink-0" variant={statusVariant(aside.status)}>
@@ -303,7 +316,7 @@ export function LearningAsidePanel({
               </div>
               {!activeAside.anchor.message_id && (
                 <p className="mt-1 line-clamp-2 break-words text-xs text-muted-foreground">
-                  {activeAside.anchor.content}
+                  {toPlainTextPreview(activeAside.anchor.content)}
                 </p>
               )}
             </div>
@@ -327,9 +340,10 @@ export function LearningAsidePanel({
                       </Badge>
                     </div>
                     <div className="mt-3">
-                      <MarkdownRenderer>
-                        {latestUpdate.conclusion}
-                      </MarkdownRenderer>
+                      <ReferencedMarkdown
+                        content={latestUpdate.conclusion}
+                        onReferenceClick={onReferenceClick}
+                      />
                     </div>
                     {latestUpdate.relevance && (
                       <div className="mt-3 border-t pt-3">
@@ -360,6 +374,17 @@ export function LearningAsidePanel({
                     />
                     <div className="mt-3 flex flex-wrap gap-2 border-t pt-3">
                       <Button
+                        size="sm"
+                        onClick={() =>
+                          returnTarget
+                            ? returnToMainMessage(returnTarget)
+                            : onOpenChange(false)
+                        }
+                      >
+                        <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
+                        {t('learningAsides.returnToMain')}
+                      </Button>
+                      <Button
                         variant="secondary"
                         size="sm"
                         onClick={() => setShowTranscript((value) => !value)}
@@ -368,19 +393,6 @@ export function LearningAsidePanel({
                           ? t('learningAsides.hideTranscript')
                           : t('learningAsides.viewTranscript')}
                       </Button>
-                      {latestUpdate.applied_message_id && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            returnToMainMessage(
-                              latestUpdate.applied_message_id!
-                            )
-                          }
-                        >
-                          {t('learningAsides.viewMergedResponse')}
-                        </Button>
-                      )}
                     </div>
                   </div>
                 )}
@@ -410,9 +422,10 @@ export function LearningAsidePanel({
                           }`}
                         >
                           {message.type === 'ai' ? (
-                            <MarkdownRenderer>
-                              {message.content}
-                            </MarkdownRenderer>
+                            <ReferencedMarkdown
+                              content={message.content}
+                              onReferenceClick={onReferenceClick}
+                            />
                           ) : (
                             <p className="whitespace-pre-wrap">
                               {message.content}
@@ -506,15 +519,13 @@ export function LearningAsidePanel({
                       <Textarea
                         value={input}
                         onChange={(event) => setInput(event.target.value)}
-                        placeholder={t('learningAsides.askPlaceholder')}
+                        placeholder={`${t('learningAsides.askPlaceholder')} (${t('chat.pressToSend', { key: sendShortcutHint() })})`}
+                        aria-label={t('learningAsides.askPlaceholder')}
                         className="min-h-[42px] flex-1 resize-none"
                         rows={1}
                         disabled={isSending || isAsideLoading}
                         onKeyDown={(event) => {
-                          if (
-                            event.key === 'Enter' &&
-                            (event.metaKey || event.ctrlKey)
-                          ) {
+                          if (isSendShortcut(event)) {
                             event.preventDefault()
                             void send()
                           }

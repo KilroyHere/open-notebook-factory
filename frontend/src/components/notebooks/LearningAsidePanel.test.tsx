@@ -77,9 +77,7 @@ describe('LearningAsidePanel', () => {
       />
     )
 
-    const input = screen.getByPlaceholderText(
-      'learningAsides.askPlaceholder'
-    )
+    const input = screen.getByLabelText('learningAsides.askPlaceholder')
     fireEvent.change(input, {
       target: { value: 'Can you show the algebra?' },
     })
@@ -91,6 +89,34 @@ describe('LearningAsidePanel', () => {
       expect(onSendMessage).toHaveBeenCalledWith(
         'learning_aside:one',
         'Can you show the algebra?'
+      )
+    )
+  })
+
+  it('sends with the same Ctrl+Enter shortcut as main chat and says so', async () => {
+    const onSendMessage = vi.fn().mockResolvedValue(undefined)
+    render(
+      <LearningAsidePanel
+        {...baseProps}
+        activeAside={aside}
+        onSendMessage={onSendMessage}
+      />
+    )
+
+    const input = screen.getByLabelText('learningAsides.askPlaceholder')
+    expect(input).toHaveAttribute(
+      'placeholder',
+      'learningAsides.askPlaceholder (chat.pressToSend)'
+    )
+    fireEvent.change(input, { target: { value: 'Show the algebra' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(onSendMessage).not.toHaveBeenCalled()
+
+    fireEvent.keyDown(input, { key: 'Enter', ctrlKey: true })
+    await waitFor(() =>
+      expect(onSendMessage).toHaveBeenCalledWith(
+        'learning_aside:one',
+        'Show the algebra'
       )
     )
   })
@@ -339,5 +365,100 @@ describe('LearningAsidePanel', () => {
     expect(
       screen.queryByRole('button', { name: /chapter 2/ })
     ).not.toBeInTheDocument()
+  })
+  it('renders aside citations as numbered references like main chat', () => {
+    const onReferenceClick = vi.fn()
+    const cited: LearningAside = {
+      ...aside,
+      messages: [
+        aside.messages[0],
+        {
+          id: 'ai:cited',
+          type: 'ai',
+          content: 'Scaled attention divides by the key size [source:6tsit42].',
+        },
+      ],
+    }
+    render(
+      <LearningAsidePanel
+        {...baseProps}
+        activeAside={cited}
+        onReferenceClick={onReferenceClick}
+      />
+    )
+
+    expect(screen.queryByText(/\[source:6tsit42\]/)).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '1' }))
+    expect(onReferenceClick).toHaveBeenCalledWith('source', '6tsit42')
+    expect(screen.getByText(/common\.references/)).toBeInTheDocument()
+  })
+
+  it('offers a way back to the merged reply after resolving', async () => {
+    const onOpenChange = vi.fn()
+    const onNavigateToMessage = vi.fn()
+    const update = {
+      id: 'learning_update:one',
+      aside_id: aside.id,
+      conclusion: 'Jensen gives a lower bound.',
+      open_questions: [],
+      citations: [],
+      include_in_main: true,
+      applied_message_id: 'ai:merged',
+      version: 1,
+      created: aside.created,
+      updated: aside.updated,
+    }
+    const { rerender } = render(
+      <LearningAsidePanel
+        {...baseProps}
+        activeAside={{ ...aside, status: 'resolved', updates: [update] }}
+        onOpenChange={onOpenChange}
+        onNavigateToMessage={onNavigateToMessage}
+      />
+    )
+
+    fireEvent.click(
+      screen.getByText('learningAsides.returnToMain').closest('button')!
+    )
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+    await waitFor(() =>
+      expect(onNavigateToMessage).toHaveBeenCalledWith('ai:merged')
+    )
+    expect(onNavigateToMessage).toHaveBeenCalledTimes(1)
+
+    // Not merged into the main chat: fall back to the origin message.
+    rerender(
+      <LearningAsidePanel
+        {...baseProps}
+        activeAside={{
+          ...aside,
+          status: 'resolved',
+          updates: [{ ...update, applied_message_id: null }],
+        }}
+        onOpenChange={onOpenChange}
+        onNavigateToMessage={onNavigateToMessage}
+      />
+    )
+    fireEvent.click(
+      screen.getByText('learningAsides.returnToMain').closest('button')!
+    )
+    await waitFor(() =>
+      expect(onNavigateToMessage).toHaveBeenLastCalledWith('message:one')
+    )
+  })
+
+  it('does not leave an unresolved aside on its own', () => {
+    const onNavigateToMessage = vi.fn()
+    render(
+      <LearningAsidePanel
+        {...baseProps}
+        activeAside={aside}
+        onNavigateToMessage={onNavigateToMessage}
+      />
+    )
+    expect(
+      screen.queryByText('learningAsides.returnToMain')
+    ).not.toBeInTheDocument()
+    expect(onNavigateToMessage).not.toHaveBeenCalled()
   })
 })

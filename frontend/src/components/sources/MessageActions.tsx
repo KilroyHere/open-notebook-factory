@@ -78,11 +78,12 @@ export function MessageActions({ content, notebookId, onOpenAside }: MessageActi
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 px-2"
+                className="h-7 gap-1 px-2 text-xs"
                 onClick={onOpenAside}
                 aria-label={t('learningAsides.open')}
               >
                 <GitBranch className="h-3.5 w-3.5" />
+                <span>{t('learningAsides.goDeeper')}</span>
               </Button>
             </TooltipTrigger>
             <TooltipContent>
