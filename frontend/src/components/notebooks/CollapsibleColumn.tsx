@@ -3,7 +3,7 @@
 import { ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { ChevronLeft, LucideIcon } from 'lucide-react'
+import { ChevronLeft, ChevronRight, LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface CollapsibleColumnProps {
@@ -66,7 +66,12 @@ export function CollapsibleColumn({
 }
 
 // Factory function to create a collapse button for card headers
-export function createCollapseButton(onToggle: () => void, label: string) {
+export function createCollapseButton(
+  onToggle: () => void,
+  label: string,
+  side: 'left' | 'right' = 'left'
+) {
+  const Icon = side === 'right' ? ChevronRight : ChevronLeft
   return (
     <div className="hidden lg:block">
       <TooltipProvider>
@@ -82,7 +87,7 @@ export function createCollapseButton(onToggle: () => void, label: string) {
               className="h-7 w-7 hover:bg-accent"
               aria-label={`Collapse ${label}`}
             >
-              <ChevronLeft className="h-4 w-4" />
+              <Icon className="h-4 w-4" />
             </Button>
           </TooltipTrigger>
           <TooltipContent>

@@ -226,7 +226,11 @@ class LearningAside(ObjectModel):
 
 class LearningUpdate(ObjectModel):
     table_name: ClassVar[str] = "learning_update"
-    nullable_fields: ClassVar[set[str]] = {"relevance", "saved_note"}
+    nullable_fields: ClassVar[set[str]] = {
+        "relevance",
+        "saved_note",
+        "applied_message_id",
+    }
 
     aside: str
     conclusion: str = Field(min_length=1, max_length=100_000)
@@ -235,6 +239,7 @@ class LearningUpdate(ObjectModel):
     citations: List[str] = Field(default_factory=list, max_length=100)
     include_in_main: bool = True
     saved_note: Optional[str] = None
+    applied_message_id: Optional[str] = None
     version: int = Field(default=1, ge=1)
 
     @field_validator("conclusion")
@@ -259,4 +264,5 @@ class LearningUpdate(ObjectModel):
             "relevance": self.relevance,
             "open_questions": self.open_questions,
             "citations": self.citations,
+            "applied_message_id": self.applied_message_id,
         }

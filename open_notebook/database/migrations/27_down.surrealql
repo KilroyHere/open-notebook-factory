@@ -1,0 +1,3 @@
+-- Remove main-response backlinks from learning updates.
+
+REMOVE FIELD IF EXISTS applied_message_id ON TABLE learning_update;

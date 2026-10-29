@@ -244,6 +244,7 @@ export function useLearningAsides({
     setPanelOpen,
     openAside,
     openList,
+    refreshJourney: () => refresh(),
     createAside: createMutation.mutateAsync,
     sendMessage: sendMutation.mutateAsync,
     resolveAside: resolveMutation.mutateAsync,

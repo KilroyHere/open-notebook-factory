@@ -47,6 +47,7 @@ function createLearningMock(overrides: Record<string, unknown> = {}) {
     setPanelOpen: vi.fn(),
     openAside: vi.fn(),
     openList: vi.fn(),
+    refreshJourney: vi.fn(),
     createAside: vi.fn(),
     sendMessage: vi.fn(),
     resolveAside: vi.fn(),

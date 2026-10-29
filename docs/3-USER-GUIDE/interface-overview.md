@@ -46,26 +46,28 @@ The workspace pages have a sidebar on the left (it can be collapsed to icons). T
 
 ## The Notebook Page
 
-Opening a notebook shows its header and three columns.
+Opening a notebook shows its header, then a conversation-first workspace. On a wide screen the chat fills the center. Sources and notes share a collapsible **Knowledge** rail on the left, and the **Learning journey** rail on the right holds the chat outline and an aside map. Both rails can be collapsed so the conversation uses the full width.
 
 ```
 ┌────────────────────────────────────────────────────────────────────┐
 │ Notebook name   (click to edit)            [Archive]   [Delete]    │
 │ Description     (click to edit)                                    │
-├──────────────────┬──────────────────┬──────────────────────────────┤
-│ SOURCES          │ NOTES            │ CHAT WITH NOTEBOOK           │
-│ [Context] [Add   │ [Context]        │ [Sessions]                   │
-│           Source]│ [Write Note]     │                              │
-│                  │                  │  messages, with numbered     │
-│ ┌──────────────┐ │ ┌──────────────┐ │  references                  │
-│ │ paper.pdf    │ │ │ My notes     │ │                              │
-│ │ File · 2     │ │ │ Human        │ │  2 sources · 1 note          │
-│ │ insights  ◐ ⋮│ │ │            ◐ │ │  ~12,400 tokens              │
-│ └──────────────┘ │ └──────────────┘ │ [Model] [Ask anything...]    │
-└──────────────────┴──────────────────┴──────────────────────────────┘
+├──────────────────┬──────────────────────────────┬──────────────────┤
+│ KNOWLEDGE        │ CHAT WITH NOTEBOOK           │ LEARNING JOURNEY │
+│ [Sources] [Notes]│ [Asides] [Sessions]          │ [Outline] [Map]  │
+│ [Context] [Add]  │                              │                  │
+│ ┌──────────────┐ │  messages, with numbered     │ 1. question      │
+│ │ paper.pdf    │ │  references and aside        │    └ deep dive   │
+│ │ File · 2  ◐ ⋮│ │  summaries                   │                  │
+│ └──────────────┘ │ [Model] [Ask anything...]    │                  │
+└──────────────────┴──────────────────────────────┴──────────────────┘
 ```
 
-On desktop the Sources and Notes columns can be collapsed. On small screens the columns become three tabs, **Sources**, **Notes** and **Chat**, with Chat selected first.
+On small screens the workspace becomes three tabs, **Sources**, **Notes** and **Chat**, with Chat selected first. The journey rail is available on wide screens.
+
+### Knowledge rail
+
+The left rail has **Sources** and **Notes** tabs. Collapse it from the header to give the conversation the full width. The actions below are the same ones that used to live in separate columns.
 
 ### Sources column
 
