@@ -4,7 +4,7 @@ Password protection, credential encryption and production hardening.
 
 Open Notebook's built-in protection is basic: one shared password, no user accounts, CORS open to every origin by default. Treat it as a lock on the door, not as enterprise security. For anything reachable from the internet, put it behind HTTPS and a firewall (see [Production hardening](#production-hardening)).
 
-All variables on this page go in the `open_notebook` service's `environment:` block (apply with `docker compose up -d`) or in `.env` when running from source. Full list: [Environment Reference](environment-reference.md#security-and-access).
+With the shipped Compose file, put `OPEN_NOTEBOOK_ENCRYPTION_KEY` and `OPEN_NOTEBOOK_PASSWORD` in a `.env` file next to `docker-compose.yml`. Other variables on this page go in the `open_notebook` service's `environment:` block. Apply either change with `docker compose up -d`. From source, put them in `.env`. Full list: [Environment Reference](environment-reference.md#security-and-access).
 
 ---
 
@@ -22,18 +22,16 @@ openssl rand -hex 32                                   # macOS, Linux
 [guid]::NewGuid().ToString("N") + [guid]::NewGuid().ToString("N")   # Windows PowerShell
 ```
 
-```yaml
-services:
-  open_notebook:
-    environment:
-      - OPEN_NOTEBOOK_ENCRYPTION_KEY=<generated-key>
+```bash
+# .env, next to docker-compose.yml
+OPEN_NOTEBOOK_ENCRYPTION_KEY=<generated-key>
 ```
 
-Don't copy an example value from any guide, including this one.
+Don't copy an example value from any guide, including this one. Editing the `environment:` line in the compose file still works.
 
 - **The key has no default.** Without it you can't save credentials: **Manage → Models** shows "Encryption key not configured" and the API logs `OPEN_NOTEBOOK_ENCRYPTION_KEY not set. API key encryption will fail until this is configured.`
 - **Use a generated value.** Any string is accepted, but PBKDF2 only slows down guessing; it can't save a short, common or published passphrase.
-- **Replace the placeholder.** The shipped `docker-compose.yml` sets `change-me-to-a-secret-string`. That value is public, and Open Notebook does not warn about it.
+- **Replace the placeholder.** When `.env` leaves the key empty, the shipped `docker-compose.yml` uses `change-me-to-a-secret-string`. That value is public, and Open Notebook does not warn about it.
 - **Don't change it once credentials are saved.** Keys encrypted with the old value can't be decrypted with the new one. Each affected credential shows **Decryption Error** in Manage → Models; delete and re-create it. There is no key-rotation command.
 - **Keep it apart from your backups.** A database backup plus the key gives access to every stored provider key.
 
@@ -79,12 +77,10 @@ Values that are not encrypted at all (from versions before credential encryption
 
 Set a password for any deployment reachable from something other than your own machine: a cloud host, a shared LAN, a reverse proxy on the internet. Without `OPEN_NOTEBOOK_PASSWORD`, authentication is off and anyone who can reach ports 8502 or 5055 can use the app and its stored provider keys. Open Notebook does not log a warning when the password is unset.
 
-```yaml
-services:
-  open_notebook:
-    environment:
-      - OPEN_NOTEBOOK_ENCRYPTION_KEY=<generated-key>
-      - OPEN_NOTEBOOK_PASSWORD=<generated-password>
+```bash
+# .env, next to docker-compose.yml
+OPEN_NOTEBOOK_ENCRYPTION_KEY=<generated-key>
+OPEN_NOTEBOOK_PASSWORD=<generated-password>
 ```
 
 Generate the password the same way as the key (`openssl rand -hex 32`, or the PowerShell command above), and use a different value for each. Non-ASCII passwords work; API clients must send them UTF-8 encoded.

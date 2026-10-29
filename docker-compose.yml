@@ -29,9 +29,14 @@ services:
       - "8502:8502"  # Web UI
       - "5055:5055"  # REST API
     environment:
-      # REQUIRED: Change this to your own secret string
-      # This encrypts your API keys in the database
-      - OPEN_NOTEBOOK_ENCRYPTION_KEY=change-me-to-a-secret-string
+      # Put the encryption key and password in a .env file next to this
+      # compose file (see .env.example), the same way SURREAL_USER and
+      # SURREAL_PASSWORD work. Generate the key with: openssl rand -hex 32
+      # An empty password leaves authentication off. If you already changed
+      # the key inside an older copy of this file, copy that same value into
+      # .env before recreating the container.
+      - OPEN_NOTEBOOK_ENCRYPTION_KEY=${OPEN_NOTEBOOK_ENCRYPTION_KEY:-change-me-to-a-secret-string}
+      - OPEN_NOTEBOOK_PASSWORD=${OPEN_NOTEBOOK_PASSWORD:-}
 
       # Database connection. SURREAL_USER / SURREAL_PASSWORD default to root:root
       # for local use; override them in a .env file before exposing the instance

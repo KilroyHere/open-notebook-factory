@@ -67,6 +67,15 @@ class TestNoPasswordConfigured:
 
         assert status == 200
 
+    @pytest.mark.asyncio
+    async def test_empty_password_keeps_auth_disabled(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # docker compose sets OPEN_NOTEBOOK_PASSWORD to "" when .env omits it.
+        status = await _request(monkeypatch, password="")
+
+        assert status == 200
+
 
 class TestNonAsciiPassword:
     @pytest.mark.asyncio

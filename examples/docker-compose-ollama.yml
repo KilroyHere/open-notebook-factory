@@ -5,9 +5,10 @@
 #
 # Usage:
 #   1. Copy this file to your project folder as docker-compose.yml
-#   2. Change OPEN_NOTEBOOK_ENCRYPTION_KEY below
+#   2. Put OPEN_NOTEBOOK_ENCRYPTION_KEY in a .env file next to this compose file
+#      (openssl rand -hex 32). An empty value keeps the public placeholder.
 #   3. Run: docker compose up -d
-#   4. Pull a model: docker exec open_notebook-ollama-1 ollama pull mistral
+#   4. Pull a model: docker compose exec ollama ollama pull mistral
 #   5. Configure Ollama in UI: Manage → Models → Add Ollama (URL: http://ollama:11434)
 
 services:
@@ -41,8 +42,10 @@ services:
       - "8502:8502"
       - "5055:5055"
     environment:
-      # REQUIRED: Change this to your own secret string
-      - OPEN_NOTEBOOK_ENCRYPTION_KEY=change-me-to-a-secret-string
+      # Set these in a .env file next to this compose file. An empty
+      # password leaves authentication off.
+      - OPEN_NOTEBOOK_ENCRYPTION_KEY=${OPEN_NOTEBOOK_ENCRYPTION_KEY:-change-me-to-a-secret-string}
+      - OPEN_NOTEBOOK_PASSWORD=${OPEN_NOTEBOOK_PASSWORD:-}
 
       # Database connection
       - SURREAL_URL=ws://surrealdb:8000/rpc

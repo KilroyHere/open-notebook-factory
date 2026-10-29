@@ -111,13 +111,13 @@ curl -o docker-compose.yml https://raw.githubusercontent.com/lfnovo/open-noteboo
 This is the official [docker-compose.yml](docker-compose.yml) from this repository. It runs two services: `surrealdb` (the database) and `open_notebook` (UI, API and background worker).
 
 ### Step 2: Set your encryption key
-Edit `docker-compose.yml` and change this line:
-```yaml
-- OPEN_NOTEBOOK_ENCRYPTION_KEY=change-me-to-a-secret-string
+Create a `.env` file next to `docker-compose.yml`:
+```bash
+OPEN_NOTEBOOK_ENCRYPTION_KEY=<generated-key>
 ```
-to a long random secret you generate yourself (for example with `openssl rand -hex 32`; [other options](docs/1-INSTALLATION/docker-compose.md#step-2-set-your-encryption-key)). It encrypts the API keys you store; keep it.
+Generate the key yourself (for example with `openssl rand -hex 32`; [other options](docs/1-INSTALLATION/docker-compose.md#step-2-set-your-encryption-key)). It encrypts the API keys you store; keep it. The compose file reads this value, and `OPEN_NOTEBOOK_PASSWORD`, from `.env`.
 
-> **Shared network or server?** The UI (`8502`) and API (`5055`) are published on all network interfaces and there is no password by default. If other devices can reach this machine, change those two port lines to `"127.0.0.1:8502:8502"` and `"127.0.0.1:5055:5055"`, or add `- OPEN_NOTEBOOK_PASSWORD=your-password` to the `environment:` block, before starting.
+> **Shared network or server?** The UI (`8502`) and API (`5055`) are published on all network interfaces and there is no password by default. If other devices can reach this machine, change those two port lines to `"127.0.0.1:8502:8502"` and `"127.0.0.1:5055:5055"`, or set `OPEN_NOTEBOOK_PASSWORD` in `.env`, before starting.
 
 ### Step 3: Start services
 ```bash

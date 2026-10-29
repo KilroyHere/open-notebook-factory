@@ -33,13 +33,7 @@ On Windows PowerShell, type `curl.exe` instead of `curl`. You can also open the 
 
 ## Step 2: Set your encryption key
 
-Open `docker-compose.yml` and find this line in the `open_notebook` service:
-
-```yaml
-      - OPEN_NOTEBOOK_ENCRYPTION_KEY=change-me-to-a-secret-string
-```
-
-Replace `change-me-to-a-secret-string` with a long random secret that you generate yourself. Don't copy an example value from any guide. Either of these prints a suitable value:
+Create a `.env` file next to `docker-compose.yml` and set a key you generate yourself. The compose file reads `OPEN_NOTEBOOK_ENCRYPTION_KEY` and `OPEN_NOTEBOOK_PASSWORD` from that file, the same way it reads `SURREAL_USER` and `SURREAL_PASSWORD`. Don't copy an example value from any guide. Either of these prints a suitable key:
 
 ```bash
 openssl rand -hex 32                                   # macOS, Linux
@@ -49,16 +43,23 @@ openssl rand -hex 32                                   # macOS, Linux
 [guid]::NewGuid().ToString("N") + [guid]::NewGuid().ToString("N")   # Windows PowerShell
 ```
 
+```bash
+# .env
+OPEN_NOTEBOOK_ENCRYPTION_KEY=<generated-key>
+```
+
+Editing the `environment:` line in `docker-compose.yml` still works. The shipped default, used when `.env` leaves the key empty, is the public placeholder `change-me-to-a-secret-string`.
+
 Open Notebook uses this key to encrypt the provider API keys it stores.
 
-> **Keep this key.** If it changes later, the keys you saved can no longer be decrypted and you have to enter them again.
+> **Keep this key.** If it changes later, the keys you saved can no longer be decrypted and you have to enter them again. If you previously edited the key inside `docker-compose.yml` and then download a newer compose file, put that same value in `.env` before `docker compose up -d`.
 
 ## Step 3: Decide who can reach it
 
 The shipped file publishes ports `8502` (UI) and `5055` (API) on **all network interfaces**, and authentication is off until you set a password. If other people or devices can reach this machine (shared network, server, VPS), do one of these **before starting**:
 
 - **Keep it on this machine only:** in `docker-compose.yml`, change the two port lines of the `open_notebook` service to `"127.0.0.1:8502:8502"` and `"127.0.0.1:5055:5055"`.
-- **Require a password:** add `- OPEN_NOTEBOOK_PASSWORD=your-password` to the `environment:` block of the `open_notebook` service.
+- **Require a password:** set `OPEN_NOTEBOOK_PASSWORD` in the same `.env` file. An empty or missing password leaves authentication off. Adding `- OPEN_NOTEBOOK_PASSWORD=your-password` to the `environment:` block still works.
 
 See [Access from another machine](#access-from-another-machine) if you do want to use it from other devices.
 
@@ -91,7 +92,7 @@ Then follow [Connect a provider](../4-AI-PROVIDERS/index.md#connect-a-provider):
 
 ## Changing settings
 
-Every Open Notebook setting is an environment variable on the **`open_notebook`** service. Add it to that service's `environment:` block and apply it with:
+Every Open Notebook setting is an environment variable on the **`open_notebook`** service. The encryption key, the password, and the database user and password can live in `.env`. Add anything else to that service's `environment:` block and apply it with:
 
 ```bash
 docker compose up -d
@@ -99,18 +100,15 @@ docker compose up -d
 
 `up -d` recreates the container when its configuration changed. `docker compose restart` does **not** apply new settings.
 
-For example, to require a password:
+For example, to require a password, add this to `.env`:
 
-```yaml
-  open_notebook:
-    environment:
-      # ...existing lines...
-      - OPEN_NOTEBOOK_PASSWORD=choose-a-password
+```bash
+OPEN_NOTEBOOK_PASSWORD=choose-a-password
 ```
 
 A few things to know:
 
-- **`.env` is not loaded into the container.** The shipped compose file has no `env_file:`. A `.env` file next to `docker-compose.yml` only fills the `${...}` placeholders in the file (the shipped file uses it for `SURREAL_USER` and `SURREAL_PASSWORD`). Anything else you put in `.env` is ignored.
+- **`.env` is not loaded into the container.** The shipped compose file has no `env_file:`. A `.env` file next to `docker-compose.yml` only fills the `${...}` placeholders in the file. The shipped file uses that for `OPEN_NOTEBOOK_ENCRYPTION_KEY`, `OPEN_NOTEBOOK_PASSWORD`, `SURREAL_USER` and `SURREAL_PASSWORD`. Anything else you put in `.env` is ignored unless you add it to the `environment:` block.
 - **Database credentials** default to `root:root`, and the database port is only reachable from the same machine. To use other credentials, put `SURREAL_USER=...` and `SURREAL_PASSWORD=...` in a `.env` file before the first start; both services read them. See [`.env.example`](../../.env.example).
 - **Optional extraction engines** (Docling, Crawl4AI) are commented out in the compose file. When enabled they are installed on the next start, which then takes several minutes. See the [Environment Reference](../5-CONFIGURATION/environment-reference.md).
 - **Keep your changes in an override file (optional).** Docker Compose automatically merges a `docker-compose.override.yml` in the same folder. Putting your additions there leaves `docker-compose.yml` untouched, so you can download a newer one later. The variants below use this file.

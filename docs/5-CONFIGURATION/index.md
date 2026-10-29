@@ -11,7 +11,7 @@ Open Notebook is configured in two places:
 
 ### Docker Compose
 
-Put them under the `open_notebook` service's `environment:` block in `docker-compose.yml`, then run:
+The shipped compose file reads `OPEN_NOTEBOOK_ENCRYPTION_KEY`, `OPEN_NOTEBOOK_PASSWORD`, `SURREAL_USER` and `SURREAL_PASSWORD` from a `.env` file next to `docker-compose.yml`. Put every other variable under the `open_notebook` service's `environment:` block, then run:
 
 ```bash
 docker compose up -d
@@ -19,17 +19,21 @@ docker compose up -d
 
 `docker compose restart` keeps the old environment, so it does not apply changes.
 
+```bash
+# .env
+OPEN_NOTEBOOK_ENCRYPTION_KEY=<generated-key>
+```
+
 ```yaml
 services:
   open_notebook:
     environment:
-      - OPEN_NOTEBOOK_ENCRYPTION_KEY=<generated-key>
       - API_URL=https://notebook.example.com
 ```
 
-Replace `<generated-key>` with a value you generate yourself, for example with `openssl rand -hex 32` (on Windows, see [Set your encryption key](../1-INSTALLATION/docker-compose.md#step-2-set-your-encryption-key)). Don't reuse an example value.
+Replace `<generated-key>` with a value you generate yourself, for example with `openssl rand -hex 32` (on Windows, see [Set your encryption key](../1-INSTALLATION/docker-compose.md#step-2-set-your-encryption-key)). Don't reuse an example value. Editing the key's `environment:` line still works.
 
-The shipped `docker-compose.yml` doesn't load an env file into the container. A `.env` file next to it only fills the `${...}` placeholders in the compose file (`SURREAL_USER`, `SURREAL_PASSWORD`), so a variable that exists only in `.env` never reaches Open Notebook. To keep settings in a file, add `env_file: .env` to the `open_notebook` service.
+The shipped `docker-compose.yml` doesn't load an env file into the container. A `.env` file next to it only fills the `${...}` placeholders in the compose file. A variable that exists only in `.env`, other than the four names above, never reaches Open Notebook. To keep more settings in a file, add `env_file: .env` to the `open_notebook` service.
 
 ### From source
 
@@ -47,7 +51,7 @@ Frontend variables (`API_URL`, `INTERNAL_API_URL`, `NEXT_PUBLIC_*`) are not read
 - OPEN_NOTEBOOK_ENCRYPTION_KEY=<generated-key>
 ```
 
-Encrypts the provider API keys you save in Manage → Models. Generate the value yourself, for example with `openssl rand -hex 32`. Without it you can't save credentials. Replace the `change-me-to-a-secret-string` placeholder from the shipped file, and don't change the value later: credentials saved with the old key become unreadable. See [Security](security.md#api-key-encryption).
+Encrypts the provider API keys you save in Manage → Models. Generate the value yourself, for example with `openssl rand -hex 32`, and put it in `.env` as `OPEN_NOTEBOOK_ENCRYPTION_KEY`. Without it you can't save credentials. The shipped compose file falls back to the public placeholder `change-me-to-a-secret-string` when that line is empty. Don't change the value later: credentials saved with the old key become unreadable. See [Security](security.md#api-key-encryption).
 
 ### Database
 
@@ -73,7 +77,7 @@ The browser finds the API automatically at `<the host you opened>:5055`. Set `AP
 
 ### Password
 
-Set `OPEN_NOTEBOOK_PASSWORD` for anything reachable beyond your own machine. Without it, authentication is off. See [Security](security.md).
+Set `OPEN_NOTEBOOK_PASSWORD` in `.env` for anything reachable beyond your own machine. Without it, authentication is off. See [Security](security.md).
 
 ---
 
