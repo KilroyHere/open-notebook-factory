@@ -1,9 +1,13 @@
 import { LearningAside } from '@/lib/types/api'
 
-const INLINE_REFERENCE = /\[(?:source|note|source_insight):[^\]]+\]/g
+const INLINE_REFERENCE = /\[(?:source_insight|insight|source|note):[^\]]+\]/g
 const MARKDOWN_LINK = /\[([^\]]+)\]\([^)]+\)/g
 const MARKDOWN_MARKERS = /(^|\s)(?:#{1,6}|[-*>]+)\s+/g
+const LATEX_COMMAND = /\\([a-zA-Z]+)/g
 const LATEX_MARKERS = /[$\\{}]/g
+// Emphasis underscores sit at a word edge (`_word_`, `__word__`); underscores
+// between word characters belong to identifiers or math (`d_k`, `max_len`).
+const EMPHASIS_UNDERSCORE = /(^|[^\p{L}\p{N}_])_+|_+(?=[^\p{L}\p{N}]|$)/gu
 
 function truncateAtWord(value: string, limit: number): string {
   if (value.length <= limit) return value
@@ -13,18 +17,28 @@ function truncateAtWord(value: string, limit: number): string {
   return `${truncated.trimEnd()}…`
 }
 
-export function createAsideTitle(content: string, limit = 72): string {
-  const plainText = content
+/**
+ * Reduce Markdown/LaTeX answer text to one readable line: drops code blocks,
+ * inline `[source:id]` references, heading/list/quote markers, emphasis and
+ * math delimiters, while keeping identifiers such as `d_k` intact.
+ */
+export function toPlainTextPreview(content: string): string {
+  return content
     .replace(/```[\s\S]*?```/g, ' ')
     .replace(MARKDOWN_LINK, '$1')
     .replace(INLINE_REFERENCE, '')
     .replace(MARKDOWN_MARKERS, '$1')
-    .replace(/[*_~`]/g, '')
-    .replace(LATEX_MARKERS, '')
+    .replace(/[*~`]/g, '')
+    .replace(EMPHASIS_UNDERSCORE, '$1')
+    .replace(LATEX_COMMAND, ' $1 ')
+    .replace(LATEX_MARKERS, ' ')
+    .replace(/\s+([.,;:!?)])/g, '$1')
     .replace(/\s+/g, ' ')
     .trim()
+}
 
-  return truncateAtWord(plainText, limit)
+export function createAsideTitle(content: string, limit = 72): string {
+  return truncateAtWord(toPlainTextPreview(content), limit)
 }
 
 export function createLearningUpdateDraft(

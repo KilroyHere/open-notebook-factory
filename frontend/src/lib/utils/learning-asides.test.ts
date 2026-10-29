@@ -4,6 +4,7 @@ import {
   childDiveForQuestion,
   createAsideTitle,
   createLearningUpdateDraft,
+  toPlainTextPreview,
 } from './learning-asides'
 
 describe('learning aside text helpers', () => {
@@ -14,6 +15,17 @@ describe('learning aside text helpers', () => {
       )
     ).toBe(
       'Building on our f(x)=x^2 example, explain momentum in detail and compare…'
+    )
+  })
+
+  it('keeps identifier underscores while stripping emphasis', () => {
+    expect(
+      createAsideTitle(
+        'Why divide by $\\sqrt{d_k}$ in _scaled_ __dot-product__ attention?'
+      )
+    ).toBe('Why divide by sqrt d_k in scaled dot-product attention?')
+    expect(createAsideTitle('Compare max_len and `d_model` sizes')).toBe(
+      'Compare max_len and d_model sizes'
     )
   })
 
@@ -57,5 +69,15 @@ describe('learning aside text helpers', () => {
     expect(
       childDiveForQuestion([discarded], 'learning_aside:parent', 'Why a Gaussian prior?')
     ).toBeUndefined()
+  })
+
+  it('strips citations, markdown and math from one-line previews', () => {
+    expect(
+      toPlainTextPreview(
+        '**Scaled dot-product attention** computes $QK^T / \\sqrt{d_k}$ [source:6tsit42].\n\n- Then a softmax [insight:abc, note:x].'
+      )
+    ).toBe(
+      'Scaled dot-product attention computes QK^T / sqrt d_k. Then a softmax.'
+    )
   })
 })
