@@ -48,18 +48,18 @@ Things to know:
 
 ## Sessions
 
-A session is one conversation; its messages are saved and reloaded when you come back. Click **Sessions** to open **Chat Sessions**, where you can create a session (give it a title), switch to another one, rename it or delete it. Each session remembers the conversation, not the context selection.
+A session is one conversation; its messages are saved and reloaded when you come back. The chat control shows the title of the session you are in. Click it to open **Chat Sessions**, where the open session is marked **Current**. From there you can create a session (give it a title), switch to another one, rename it or delete it. Each session remembers the conversation, not the context selection.
 
 ## Learning Asides
 
 Use an aside when an answer raises a prerequisite or tangent that you want to explore without filling the main conversation with the detour.
 
 1. Under an assistant answer, click **Open as an aside**.
-2. Ask follow-up questions in the center conversation. The aside retains the selected answer and the parent conversation up to that point. **Back to origin message** returns you to the message that started it.
+2. Ask follow-up questions in the center conversation. The aside retains the selected answer and the parent conversation up to that point. **Back to origin message** returns you to the message that started it. When that link is available, the aside does not also quote the starting passage. A dive opened from a question, with no origin message, still shows the question.
 3. **Park** it to return later, **Discard** it if the tangent was not useful, or **Resolve aside** when you have an answer.
 4. Before resolving, edit the proposed conclusion and decide whether to use it in the main conversation, save it as a note, or both.
 
-The complete aside transcript stays isolated. Only the conclusion you approve is added to future main-chat context. A resolved aside leaves its summary under the origin message, with **View transcript** and, after the main chat uses that conclusion, **View merged response**. That same conclusion also appears on the reply that received it, including why it matters, any open questions, and citations that open the existing source, note, or insight view. The **Asides** button lists active, parked and resolved asides. On a wide screen the **Learning journey** rail's **Outline** nests each aside under the chat turn it came from, and **Map** shows the main thread, each branch, its summary, and the merged reply. Expanding the map covers the journey surface; **Outline** brings the list back. When you return to a notebook with unfinished work, a resume prompt takes you back to it. Aside sessions do not appear in the normal **Chat Sessions** list.
+The complete aside transcript stays isolated. Only the conclusion you approve is added to future main-chat context. A resolved aside leaves its summary under the origin message, with **View transcript** and, after the main chat uses that conclusion, **View merged response**. That same conclusion also appears on the reply that received it, including why it matters, any open questions, and citations that open the existing source, note, or insight view. **Dive in** on an open question starts a nested aside under that branch; **Park question** saves the same child without leaving the thread you are reading. The outline and map place the child under its parent, and **Back to parent dive** returns from it. The **Asides** button lists active, parked and resolved asides. On a wide screen the **Learning journey** rail's **Outline** names each part of the chat as a section. Rename a section or pin it; the name stays when you reload, and pinned sections stay at the top. Each aside still nests under the turn it came from. **Map** shows the main thread, each branch, its summary, and the merged reply. Expanding the map covers the journey surface; **Outline** brings the list back. When you return to a notebook with unfinished work, a resume prompt takes you back to it. Aside sessions do not appear in the normal **Chat Sessions** list.
 
 If you also save the conclusion as a note, it behaves like any other notebook
 note: sessions that include notes in their context can use it. Leave that
@@ -69,7 +69,7 @@ On a wide screen the aside takes the center conversation, with the knowledge and
 
 ## Choosing the Model
 
-The model button next to the message box opens **Model Configuration**. Pick a model to use for this session instead of your **Chat Model** default, or click **Reset to Default**. Only language models you have added in **Manage → Models** are listed.
+The model button on the message row opens **Model Configuration**. Pick a model to use for this session instead of your **Chat Model** default, or click **Reset to Default**. Only language models you have added in **Manage → Models** are listed.
 
 ---
 

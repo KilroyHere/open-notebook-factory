@@ -14,10 +14,13 @@ from api.models import (
     LearningAsideResponse,
     LearningJourneyResponse,
     LearningJourneyResumeResponse,
+    LearningSectionResponse,
     LearningUpdateResponse,
     ResolveLearningAsideRequest,
     SendLearningAsideMessageRequest,
+    SyncLearningSectionsRequest,
     UpdateLearningAsideRequest,
+    UpdateLearningSectionRequest,
 )
 from api.routers._chat_shared import normalize_record_id
 from open_notebook.database.repository import ensure_record_id, repo_query
@@ -25,6 +28,7 @@ from open_notebook.domain.learning import (
     AsideAnchor,
     LearningAside,
     LearningJourney,
+    LearningSection,
     LearningUpdate,
 )
 from open_notebook.domain.notebook import ChatSession, Note, Notebook
@@ -135,12 +139,28 @@ async def _aside_response(aside: LearningAside) -> LearningAsideResponse:
     )
 
 
+def _section_response(section: LearningSection) -> LearningSectionResponse:
+    return LearningSectionResponse(
+        id=section.id or "",
+        journey_id=section.journey,
+        title=section.title,
+        pinned=section.pinned,
+        start_message_id=section.start_message_id,
+        created=_timestamp(section.created),
+        updated=_timestamp(section.updated),
+    )
+
+
 async def _journey_response(journey: LearningJourney) -> LearningJourneyResponse:
     asides = [
         await _aside_response(aside)
         for aside in await journey.get_asides(include_discarded=True)
     ]
     updates = [_update_response(update) for update in await journey.get_updates()]
+    sections = [
+        _section_response(section)
+        for section in await LearningSection.get_for_journey(journey.id or "")
+    ]
     return LearningJourneyResponse(
         id=journey.id or "",
         notebook_id=journey.notebook,
@@ -150,6 +170,7 @@ async def _journey_response(journey: LearningJourney) -> LearningJourneyResponse
         status=journey.status,
         asides=asides,
         updates=updates,
+        sections=sections,
         created=_timestamp(journey.created),
         updated=_timestamp(journey.updated),
     )
@@ -215,6 +236,36 @@ async def get_journey_resume(
     )
 
 
+@router.post("/sections/sync", response_model=List[LearningSectionResponse])
+async def sync_sections(request: SyncLearningSectionsRequest):
+    full_session_id, _, _ = await _verify_notebook_session(
+        request.notebook_id, request.main_session_id
+    )
+    journey = await LearningJourney.get_or_create(
+        normalize_record_id("notebook", request.notebook_id),
+        full_session_id,
+    )
+    sections = await LearningSection.ensure_for_turns(
+        journey.id or "",
+        [(item.start_message_id, item.title) for item in request.sections],
+    )
+    return [_section_response(section) for section in sections]
+
+
+@router.patch("/sections/{section_id}", response_model=LearningSectionResponse)
+async def update_section(section_id: str, request: UpdateLearningSectionRequest):
+    section = await LearningSection.get(
+        normalize_record_id("learning_section", section_id)
+    )
+    update = request.model_dump(exclude_unset=True)
+    if "title" in update:
+        section.title = update["title"]
+    if "pinned" in update:
+        section.pinned = update["pinned"]
+    await section.save()
+    return _section_response(section)
+
+
 @router.post("/asides", response_model=LearningAsideResponse)
 async def create_aside(request: CreateLearningAsideRequest):
     parent_session_id, _, parent_session = await _verify_notebook_session(
@@ -230,6 +281,8 @@ async def create_aside(request: CreateLearningAsideRequest):
             raise InvalidInputError(
                 "Parent aside does not belong to the selected chat session"
             )
+        if parent_aside.status == "discarded":
+            raise InvalidInputError("Discarded asides cannot parent a new dive")
     else:
         parent_aside = await LearningAside.get_for_chat_session(parent_session_id)
 

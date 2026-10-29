@@ -23,17 +23,20 @@ import { Settings2, Sparkles } from 'lucide-react'
 import { useModelDefaults, useModels } from '@/lib/hooks/use-models'
 import { useTranslation } from '@/lib/hooks/use-translation'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
+import { cn } from '@/lib/utils'
 
 interface ModelSelectorProps {
   currentModel?: string
   onModelChange: (model?: string) => void
   disabled?: boolean
+  className?: string
 }
 
 export function ModelSelector({ 
   currentModel, 
   onModelChange,
-  disabled = false 
+  disabled = false,
+  className,
 }: ModelSelectorProps) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
@@ -88,10 +91,10 @@ export function ModelSelector({
           variant="outline" 
           size="sm"
           disabled={disabled}
-          className="gap-2"
+          className={cn('h-8 max-w-[10rem] gap-1.5 px-2', className)}
         >
-          <Settings2 className="h-4 w-4" />
-          <span className="text-xs">
+          <Settings2 className="h-3.5 w-3.5 shrink-0" />
+          <span className="truncate text-xs">
             {currentModelName}
           </span>
         </Button>

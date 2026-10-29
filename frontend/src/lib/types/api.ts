@@ -292,6 +292,16 @@ export interface LearningAside {
   updated: string
 }
 
+export interface LearningSection {
+  id: string
+  journey_id: string
+  title: string
+  pinned: boolean
+  start_message_id: string
+  created: string
+  updated: string
+}
+
 export interface LearningJourney {
   id: string
   notebook_id: string
@@ -301,6 +311,7 @@ export interface LearningJourney {
   status: 'active' | 'archived'
   asides: LearningAside[]
   updates: LearningUpdate[]
+  sections?: LearningSection[]
   created: string
   updated: string
 }

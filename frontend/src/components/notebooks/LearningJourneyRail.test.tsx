@@ -1,7 +1,11 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { LearningJourneyRail } from './LearningJourneyRail'
-import { LearningAside, NotebookChatMessage } from '@/lib/types/api'
+import {
+  LearningAside,
+  LearningSection,
+  NotebookChatMessage,
+} from '@/lib/types/api'
 
 function openTab(name: string) {
   fireEvent.mouseDown(screen.getByRole('tab', { name }), {
@@ -189,6 +193,156 @@ describe('LearningJourneyRail', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /What is the KL term\?/ }))
     expect(onNavigateToMessage).toHaveBeenCalledWith('human:two')
+  })
+
+  it('nests a child dive under its parent branch', () => {
+    const child: LearningAside = {
+      ...aside,
+      id: 'learning_aside:child',
+      parent_aside_id: aside.id,
+      title: 'Discrete latents',
+      status: 'active',
+      anchor: {
+        type: 'message',
+        content: 'Does this hold for discrete latents?',
+      },
+      updates: [],
+    }
+    const parent: LearningAside = {
+      ...aside,
+      updates: [
+        {
+          ...aside.updates[0],
+          open_questions: ['Does this hold for discrete latents?'],
+        },
+      ],
+    }
+    render(
+      <LearningJourneyRail
+        messages={messages}
+        asides={[parent, child]}
+        activeAsideId={null}
+        onShowMain={vi.fn()}
+        onOpenAside={vi.fn()}
+        onNavigateToMessage={vi.fn()}
+      />
+    )
+
+    const outline = screen.getByRole('tabpanel', {
+      name: 'learningAsides.outline',
+    })
+    const outlineText = outline.textContent ?? ''
+    expect(outlineText.indexOf('Why Jensen applies')).toBeLessThan(
+      outlineText.indexOf('Discrete latents')
+    )
+    expect(outlineText).not.toContain('learningAsides.openQuestions')
+    expect(outlineText.indexOf('Explain the ELBO.')).toBeLessThan(
+      outlineText.indexOf('Discrete latents')
+    )
+
+    openTab('learningAsides.map')
+    const map = screen.getByRole('tabpanel', { name: 'learningAsides.map' })
+    const mapText = map.textContent ?? ''
+    expect(mapText.indexOf('Why Jensen applies')).toBeLessThan(
+      mapText.indexOf('Discrete latents')
+    )
+    expect(within(map).getAllByText('Discrete latents')).toHaveLength(1)
+  })
+
+  it('shows a durable section title and saves rename or pin', () => {
+    const onRenameSection = vi.fn()
+    const onTogglePinSection = vi.fn()
+    const section: LearningSection = {
+      id: 'learning_section:one',
+      journey_id: 'learning_journey:one',
+      title: 'Evidence lower bound',
+      pinned: false,
+      start_message_id: 'human:one',
+      created: '2026-10-29T00:00:00Z',
+      updated: '2026-10-29T00:00:00Z',
+    }
+    render(
+      <LearningJourneyRail
+        messages={messages}
+        asides={[aside]}
+        sections={[section]}
+        activeAsideId={null}
+        onShowMain={vi.fn()}
+        onOpenAside={vi.fn()}
+        onNavigateToMessage={vi.fn()}
+        onRenameSection={onRenameSection}
+        onTogglePinSection={onTogglePinSection}
+      />
+    )
+
+    expect(
+      screen.getByRole('button', { name: /Evidence lower bound/ })
+    ).toBeInTheDocument()
+    expect(screen.queryByText('Explain the ELBO.')).not.toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'learningAsides.pinSection' })
+    )
+    expect(onTogglePinSection).toHaveBeenCalledWith(section.id, true)
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'learningAsides.renameSection' })
+    )
+    const input = screen.getByRole('textbox', {
+      name: 'learningAsides.sectionTitlePlaceholder',
+    })
+    fireEvent.change(input, { target: { value: 'ELBO derivation' } })
+    fireEvent.blur(input)
+    expect(onRenameSection).toHaveBeenCalledWith(section.id, 'ELBO derivation')
+  })
+
+  it('floats a pinned section above later turns', () => {
+    const thread: NotebookChatMessage[] = [
+      ...messages,
+      { id: 'human:two', type: 'human', content: 'What is the KL term?' },
+    ]
+    const sections: LearningSection[] = [
+      {
+        id: 'learning_section:one',
+        journey_id: 'learning_journey:one',
+        title: 'Evidence lower bound',
+        pinned: false,
+        start_message_id: 'human:one',
+        created: '2026-10-29T00:00:00Z',
+        updated: '2026-10-29T00:00:00Z',
+      },
+      {
+        id: 'learning_section:two',
+        journey_id: 'learning_journey:one',
+        title: 'KL divergence',
+        pinned: true,
+        start_message_id: 'human:two',
+        created: '2026-10-29T00:00:00Z',
+        updated: '2026-10-29T00:00:00Z',
+      },
+    ]
+    render(
+      <LearningJourneyRail
+        messages={thread}
+        asides={[aside]}
+        sections={sections}
+        activeAsideId={null}
+        onShowMain={vi.fn()}
+        onOpenAside={vi.fn()}
+        onNavigateToMessage={vi.fn()}
+      />
+    )
+
+    const outline = screen.getByRole('tabpanel', {
+      name: 'learningAsides.outline',
+    })
+    const text = outline.textContent ?? ''
+    expect(text.indexOf('KL divergence')).toBeLessThan(
+      text.indexOf('Evidence lower bound')
+    )
+    expect(text.indexOf('Evidence lower bound')).toBeLessThan(
+      text.indexOf('Why Jensen applies')
+    )
   })
 
   it('maps main, aside, resolution, and merge without one node per message', () => {

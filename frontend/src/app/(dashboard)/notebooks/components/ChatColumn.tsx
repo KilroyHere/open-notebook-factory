@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { toast } from 'sonner'
 import { useNotebookChat } from '@/lib/hooks/use-notebook-chat'
 import { useLearningAsides } from '@/lib/hooks/use-learning-asides'
@@ -15,8 +15,9 @@ import { Button } from '@/components/ui/button'
 import { AlertCircle, GitBranch } from 'lucide-react'
 import { ContextSelections } from '../[id]/page'
 import { useTranslation } from '@/lib/hooks/use-translation'
-import { NotebookChatMessage, SourceListResponse } from '@/lib/types/api'
+import { LearningAside, NotebookChatMessage, SourceListResponse } from '@/lib/types/api'
 import { focusChatMessage } from '@/lib/utils/chat-navigation'
+import { childDiveForQuestion, createAsideTitle } from '@/lib/utils/learning-asides'
 
 interface ChatColumnProps {
   notebookId: string
@@ -66,9 +67,77 @@ export function ChatColumn({ notebookId, contextSelections, sources, sourcesLoad
     }).catch(() => undefined)
   }
 
+  const diveIntoQuestion = (parent: LearningAside, question: string) => {
+    const existing = childDiveForQuestion(learning.asides, parent.id, question)
+    if (existing) {
+      learning.openAside(existing.id)
+      return
+    }
+    void learning.createAside({
+      type: 'message',
+      content: question.trim(),
+      parentAside: parent,
+    }).catch(() => undefined)
+  }
+
+  const parkQuestion = (parent: LearningAside, question: string) => {
+    const existing = childDiveForQuestion(learning.asides, parent.id, question)
+    if (existing) {
+      if (existing.status !== 'parked') {
+        void learning.updateStatus({ asideId: existing.id, status: 'parked' }).catch(() => undefined)
+      }
+      return
+    }
+    void learning.createAside({
+      type: 'message',
+      content: question.trim(),
+      parentAside: parent,
+      initialStatus: 'parked',
+    }).catch(() => undefined)
+  }
+
   const resumableAside = learning.asides.find(
     (aside) => aside.id === learning.resume?.recommended_aside_id
   )
+
+  const sections = learning.sections
+  const syncSections = learning.syncSections
+  const syncedSectionIds = useRef(new Set<string>())
+  useEffect(() => {
+    if (!chat.currentSessionId || !syncSections) return
+    const known = new Set(
+      (sections ?? []).map((section) => section.start_message_id)
+    )
+    const missing = chat.messages.filter((message) => {
+      if (message.type !== 'human' || !message.id) return false
+      if (known.has(message.id) || syncedSectionIds.current.has(message.id)) {
+        return false
+      }
+      return Boolean(
+        createAsideTitle(message.content) || message.content.trim()
+      )
+    })
+    if (missing.length === 0) return
+    for (const message of missing) syncedSectionIds.current.add(message.id)
+    void syncSections(
+      missing.map((message) => ({
+        start_message_id: message.id,
+        title:
+          createAsideTitle(message.content) ||
+          message.content.trim().slice(0, 72),
+      }))
+    ).catch(() => {
+      for (const message of missing) syncedSectionIds.current.delete(message.id)
+    })
+  }, [chat.currentSessionId, chat.messages, sections, syncSections])
+
+  const renameSection = (sectionId: string, title: string) => {
+    void learning.updateSection({ sectionId, title }).catch(() => undefined)
+  }
+
+  const togglePinSection = (sectionId: string, pinned: boolean) => {
+    void learning.updateSection({ sectionId, pinned }).catch(() => undefined)
+  }
 
   const showMainThread = () => {
     learning.setPanelOpen(false)
@@ -165,6 +234,14 @@ export function ChatColumn({ notebookId, contextSelections, sources, sourcesLoad
           onLeaveJourney?.()
           navigateToMainMessage(messageId)
         }}
+        onDiveIntoQuestion={(parent, question) => {
+          onLeaveJourney?.()
+          diveIntoQuestion(parent, question)
+        }}
+        onParkQuestion={parkQuestion}
+        sections={learning.sections}
+        onRenameSection={renameSection}
+        onTogglePinSection={togglePinSection}
       />
     )
   }
@@ -213,6 +290,8 @@ export function ChatColumn({ notebookId, contextSelections, sources, sourcesLoad
             }
             onNavigateToMessage={navigateToMainMessage}
             onReferenceClick={handleReferenceClick}
+            onDiveIntoQuestion={diveIntoQuestion}
+            onParkQuestion={parkQuestion}
           />
         ) : (
           <ChatPanel
@@ -253,6 +332,8 @@ export function ChatColumn({ notebookId, contextSelections, sources, sourcesLoad
             learningAsides={learning.asides}
             onOpenLearningAside={learning.openAside}
             onNavigateToMessage={navigateToMainMessage}
+            onDiveIntoQuestion={diveIntoQuestion}
+            onParkQuestion={parkQuestion}
             workspaceMode
           />
         )}
@@ -264,6 +345,11 @@ export function ChatColumn({ notebookId, contextSelections, sources, sourcesLoad
         onShowMain={showMainThread}
         onOpenAside={learning.openAside}
         onNavigateToMessage={navigateToMainMessage}
+        onDiveIntoQuestion={diveIntoQuestion}
+        onParkQuestion={parkQuestion}
+        sections={learning.sections}
+        onRenameSection={renameSection}
+        onTogglePinSection={togglePinSection}
       />
     </div>
   )

@@ -1,4 +1,4 @@
-"""Tests for recently viewed notebooks and sources."""
+"""Tests for recently viewed notebooks."""
 
 from unittest.mock import AsyncMock, patch
 
@@ -18,24 +18,20 @@ def client():
 
 class TestRecentlyViewedApi:
     @patch("api.routers.notebooks.repo_query", new_callable=AsyncMock)
-    def test_recently_viewed_returns_mixed_items_newest_first(
+    def test_recently_viewed_returns_notebooks_newest_first(
         self, mock_repo_query, client
     ):
-        mock_repo_query.side_effect = [
-            [
-                {
-                    "id": "notebook:old",
-                    "title": "Older Notebook",
-                    "last_viewed_at": "2026-06-26T10:00:00Z",
-                }
-            ],
-            [
-                {
-                    "id": "source:new",
-                    "title": "Newer Source",
-                    "last_viewed_at": "2026-06-27T10:00:00Z",
-                }
-            ],
+        mock_repo_query.return_value = [
+            {
+                "id": "notebook:new",
+                "title": "Newer Notebook",
+                "last_viewed_at": "2026-06-27T10:00:00Z",
+            },
+            {
+                "id": "notebook:old",
+                "title": "Older Notebook",
+                "last_viewed_at": "2026-06-26T10:00:00Z",
+            },
         ]
 
         response = client.get("/api/recently-viewed")
@@ -43,9 +39,9 @@ class TestRecentlyViewedApi:
         assert response.status_code == 200
         assert response.json() == [
             {
-                "type": "source",
-                "id": "source:new",
-                "title": "Newer Source",
+                "type": "notebook",
+                "id": "notebook:new",
+                "title": "Newer Notebook",
                 "last_viewed_at": "2026-06-27T10:00:00Z",
             },
             {
@@ -55,48 +51,39 @@ class TestRecentlyViewedApi:
                 "last_viewed_at": "2026-06-26T10:00:00Z",
             },
         ]
+        assert mock_repo_query.await_count == 1
+        query = mock_repo_query.await_args.args[0]
+        assert "FROM notebook" in query
+        assert "ORDER BY last_viewed_at DESC" in query
+        assert "FROM source" not in query
 
     @patch("api.routers.notebooks.repo_query", new_callable=AsyncMock)
     def test_recently_viewed_honors_limit(self, mock_repo_query, client):
-        mock_repo_query.side_effect = [
-            [
-                {
-                    "id": "notebook:1",
-                    "title": "Notebook 1",
-                    "last_viewed_at": "2026-06-27T09:00:00Z",
-                },
-                {
-                    "id": "notebook:2",
-                    "title": "Notebook 2",
-                    "last_viewed_at": "2026-06-27T07:00:00Z",
-                },
-            ],
-            [
-                {
-                    "id": "source:1",
-                    "title": "Source 1",
-                    "last_viewed_at": "2026-06-27T10:00:00Z",
-                },
-                {
-                    "id": "source:2",
-                    "title": "Source 2",
-                    "last_viewed_at": "2026-06-27T08:00:00Z",
-                },
-            ],
+        mock_repo_query.return_value = [
+            {
+                "id": "notebook:1",
+                "title": "Notebook 1",
+                "last_viewed_at": "2026-06-27T09:00:00Z",
+            },
+            {
+                "id": "notebook:2",
+                "title": "Notebook 2",
+                "last_viewed_at": "2026-06-27T07:00:00Z",
+            },
         ]
 
         response = client.get("/api/recently-viewed?limit=2")
 
         assert response.status_code == 200
         data = response.json()
-        assert [item["id"] for item in data] == ["source:1", "notebook:1"]
+        assert [item["id"] for item in data] == ["notebook:1", "notebook:2"]
         assert len(data) == 2
-        assert mock_repo_query.await_args_list[0].args[1] == {"limit": 2}
-        assert mock_repo_query.await_args_list[1].args[1] == {"limit": 2}
+        assert mock_repo_query.await_count == 1
+        assert mock_repo_query.await_args.args[1] == {"limit": 2}
 
     @patch("api.routers.notebooks.repo_query", new_callable=AsyncMock)
     def test_recently_viewed_empty_when_no_view_history(self, mock_repo_query, client):
-        mock_repo_query.side_effect = [[], []]
+        mock_repo_query.return_value = []
 
         response = client.get("/api/recently-viewed")
 
@@ -158,24 +145,16 @@ class TestRecentlyViewedApi:
     def test_recently_viewed_reorders_after_notebook_is_viewed_again(
         self, mock_repo_query, client
     ):
-        mock_repo_query.side_effect = [
-            [
-                {
-                    "id": "notebook:1",
-                    "title": "Notebook",
-                    "last_viewed_at": "2026-06-27T11:00:00Z",
-                }
-            ],
-            [
-                {
-                    "id": "source:1",
-                    "title": "Source",
-                    "last_viewed_at": "2026-06-27T10:00:00Z",
-                }
-            ],
+        mock_repo_query.return_value = [
+            {
+                "id": "notebook:1",
+                "title": "Notebook",
+                "last_viewed_at": "2026-06-27T11:00:00Z",
+            }
         ]
 
         response = client.get("/api/recently-viewed")
 
         assert response.status_code == 200
-        assert [item["id"] for item in response.json()] == ["notebook:1", "source:1"]
+        assert [item["id"] for item in response.json()] == ["notebook:1"]
+        assert all(item["type"] == "notebook" for item in response.json())

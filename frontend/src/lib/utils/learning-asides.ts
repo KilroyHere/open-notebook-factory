@@ -1,3 +1,5 @@
+import { LearningAside } from '@/lib/types/api'
+
 const INLINE_REFERENCE = /\[(?:source|note|source_insight):[^\]]+\]/g
 const MARKDOWN_LINK = /\[([^\]]+)\]\([^)]+\)/g
 const MARKDOWN_MARKERS = /(^|\s)(?:#{1,6}|[-*>]+)\s+/g
@@ -35,4 +37,19 @@ export function createLearningUpdateDraft(
       .map((paragraph) => paragraph.trim())
       .find(Boolean) ?? ''
   return truncateAtWord(firstParagraph, limit)
+}
+
+export function childDiveForQuestion(
+  asides: LearningAside[],
+  parentId: string,
+  question: string
+): LearningAside | undefined {
+  const normalized = question.trim()
+  if (!normalized) return undefined
+  return asides.find(
+    (aside) =>
+      aside.parent_aside_id === parentId &&
+      aside.status !== 'discarded' &&
+      aside.anchor.content.trim() === normalized
+  )
 }

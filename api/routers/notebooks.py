@@ -22,10 +22,6 @@ from open_notebook.exceptions import (
 router = APIRouter()
 
 
-def _last_viewed_sort_key(item: RecentlyViewedResponse) -> str:
-    return item.last_viewed_at
-
-
 async def _stamp_notebook_view(notebook_id: str) -> None:
     # Best-effort write-on-read: recording the view timestamp must never turn a
     # successful read into a 500. Log and move on if the stamp update fails.
@@ -45,15 +41,6 @@ def _recently_viewed_notebook(row: dict) -> RecentlyViewedResponse:
         type="notebook",
         id=str(row.get("id", "")),
         title=row.get("title") or row.get("name") or "Untitled notebook",
-        last_viewed_at=str(row.get("last_viewed_at", "")),
-    )
-
-
-def _recently_viewed_source(row: dict) -> RecentlyViewedResponse:
-    return RecentlyViewedResponse(
-        type="source",
-        id=str(row.get("id", "")),
-        title=row.get("title") or "Untitled source",
         last_viewed_at=str(row.get("last_viewed_at", "")),
     )
 
@@ -162,7 +149,7 @@ async def create_notebook(notebook: NotebookCreate):
 async def get_recently_viewed(
     limit: int = Query(12, ge=1, le=50, description="Number of items to return"),
 ):
-    """Get recently viewed notebooks and sources, newest first."""
+    """Get recently viewed notebooks, newest first."""
     try:
         notebooks = await repo_query(
             """
@@ -174,23 +161,7 @@ async def get_recently_viewed(
             """,
             {"limit": limit},
         )
-        sources = await repo_query(
-            """
-            SELECT id, title, last_viewed_at
-            FROM source
-            WHERE last_viewed_at != NONE AND last_viewed_at != NULL
-            ORDER BY last_viewed_at DESC
-            LIMIT $limit
-            """,
-            {"limit": limit},
-        )
-
-        items = [
-            *[_recently_viewed_notebook(nb) for nb in notebooks],
-            *[_recently_viewed_source(src) for src in sources],
-        ]
-        items.sort(key=_last_viewed_sort_key, reverse=True)
-        return items[:limit]
+        return [_recently_viewed_notebook(nb) for nb in notebooks]
     except HTTPException:
         raise
     except OpenNotebookError:

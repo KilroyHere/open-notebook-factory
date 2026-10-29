@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
-import { Bot, User, Send, Loader2, FileText, Lightbulb, StickyNote, Clock, GitBranch } from 'lucide-react'
+import { Bot, User, Send, Loader2, FileText, Lightbulb, StickyNote, MessageSquare, GitBranch } from 'lucide-react'
 import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
 import {
   SourceChatMessage,
@@ -72,6 +72,8 @@ interface ChatPanelProps {
   learningAsides?: LearningAside[]
   onOpenLearningAside?: (asideId: string) => void
   onNavigateToMessage?: (messageId: string) => void
+  onDiveIntoQuestion?: (parent: LearningAside, question: string) => void
+  onParkQuestion?: (parent: LearningAside, question: string) => void
   workspaceMode?: boolean
 }
 
@@ -99,10 +101,19 @@ export function ChatPanel({
   learningAsides = [],
   onOpenLearningAside,
   onNavigateToMessage,
+  onDiveIntoQuestion,
+  onParkQuestion,
   workspaceMode = false
 }: ChatPanelProps) {
   const { t } = useTranslation()
   const [sessionManagerOpen, setSessionManagerOpen] = useState(false)
+  const showSessions = Boolean(
+    onSelectSession && onCreateSession && onDeleteSession
+  )
+  const sourceCount = contextIndicators?.sources?.length ?? 0
+  const insightCount = contextIndicators?.insights?.length ?? 0
+  const noteCount = contextIndicators?.notes?.length ?? 0
+  const hasSourceContext = sourceCount + insightCount + noteCount > 0
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const anchoredHashRef = useRef<string | null>(null)
@@ -144,8 +155,41 @@ export function ChatPanel({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  const asideControl = onOpenAsides ? (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="h-8 gap-1.5 px-2 text-muted-foreground"
+      onClick={onOpenAsides}
+    >
+      <GitBranch className="h-4 w-4" />
+      <span className="text-xs">
+        {t('learningAsides.title')}
+        {asideCount > 0 ? ` (${asideCount})` : ''}
+      </span>
+    </Button>
+  ) : null
+
+  const sessionControl = showSessions ? (
+    <SessionPicker
+      open={sessionManagerOpen}
+      onOpenChange={setSessionManagerOpen}
+      sessions={sessions}
+      currentSessionId={currentSessionId ?? null}
+      loadingSessions={loadingSessions}
+      onCreateSession={(sessionTitle) => onCreateSession?.(sessionTitle)}
+      onSelectSession={(sessionId) => {
+        onSelectSession?.(sessionId)
+        setSessionManagerOpen(false)
+      }}
+      onUpdateSession={(sessionId, sessionTitle) =>
+        onUpdateSession?.(sessionId, sessionTitle)
+      }
+      onDeleteSession={(sessionId) => onDeleteSession?.(sessionId)}
+    />
+  ) : null
+
   return (
-    <>
     <Card
       className={cn(
         'flex min-h-0 flex-1 flex-col overflow-hidden',
@@ -154,59 +198,20 @@ export function ChatPanel({
           : 'h-full'
       )}
     >
-      <CardHeader className="pb-3 flex-shrink-0">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.13em] text-muted-foreground">
-            <span aria-hidden className="h-3.5 w-[3px] rounded-full bg-teal" />
-            {title || (contextType === 'source' ? t('chat.chatWith', { name: t('navigation.sources') }) : t('chat.chatWith', { name: t('common.notebook') }))}
-          </CardTitle>
-          <div className="flex items-center gap-1">
-          {onOpenAsides && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="gap-2 text-muted-foreground"
-              onClick={onOpenAsides}
-            >
-              <GitBranch className="h-4 w-4" />
-              <span className="text-xs">
-                {t('learningAsides.title')}
-                {asideCount > 0 ? ` (${asideCount})` : ''}
-              </span>
-            </Button>
-          )}
-          {onSelectSession && onCreateSession && onDeleteSession && (
-            <Dialog open={sessionManagerOpen} onOpenChange={setSessionManagerOpen}>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-2 text-muted-foreground"
-                onClick={() => setSessionManagerOpen(true)}
-                disabled={loadingSessions}
-              >
-                <Clock className="h-4 w-4" />
-                <span className="text-xs">{t('chat.sessions')}</span>
-              </Button>
-              <DialogContent className="sm:max-w-[420px] p-0 overflow-hidden">
-                <DialogTitle className="sr-only">{t('chat.sessionsTitle')}</DialogTitle>
-                <SessionManager
-                  sessions={sessions}
-                  currentSessionId={currentSessionId ?? null}
-                  onCreateSession={(title) => onCreateSession?.(title)}
-                  onSelectSession={(sessionId) => {
-                    onSelectSession(sessionId)
-                    setSessionManagerOpen(false)
-                  }}
-                  onUpdateSession={(sessionId, title) => onUpdateSession?.(sessionId, title)}
-                  onDeleteSession={(sessionId) => onDeleteSession?.(sessionId)}
-                  loadingSessions={loadingSessions}
-                />
-              </DialogContent>
-            </Dialog>
-          )}
+      {!workspaceMode && (
+        <CardHeader className="flex-shrink-0 px-4 py-2">
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.13em] text-muted-foreground">
+              <span aria-hidden className="h-3.5 w-[3px] rounded-full bg-teal" />
+              {title || (contextType === 'source' ? t('chat.chatWith', { name: t('navigation.sources') }) : t('chat.chatWith', { name: t('common.notebook') }))}
+            </CardTitle>
+            <div className="flex min-w-0 items-center gap-1">
+              {asideControl}
+              {sessionControl}
+            </div>
           </div>
-        </div>
-      </CardHeader>
+        </CardHeader>
+      )}
       <CardContent className="flex-1 flex flex-col min-h-0 p-0">
         <ScrollArea
           className="min-h-0 flex-1 overflow-hidden px-4"
@@ -233,6 +238,8 @@ export function ChatPanel({
                   learningAsides={learningAsides}
                   onOpenLearningAside={onOpenLearningAside}
                   onNavigateToMessage={onNavigateToMessage}
+                  onDiveIntoQuestion={onDiveIntoQuestion}
+                  onParkQuestion={onParkQuestion}
                   wide={workspaceMode}
                 />
               ))
@@ -253,54 +260,111 @@ export function ChatPanel({
           </div>
         </ScrollArea>
 
-        {/* Context Indicators */}
-        {contextIndicators && (
-          <div className="border-t px-4 py-2">
-            <div className="flex flex-wrap gap-2 text-xs">
-              {contextIndicators.sources?.length > 0 && (
+        <div className="flex-shrink-0 border-t">
+          {hasSourceContext && (
+            <div className="flex flex-wrap gap-1.5 px-3 pt-1.5 text-xs">
+              {sourceCount > 0 && (
                 <Badge variant="outline" className="gap-1">
                   <FileText className="h-3 w-3" />
-                  {contextIndicators.sources.length} {t('navigation.sources')}
+                  {sourceCount} {t('navigation.sources')}
                 </Badge>
               )}
-              {contextIndicators.insights?.length > 0 && (
+              {insightCount > 0 && (
                 <Badge variant="outline" className="gap-1">
                   <Lightbulb className="h-3 w-3" />
-                  {contextIndicators.insights.length} {contextIndicators.insights.length === 1 ? t('common.insight') : t('common.insights')}
+                  {insightCount} {insightCount === 1 ? t('common.insight') : t('common.insights')}
                 </Badge>
               )}
-              {contextIndicators.notes?.length > 0 && (
+              {noteCount > 0 && (
                 <Badge variant="outline" className="gap-1">
                   <StickyNote className="h-3 w-3" />
-                  {contextIndicators.notes.length} {contextIndicators.notes.length === 1 ? t('common.note') : t('common.notes')}
+                  {noteCount} {noteCount === 1 ? t('common.note') : t('common.notes')}
                 </Badge>
               )}
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Notebook Context Indicator */}
-        {notebookContextStats && (
-          <ContextIndicator
-            sourcesInsights={notebookContextStats.sourcesInsights}
-            sourcesFull={notebookContextStats.sourcesFull}
-            notesCount={notebookContextStats.notesCount}
-            tokenCount={notebookContextStats.tokenCount}
-            charCount={notebookContextStats.charCount}
+          {notebookContextStats && (
+            <ContextIndicator
+              sourcesInsights={notebookContextStats.sourcesInsights}
+              sourcesFull={notebookContextStats.sourcesFull}
+              notesCount={notebookContextStats.notesCount}
+              tokenCount={notebookContextStats.tokenCount}
+              charCount={notebookContextStats.charCount}
+              className="px-3 pt-1.5"
+            />
+          )}
+
+          {workspaceMode && (onOpenAsides || showSessions) && (
+            <div className="flex min-w-0 items-center gap-1 px-2 pt-1.5">
+              {asideControl}
+              {sessionControl}
+            </div>
+          )}
+
+          <ChatComposer
+            onSendMessage={onSendMessage}
+            isStreaming={isStreaming}
+            modelOverride={modelOverride}
+            onModelChange={onModelChange}
           />
-        )}
-
-        {/* Input Area */}
-        <ChatComposer
-          onSendMessage={onSendMessage}
-          isStreaming={isStreaming}
-          modelOverride={modelOverride}
-          onModelChange={onModelChange}
-        />
+        </div>
       </CardContent>
     </Card>
+  )
+}
 
-    </>
+function SessionPicker({
+  open,
+  onOpenChange,
+  sessions,
+  currentSessionId,
+  loadingSessions,
+  onCreateSession,
+  onSelectSession,
+  onUpdateSession,
+  onDeleteSession,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  sessions: BaseChatSession[]
+  currentSessionId: string | null
+  loadingSessions: boolean
+  onCreateSession: (title: string) => void
+  onSelectSession: (sessionId: string) => void
+  onUpdateSession: (sessionId: string, title: string) => void
+  onDeleteSession: (sessionId: string) => void
+}) {
+  const { t } = useTranslation()
+  const current = sessions.find((session) => session.id === currentSessionId)
+  const label = current?.title || t('chat.sessions')
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-8 max-w-[12rem] gap-1.5 px-2 text-muted-foreground"
+        onClick={() => onOpenChange(true)}
+        disabled={loadingSessions}
+        aria-label={`${t('chat.sessions')}: ${label}`}
+      >
+        <MessageSquare className="h-4 w-4 shrink-0" />
+        <span className="truncate text-xs">{label}</span>
+      </Button>
+      <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">
+        <DialogTitle className="sr-only">{t('chat.sessionsTitle')}</DialogTitle>
+        <SessionManager
+          sessions={sessions}
+          currentSessionId={currentSessionId}
+          onCreateSession={onCreateSession}
+          onSelectSession={onSelectSession}
+          onUpdateSession={onUpdateSession}
+          onDeleteSession={onDeleteSession}
+          loadingSessions={loadingSessions}
+        />
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -346,45 +410,39 @@ function ChatComposer({
   const keyHint = isMac ? '⌘+Enter' : 'Ctrl+Enter'
 
   return (
-    <div className="flex-shrink-0 p-4 space-y-3 border-t">
-      {/* Model selector */}
+    <div className="flex flex-shrink-0 items-end gap-2 px-2 py-2">
+      <Textarea
+        id={chatInputId}
+        name="chat-message"
+        autoComplete="off"
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder={`${t('chat.sendPlaceholder')} (${t('chat.pressToSend', { key: keyHint })})`}
+        disabled={isStreaming}
+        className="min-h-9 max-h-[100px] min-w-0 flex-1 resize-none px-3 py-2"
+        rows={1}
+      />
       {onModelChange && (
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-muted-foreground">{t('chat.model')}</span>
-          <ModelSelector
-            currentModel={modelOverride}
-            onModelChange={onModelChange}
-            disabled={isStreaming}
-          />
-        </div>
-      )}
-
-      <div className="flex gap-2 items-end min-w-0">
-        <Textarea
-          id={chatInputId}
-          name="chat-message"
-          autoComplete="off"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={`${t('chat.sendPlaceholder')} (${t('chat.pressToSend', { key: keyHint })})`}
+        <ModelSelector
+          currentModel={modelOverride}
+          onModelChange={onModelChange}
           disabled={isStreaming}
-          className="flex-1 min-h-[40px] max-h-[100px] resize-none py-2 px-3 min-w-0"
-          rows={1}
         />
-        <Button
-          onClick={handleSend}
-          disabled={!input.trim() || isStreaming}
-          size="icon"
-          className="h-[40px] w-[40px] flex-shrink-0"
-        >
-          {isStreaming ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Send className="h-4 w-4" />
-          )}
-        </Button>
-      </div>
+      )}
+      <Button
+        onClick={handleSend}
+        disabled={!input.trim() || isStreaming}
+        size="icon"
+        aria-label={t('chat.sendPlaceholder')}
+        className="h-9 w-9 flex-shrink-0"
+      >
+        {isStreaming ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <Send className="h-4 w-4" />
+        )}
+      </Button>
     </div>
   )
 }
@@ -399,6 +457,8 @@ interface ChatMessageProps {
   learningAsides?: LearningAside[]
   onOpenLearningAside?: (asideId: string) => void
   onNavigateToMessage?: (messageId: string) => void
+  onDiveIntoQuestion?: (parent: LearningAside, question: string) => void
+  onParkQuestion?: (parent: LearningAside, question: string) => void
   wide?: boolean
 }
 
@@ -410,6 +470,8 @@ const ChatMessage = memo(function ChatMessage({
   learningAsides = [],
   onOpenLearningAside,
   onNavigateToMessage,
+  onDiveIntoQuestion,
+  onParkQuestion,
   wide = false
 }: ChatMessageProps) {
   const appliedUpdates = learningMergesForMessage(learningAsides, message.id)
@@ -455,8 +517,11 @@ const ChatMessage = memo(function ChatMessage({
             key={`${aside.id}:${update.id}`}
             aside={aside}
             update={update}
+            asides={learningAsides}
             onOpenAside={onOpenLearningAside}
             onReferenceClick={onReferenceClick}
+            onDiveIntoQuestion={onDiveIntoQuestion}
+            onParkQuestion={onParkQuestion}
           />
         ))}
         {message.type === 'ai' && (
@@ -475,6 +540,8 @@ const ChatMessage = memo(function ChatMessage({
                 onOpenAside={onOpenLearningAside}
                 onNavigateToMessage={onNavigateToMessage}
                 onReferenceClick={onReferenceClick}
+                onDiveIntoQuestion={onDiveIntoQuestion}
+                onParkQuestion={onParkQuestion}
               />
             )}
           </>

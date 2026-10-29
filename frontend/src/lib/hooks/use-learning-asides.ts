@@ -6,10 +6,14 @@ import { toast } from 'sonner'
 import { learningApi } from '@/lib/api/learning'
 import { QUERY_KEYS } from '@/lib/api/query-client'
 import {
+  LearningAside,
   LearningAsideAnchor,
   LearningAsideStatus,
+  LearningSection,
   ResolveLearningAsideRequest,
 } from '@/lib/types/api'
+
+const EMPTY_SECTIONS: LearningSection[] = []
 import { useTranslation } from '@/lib/hooks/use-translation'
 import { getApiErrorMessage } from '@/lib/utils/error-handler'
 import { createAsideTitle } from '@/lib/utils/learning-asides'
@@ -19,6 +23,11 @@ interface UseLearningAsidesParams {
   mainSessionId: string | null
   buildContext: () => Promise<Record<string, unknown>>
   modelOverride?: string
+}
+
+export type CreateAsideInput = LearningAsideAnchor & {
+  parentAside?: Pick<LearningAside, 'id' | 'chat_session_id'>
+  initialStatus?: 'parked'
 }
 
 export function useLearningAsides({
@@ -85,28 +94,37 @@ export function useLearningAsides({
   )
 
   const createMutation = useMutation({
-    mutationFn: (anchor: LearningAsideAnchor) => {
+    mutationFn: async (input: CreateAsideInput) => {
       if (!mainSessionId) {
         throw new Error('A main chat session is required before opening an aside')
       }
+      const { parentAside, initialStatus, ...anchor } = input
       const title =
         createAsideTitle(anchor.content) || t('learningAsides.untitled')
-      return learningApi.createAside({
+      const aside = await learningApi.createAside({
         notebook_id: notebookId,
-        parent_session_id: mainSessionId,
+        parent_session_id: parentAside?.chat_session_id ?? mainSessionId,
+        parent_aside_id: parentAside?.id,
         title,
         model_override: modelOverride,
         anchor,
       })
+      if (initialStatus === 'parked') {
+        return learningApi.updateAside(aside.id, { status: 'parked' })
+      }
+      return aside
     },
-    onMutate: () => {
+    onMutate: (input) => {
+      if (input.initialStatus === 'parked') return
       setActiveAsideId(null)
       setPanelOpen(true)
     },
-    onSuccess: async (aside) => {
+    onSuccess: async (aside, input) => {
       queryClient.setQueryData(QUERY_KEYS.learningAside(aside.id), aside)
-      setActiveAsideId(aside.id)
-      setPanelOpen(true)
+      if (input.initialStatus !== 'parked') {
+        setActiveAsideId(aside.id)
+        setPanelOpen(true)
+      }
       await refresh(aside.id)
       toast.success(t('learningAsides.created'))
     },
@@ -214,6 +232,65 @@ export function useLearningAsides({
     },
   })
 
+  const syncSectionsMutation = useMutation({
+    mutationFn: (
+      sections: Array<{ start_message_id: string; title: string }>
+    ) => {
+      if (!mainSessionId) {
+        throw new Error('A main chat session is required before naming sections')
+      }
+      return learningApi.syncSections({
+        notebook_id: notebookId,
+        main_session_id: mainSessionId,
+        sections,
+      })
+    },
+    onSuccess: async () => {
+      await refresh()
+    },
+    onError: (error: unknown) => {
+      const apiError = error as {
+        response?: { data?: { detail?: string } }
+        message?: string
+      }
+      toast.error(
+        getApiErrorMessage(
+          apiError.response?.data?.detail || apiError.message,
+          (key) => t(key),
+          'learningAsides.sectionSaveFailed'
+        )
+      )
+    },
+  })
+
+  const updateSectionMutation = useMutation({
+    mutationFn: ({
+      sectionId,
+      title,
+      pinned,
+    }: {
+      sectionId: string
+      title?: string
+      pinned?: boolean
+    }) => learningApi.updateSection(sectionId, { title, pinned }),
+    onSuccess: async () => {
+      await refresh()
+    },
+    onError: (error: unknown) => {
+      const apiError = error as {
+        response?: { data?: { detail?: string } }
+        message?: string
+      }
+      toast.error(
+        getApiErrorMessage(
+          apiError.response?.data?.detail || apiError.message,
+          (key) => t(key),
+          'learningAsides.sectionSaveFailed'
+        )
+      )
+    },
+  })
+
   const openAside = useCallback((asideId: string) => {
     setActiveAsideId(asideId)
     setPanelOpen(true)
@@ -233,6 +310,7 @@ export function useLearningAsides({
     journey: journeyQuery.data,
     resume: resumeQuery.data,
     asides: journeyQuery.data?.asides ?? [],
+    sections: journeyQuery.data?.sections ?? EMPTY_SECTIONS,
     activeAside,
     activeAsideId,
     panelOpen,
@@ -249,5 +327,7 @@ export function useLearningAsides({
     sendMessage: sendMutation.mutateAsync,
     resolveAside: resolveMutation.mutateAsync,
     updateStatus: updateMutation.mutateAsync,
+    syncSections: syncSectionsMutation.mutateAsync,
+    updateSection: updateSectionMutation.mutateAsync,
   }
 }

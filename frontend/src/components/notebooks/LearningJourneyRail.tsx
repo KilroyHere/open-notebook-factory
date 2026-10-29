@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import {
   CheckCircle2,
   Circle,
@@ -9,6 +9,8 @@ import {
   Map as MapIcon,
   MessageSquare,
   Pause,
+  Pencil,
+  Pin,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -18,12 +20,15 @@ import {
   CollapsibleColumn,
   createCollapseButton,
 } from '@/components/notebooks/CollapsibleColumn'
+import { LearningQuestionList } from '@/components/notebooks/LearningThreadLinks'
 import {
   LearningAside,
+  LearningSection,
   NotebookChatMessage,
 } from '@/lib/types/api'
 import { useNotebookColumnsStore } from '@/lib/stores/notebook-columns-store'
 import { useTranslation } from '@/lib/hooks/use-translation'
+import { childDiveForQuestion } from '@/lib/utils/learning-asides'
 import { cn } from '@/lib/utils'
 
 interface LearningJourneyRailProps {
@@ -33,7 +38,23 @@ interface LearningJourneyRailProps {
   onShowMain: () => void
   onOpenAside: (asideId: string) => void
   onNavigateToMessage: (messageId: string) => void
+  onDiveIntoQuestion?: (parent: LearningAside, question: string) => void
+  onParkQuestion?: (parent: LearningAside, question: string) => void
+  sections?: LearningSection[]
+  onRenameSection?: (sectionId: string, title: string) => void
+  onTogglePinSection?: (sectionId: string, pinned: boolean) => void
   presentation?: 'rail' | 'sheet'
+}
+
+function rootAsides(asides: LearningAside[]): LearningAside[] {
+  const ids = new Set(asides.map((aside) => aside.id))
+  return asides.filter(
+    (aside) => !aside.parent_aside_id || !ids.has(aside.parent_aside_id)
+  )
+}
+
+function childAsides(asides: LearningAside[], parentId: string): LearningAside[] {
+  return asides.filter((aside) => aside.parent_aside_id === parentId)
 }
 
 function compact(value: string, limit = 72): string {
@@ -127,69 +148,311 @@ function AsideOutlineItem({
   )
 }
 
-function OpenQuestions({ aside }: { aside: LearningAside }) {
-  const { t } = useTranslation()
+function OpenQuestions({
+  aside,
+  asides,
+  onOpenAside,
+  onDiveIntoQuestion,
+  onParkQuestion,
+}: {
+  aside: LearningAside
+  asides: LearningAside[]
+  onOpenAside: (asideId: string) => void
+  onDiveIntoQuestion?: (parent: LearningAside, question: string) => void
+  onParkQuestion?: (parent: LearningAside, question: string) => void
+}) {
   if (aside.status !== 'resolved') return null
   const questions = (latestUpdate(aside)?.open_questions ?? []).filter(
-    (question) => question.trim()
+    (question) =>
+      question.trim() && !childDiveForQuestion(asides, aside.id, question)
   )
   if (questions.length === 0) return null
   return (
     <div className="px-1">
-      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-        {t('learningAsides.openQuestions')}
-      </p>
-      <ul className="mt-1 space-y-1">
-        {questions.map((question) => (
-          <li key={question} className="text-xs text-muted-foreground">
-            {question}
-          </li>
-        ))}
-      </ul>
+      <LearningQuestionList
+        questions={questions}
+        asides={asides}
+        parentAside={aside}
+        onOpenAside={onOpenAside}
+        onDiveIntoQuestion={onDiveIntoQuestion}
+        onParkQuestion={onParkQuestion}
+      />
     </div>
   )
 }
 
 function AsideOutlineGroup({
   asides,
+  allAsides,
   activeAsideId,
   onOpenAside,
+  onDiveIntoQuestion,
+  onParkQuestion,
+  depth = 0,
 }: {
   asides: LearningAside[]
+  allAsides: LearningAside[]
   activeAsideId: string | null
   onOpenAside: (asideId: string) => void
+  onDiveIntoQuestion?: (parent: LearningAside, question: string) => void
+  onParkQuestion?: (parent: LearningAside, question: string) => void
+  depth?: number
 }) {
   const { t } = useTranslation()
   const parked = asides.filter((aside) => aside.status === 'parked')
   const nested = asides.filter((aside) => aside.status !== 'parked')
-  if (asides.length === 0) return null
+  if (asides.length === 0 || depth > 8) return null
+
+  const branch = (aside: LearningAside) => {
+    const children = childAsides(allAsides, aside.id)
+    return (
+      <div key={aside.id} className="space-y-1.5">
+        <AsideOutlineItem
+          aside={aside}
+          active={aside.id === activeAsideId}
+          onOpen={onOpenAside}
+        />
+        <OpenQuestions
+          aside={aside}
+          asides={allAsides}
+          onOpenAside={onOpenAside}
+          onDiveIntoQuestion={onDiveIntoQuestion}
+          onParkQuestion={onParkQuestion}
+        />
+        {children.length > 0 && (
+          <AsideOutlineGroup
+            asides={children}
+            allAsides={allAsides}
+            activeAsideId={activeAsideId}
+            onOpenAside={onOpenAside}
+            onDiveIntoQuestion={onDiveIntoQuestion}
+            onParkQuestion={onParkQuestion}
+            depth={depth + 1}
+          />
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="mt-1 space-y-2 border-l border-teal/40 pl-3">
-      {nested.map((aside) => (
-        <div key={aside.id} className="space-y-1.5">
-          <AsideOutlineItem
-            aside={aside}
-            active={aside.id === activeAsideId}
-            onOpen={onOpenAside}
-          />
-          <OpenQuestions aside={aside} />
-        </div>
-      ))}
+      {nested.map(branch)}
       {parked.length > 0 && (
         <div className="space-y-2 rounded-md border bg-card p-2">
           <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
             {t('learningAsides.status.parked')}
           </p>
-          {parked.map((aside) => (
-            <AsideOutlineItem
-              key={aside.id}
-              aside={aside}
-              active={aside.id === activeAsideId}
-              onOpen={onOpenAside}
-            />
-          ))}
+          {parked.map(branch)}
         </div>
+      )}
+    </div>
+  )
+}
+
+function MapBranch({
+  aside,
+  asides,
+  activeAsideId,
+  onOpenAside,
+  onNavigateToMessage,
+  depth = 0,
+}: {
+  aside: LearningAside
+  asides: LearningAside[]
+  activeAsideId: string | null
+  onOpenAside: (asideId: string) => void
+  onNavigateToMessage: (messageId: string) => void
+  depth?: number
+}) {
+  const { t } = useTranslation()
+  const latest = latestUpdate(aside)
+  const appliedMessageId = mergedUpdate(aside)?.applied_message_id
+  const showResolution = aside.status === 'resolved' && Boolean(latest)
+  const children = depth > 8 ? [] : childAsides(asides, aside.id)
+  return (
+    <div className="relative mb-3">
+      <span className="absolute -left-5 top-5 h-px w-5 bg-border" />
+      <button
+        type="button"
+        className={`w-full rounded-md border p-3 text-left ${
+          aside.id === activeAsideId ? 'border-teal bg-teal-tint' : 'bg-card'
+        }`}
+        onClick={() => onOpenAside(aside.id)}
+      >
+        <div className="flex items-center gap-1.5">
+          <GitBranch className="h-3.5 w-3.5 text-teal" />
+          <span className="truncate text-xs font-medium">{aside.title}</span>
+        </div>
+      </button>
+      {(showResolution || appliedMessageId || children.length > 0) && (
+        <div className="ml-4 mt-2 space-y-2 border-l border-border pl-3">
+          {showResolution && latest && (
+            <button
+              type="button"
+              className="w-full rounded-md border bg-card p-3 text-left"
+              onClick={() => onOpenAside(aside.id)}
+            >
+              <div className="flex items-center gap-1.5">
+                <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-fern" />
+                <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                  {t('learningAsides.summary')}
+                </span>
+              </div>
+              <p className="mt-1 line-clamp-3 text-[11px] text-muted-foreground">
+                {latest.conclusion}
+              </p>
+            </button>
+          )}
+          {appliedMessageId && (
+            <button
+              type="button"
+              className="w-full rounded-md border bg-card p-3 text-left text-xs font-medium"
+              onClick={() => onNavigateToMessage(appliedMessageId)}
+            >
+              {t('learningAsides.viewMergedResponse')}
+            </button>
+          )}
+          {children.length > 0 && (
+            <div className="relative ml-5 border-l border-border pl-5 pt-1">
+              {children.map((child) => (
+                <MapBranch
+                  key={child.id}
+                  aside={child}
+                  asides={asides}
+                  activeAsideId={activeAsideId}
+                  onOpenAside={onOpenAside}
+                  onNavigateToMessage={onNavigateToMessage}
+                  depth={depth + 1}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+interface OutlineGroup {
+  key: string
+  index: number
+  turn: OutlineTurn
+  section?: LearningSection
+}
+
+function groupOutlineTurns(
+  turns: OutlineTurn[],
+  sections: LearningSection[]
+): OutlineGroup[] {
+  const byMessage = new Map(
+    sections.map((section) => [section.start_message_id, section])
+  )
+  const groups = turns.map((turn, index) => ({
+    key: byMessage.get(turn.anchor.id)?.id ?? turn.anchor.id,
+    index,
+    turn,
+    section: byMessage.get(turn.anchor.id),
+  }))
+  return [
+    ...groups.filter((group) => group.section?.pinned),
+    ...groups.filter((group) => !group.section?.pinned),
+  ]
+}
+
+function TurnHeading({
+  index,
+  turn,
+  section,
+  onNavigateToMessage,
+  onRenameSection,
+  onTogglePinSection,
+}: {
+  index: number
+  turn: OutlineTurn
+  section?: LearningSection
+  onNavigateToMessage: (messageId: string) => void
+  onRenameSection?: (sectionId: string, title: string) => void
+  onTogglePinSection?: (sectionId: string, pinned: boolean) => void
+}) {
+  const { t } = useTranslation()
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(section?.title ?? '')
+  const committed = useRef(false)
+  const heading = section?.title ?? compact(turn.anchor.content)
+
+  const commit = () => {
+    if (committed.current) return
+    committed.current = true
+    const next = draft.trim()
+    setEditing(false)
+    if (!section || !next || next === section.title) return
+    onRenameSection?.(section.id, next)
+  }
+
+  if (editing && section) {
+    return (
+      <form
+        onSubmit={(event) => {
+          event.preventDefault()
+          commit()
+        }}
+      >
+        <input
+          aria-label={t('learningAsides.sectionTitlePlaceholder')}
+          className="w-full rounded-sm border bg-card px-2 py-1.5 text-xs"
+          value={draft}
+          autoFocus
+          onChange={(event) => setDraft(event.target.value)}
+          onBlur={commit}
+        />
+      </form>
+    )
+  }
+
+  return (
+    <div className="flex items-start gap-1">
+      <button
+        type="button"
+        className="block min-w-0 flex-1 rounded-sm px-2 py-1.5 text-left text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
+        onClick={() => onNavigateToMessage(turn.anchor.id)}
+      >
+        <span className="mr-1.5 font-mono text-[10px]">{index + 1}</span>
+        {heading}
+        {section?.pinned && (
+          <Pin className="ml-1 inline h-3 w-3 text-teal" aria-hidden />
+        )}
+      </button>
+      {section && onTogglePinSection && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 shrink-0 px-2"
+          aria-label={
+            section.pinned
+              ? t('learningAsides.unpinSection')
+              : t('learningAsides.pinSection')
+          }
+          onClick={() => onTogglePinSection(section.id, !section.pinned)}
+        >
+          <Pin className="h-3.5 w-3.5" />
+        </Button>
+      )}
+      {section && onRenameSection && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 shrink-0 px-2"
+          aria-label={t('learningAsides.renameSection')}
+          onClick={() => {
+            committed.current = false
+            setDraft(section.title)
+            setEditing(true)
+          }}
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </Button>
       )}
     </div>
   )
@@ -209,6 +472,7 @@ function JourneyMap({
   onNavigateToMessage: (messageId: string) => void
 }) {
   const { t } = useTranslation()
+  const roots = rootAsides(asides)
   return (
     <div>
       <button
@@ -222,62 +486,16 @@ function JourneyMap({
         </span>
       </button>
       <div className="relative ml-5 border-l border-border pb-2 pl-5 pt-3">
-        {asides.map((aside) => {
-          const latest = latestUpdate(aside)
-          const appliedMessageId = mergedUpdate(aside)?.applied_message_id
-          const showResolution = aside.status === 'resolved' && Boolean(latest)
-          return (
-            <div key={aside.id} className="relative mb-3">
-              <span className="absolute -left-5 top-5 h-px w-5 bg-border" />
-              <button
-                type="button"
-                className={`w-full rounded-md border p-3 text-left ${
-                  aside.id === activeAsideId
-                    ? 'border-teal bg-teal-tint'
-                    : 'bg-card'
-                }`}
-                onClick={() => onOpenAside(aside.id)}
-              >
-                <div className="flex items-center gap-1.5">
-                  <GitBranch className="h-3.5 w-3.5 text-teal" />
-                  <span className="truncate text-xs font-medium">
-                    {aside.title}
-                  </span>
-                </div>
-              </button>
-              {(showResolution || appliedMessageId) && (
-                <div className="ml-4 mt-2 space-y-2 border-l border-border pl-3">
-                  {showResolution && latest && (
-                    <button
-                      type="button"
-                      className="w-full rounded-md border bg-card p-3 text-left"
-                      onClick={() => onOpenAside(aside.id)}
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-fern" />
-                        <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-                          {t('learningAsides.summary')}
-                        </span>
-                      </div>
-                      <p className="mt-1 line-clamp-3 text-[11px] text-muted-foreground">
-                        {latest.conclusion}
-                      </p>
-                    </button>
-                  )}
-                  {appliedMessageId && (
-                    <button
-                      type="button"
-                      className="w-full rounded-md border bg-card p-3 text-left text-xs font-medium"
-                      onClick={() => onNavigateToMessage(appliedMessageId)}
-                    >
-                      {t('learningAsides.viewMergedResponse')}
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          )
-        })}
+        {roots.map((aside) => (
+          <MapBranch
+            key={aside.id}
+            aside={aside}
+            asides={asides}
+            activeAsideId={activeAsideId}
+            onOpenAside={onOpenAside}
+            onNavigateToMessage={onNavigateToMessage}
+          />
+        ))}
       </div>
     </div>
   )
@@ -290,6 +508,11 @@ export function LearningJourneyRail({
   onShowMain,
   onOpenAside,
   onNavigateToMessage,
+  onDiveIntoQuestion,
+  onParkQuestion,
+  sections = [],
+  onRenameSection,
+  onTogglePinSection,
   presentation = 'rail',
 }: LearningJourneyRailProps) {
   const { t } = useTranslation()
@@ -298,7 +521,9 @@ export function LearningJourneyRail({
   const [mapExpanded, setMapExpanded] = useState(false)
 
   const visibleAsides = asides.filter((aside) => aside.status !== 'discarded')
-  const { turns, loose } = buildOutline(messages, visibleAsides)
+  const roots = rootAsides(visibleAsides)
+  const { turns, loose } = buildOutline(messages, roots)
+  const outlineGroups = groupOutlineTurns(turns, sections)
   const label = t('learningAsides.journey')
 
   const closeMap = () => {
@@ -384,28 +609,29 @@ export function LearningJourneyRail({
                 {t('learningAsides.mainThread')}
               </Button>
 
-              {turns.length > 0 && (
+              {outlineGroups.length > 0 && (
                 <div>
                   <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
                     {t('learningAsides.chatOutline')}
                   </p>
                   <div className="space-y-3 border-l pl-3">
-                    {turns.map((turn, index) => (
-                      <div key={turn.anchor.id}>
-                        <button
-                          type="button"
-                          className="block w-full rounded-sm px-2 py-1.5 text-left text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
-                          onClick={() => onNavigateToMessage(turn.anchor.id)}
-                        >
-                          <span className="mr-1.5 font-mono text-[10px]">
-                            {index + 1}
-                          </span>
-                          {compact(turn.anchor.content)}
-                        </button>
+                    {outlineGroups.map((group) => (
+                      <div key={group.key}>
+                        <TurnHeading
+                          index={group.index}
+                          turn={group.turn}
+                          section={group.section}
+                          onNavigateToMessage={onNavigateToMessage}
+                          onRenameSection={onRenameSection}
+                          onTogglePinSection={onTogglePinSection}
+                        />
                         <AsideOutlineGroup
-                          asides={turn.asides}
+                          asides={group.turn.asides}
+                          allAsides={visibleAsides}
                           activeAsideId={activeAsideId}
                           onOpenAside={onOpenAside}
+                          onDiveIntoQuestion={onDiveIntoQuestion}
+                          onParkQuestion={onParkQuestion}
                         />
                       </div>
                     ))}
@@ -416,8 +642,11 @@ export function LearningJourneyRail({
               {loose.length > 0 && (
                 <AsideOutlineGroup
                   asides={loose}
+                  allAsides={visibleAsides}
                   activeAsideId={activeAsideId}
                   onOpenAside={onOpenAside}
+                  onDiveIntoQuestion={onDiveIntoQuestion}
+                  onParkQuestion={onParkQuestion}
                 />
               )}
 

@@ -165,6 +165,43 @@ describe('LearningAsidePanel', () => {
     ).toBeInTheDocument()
   })
 
+  it('returns to the parent dive from a nested aside', () => {
+    const onSelectAside = vi.fn()
+    const parent: LearningAside = {
+      ...aside,
+      id: 'learning_aside:parent',
+      title: 'Parent dive',
+    }
+    const child: LearningAside = {
+      ...aside,
+      id: 'learning_aside:child',
+      parent_aside_id: parent.id,
+      title: 'Child dive',
+      anchor: { type: 'message', content: 'A follow-up question' },
+    }
+    render(
+      <LearningAsidePanel
+        {...baseProps}
+        asides={[parent, child]}
+        activeAside={child}
+        onSelectAside={onSelectAside}
+      />
+    )
+
+    expect(
+      screen.getByRole('button', { name: 'Parent dive' })
+    ).toBeInTheDocument()
+    fireEvent.click(
+      screen.getByRole('button', { name: 'learningAsides.backToParent' })
+    )
+    expect(onSelectAside).toHaveBeenCalledWith('learning_aside:parent')
+    expect(
+      screen.queryByRole('button', { name: 'learningAsides.backToOrigin' })
+    ).not.toBeInTheDocument()
+    expect(screen.getByText('A follow-up question')).toBeInTheDocument()
+    expect(screen.queryByText('learningAsides.anchor')).not.toBeInTheDocument()
+  })
+
   it('returns to and highlights the exact origin message', async () => {
     const onOpenChange = vi.fn()
     const onNavigateToMessage = vi.fn()
@@ -176,6 +213,9 @@ describe('LearningAsidePanel', () => {
         onNavigateToMessage={onNavigateToMessage}
       />
     )
+
+    expect(screen.queryByText(aside.anchor.content)).not.toBeInTheDocument()
+    expect(screen.queryByText('learningAsides.anchor')).not.toBeInTheDocument()
 
     fireEvent.click(
       screen.getByRole('button', { name: 'learningAsides.backToOrigin' })

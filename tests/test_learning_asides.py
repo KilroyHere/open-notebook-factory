@@ -10,6 +10,7 @@ from open_notebook.domain.learning import (
     AsideAnchor,
     LearningAside,
     LearningJourney,
+    LearningSection,
     LearningUpdate,
 )
 from open_notebook.domain.notebook import Notebook
@@ -40,10 +41,14 @@ class TestMigration26:
 
         manager = AsyncMigrationManager()
 
-        assert len(manager.up_migrations) == 27
+        assert len(manager.up_migrations) == 28
         assert len(manager.up_migrations) == len(manager.down_migrations)
         assert "learning_journey" in manager.up_migrations[25].sql
         assert "applied_message_id" in manager.up_migrations[26].sql
+        assert "learning_section" in manager.up_migrations[27].sql
+        assert (
+            "REMOVE TABLE IF EXISTS learning_section" in manager.down_migrations[27].sql
+        )
 
 
 @pytest.mark.asyncio
@@ -55,6 +60,7 @@ async def test_learning_queries_use_non_reserved_bind_parameters():
         await db.query((MIGRATIONS_DIR / "3.surrealql").read_text())
         await db.query((MIGRATIONS_DIR / "26.surrealql").read_text())
         await db.query((MIGRATIONS_DIR / "27.surrealql").read_text())
+        await db.query((MIGRATIONS_DIR / "28.surrealql").read_text())
         await db.query(
             """
             CREATE notebook:one SET name = 'One', description = '';
@@ -81,6 +87,11 @@ async def test_learning_queries_use_non_reserved_bind_parameters():
                 citations = [],
                 include_in_main = true,
                 version = 1;
+            CREATE learning_section:one SET
+                journey = learning_journey:one,
+                title = 'Evidence lower bound',
+                pinned = true,
+                start_message_id = 'human:one';
             """
         )
 
@@ -110,13 +121,25 @@ async def test_learning_queries_use_non_reserved_bind_parameters():
             """,
             {"asides": [RecordID("learning_aside", "one")]},
         )
+        sections = await db.query(
+            """
+            SELECT * FROM learning_section
+            WHERE journey = learning_journey:one
+            """
+        )
 
     assert isinstance(relations, list)
     assert isinstance(journeys, list)
     assert isinstance(updates, list)
+    assert isinstance(sections, list)
     assert len(relations) == 1
     assert len(journeys) == 1
     assert len(updates) == 1
+    assert len(sections) == 1
+    section = sections[0]
+    assert isinstance(section, dict)
+    assert section["title"] == "Evidence lower bound"
+    assert section["pinned"] is True
 
 
 class TestLearningModels:
@@ -153,6 +176,14 @@ class TestLearningModels:
             (
                 lambda: LearningUpdate(aside="learning_aside:one", conclusion="  "),
                 "Learning update conclusion cannot be empty",
+            ),
+            (
+                lambda: LearningSection(
+                    journey="learning_journey:one",
+                    title="  ",
+                    start_message_id="human:one",
+                ),
+                "Section title cannot be empty",
             ),
         ],
     )

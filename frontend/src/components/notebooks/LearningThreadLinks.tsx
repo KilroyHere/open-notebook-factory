@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { LearningAside, LearningUpdate } from '@/lib/types/api'
 import { useTranslation } from '@/lib/hooks/use-translation'
+import { childDiveForQuestion } from '@/lib/utils/learning-asides'
 import { cn } from '@/lib/utils'
 
 interface LearningThreadLinksProps {
@@ -21,6 +22,8 @@ interface LearningThreadLinksProps {
   onOpenAside: (asideId: string) => void
   onNavigateToMessage: (messageId: string) => void
   onReferenceClick?: (type: string, id: string) => void
+  onDiveIntoQuestion?: (parent: LearningAside, question: string) => void
+  onParkQuestion?: (parent: LearningAside, question: string) => void
 }
 
 export interface EvidenceCitation {
@@ -119,20 +122,84 @@ export function LearningEvidenceButtons({
   )
 }
 
-function LearningOpenQuestions({ questions }: { questions: string[] }) {
+export function LearningQuestionList({
+  questions,
+  asides = [],
+  parentAside,
+  onOpenAside,
+  onDiveIntoQuestion,
+  onParkQuestion,
+}: {
+  questions: string[]
+  asides?: LearningAside[]
+  parentAside?: LearningAside
+  onOpenAside?: (asideId: string) => void
+  onDiveIntoQuestion?: (parent: LearningAside, question: string) => void
+  onParkQuestion?: (parent: LearningAside, question: string) => void
+}) {
   const { t } = useTranslation()
   const visible = questions.map((question) => question.trim()).filter(Boolean)
   if (visible.length === 0) return null
+  const interactive = Boolean(
+    parentAside && (onDiveIntoQuestion || onParkQuestion)
+  )
 
   return (
     <div className="mt-2">
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {t('learningAsides.openQuestions')}
       </p>
-      <ul className="mt-1 list-disc space-y-1 pl-4 text-xs text-muted-foreground">
-        {visible.map((question) => (
-          <li key={question}>{question}</li>
-        ))}
+      <ul className="mt-1 list-disc space-y-2 pl-4 text-xs text-muted-foreground">
+        {visible.map((question) => {
+          const child =
+            parentAside && interactive
+              ? childDiveForQuestion(asides, parentAside.id, question)
+              : undefined
+          if (!interactive || !parentAside) {
+            return <li key={question}>{question}</li>
+          }
+          if (child && onOpenAside) {
+            return (
+              <li key={question}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto max-w-full justify-start whitespace-normal px-2 py-1 text-left"
+                  onClick={() => onOpenAside(child.id)}
+                >
+                  {question}
+                </Button>
+              </li>
+            )
+          }
+          return (
+            <li key={question}>
+              <p>{question}</p>
+              <div className="mt-1 flex flex-wrap gap-1">
+                {onDiveIntoQuestion && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7"
+                    onClick={() => onDiveIntoQuestion(parentAside, question)}
+                  >
+                    {t('learningAsides.diveIn')}
+                  </Button>
+                )}
+                {onParkQuestion && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7"
+                    onClick={() => onParkQuestion(parentAside, question)}
+                  >
+                    {t('learningAsides.parkQuestion')}
+                  </Button>
+                )}
+              </div>
+            </li>
+          )
+        })}
       </ul>
     </div>
   )
@@ -141,13 +208,19 @@ function LearningOpenQuestions({ questions }: { questions: string[] }) {
 export function LearningMergeEvent({
   aside,
   update,
+  asides = [],
   onOpenAside,
   onReferenceClick,
+  onDiveIntoQuestion,
+  onParkQuestion,
 }: {
   aside: LearningAside
   update: LearningUpdate
+  asides?: LearningAside[]
   onOpenAside?: (asideId: string) => void
   onReferenceClick?: (type: string, id: string) => void
+  onDiveIntoQuestion?: (parent: LearningAside, question: string) => void
+  onParkQuestion?: (parent: LearningAside, question: string) => void
 }) {
   const { t } = useTranslation()
 
@@ -168,7 +241,14 @@ export function LearningMergeEvent({
           </p>
         </div>
       )}
-      <LearningOpenQuestions questions={update.open_questions} />
+      <LearningQuestionList
+        questions={update.open_questions}
+        asides={asides}
+        parentAside={aside}
+        onOpenAside={onOpenAside}
+        onDiveIntoQuestion={onDiveIntoQuestion}
+        onParkQuestion={onParkQuestion}
+      />
       <LearningEvidenceButtons
         citations={update.citations}
         onReferenceClick={onReferenceClick}
@@ -199,6 +279,8 @@ export function LearningThreadLinks({
   onOpenAside,
   onNavigateToMessage,
   onReferenceClick,
+  onDiveIntoQuestion,
+  onParkQuestion,
 }: LearningThreadLinksProps) {
   const { t } = useTranslation()
   const branches = asides.filter(
@@ -242,8 +324,13 @@ export function LearningThreadLinks({
                       </p>
                     </div>
                   )}
-                  <LearningOpenQuestions
+                  <LearningQuestionList
                     questions={latestUpdate.open_questions}
+                    asides={asides}
+                    parentAside={aside}
+                    onOpenAside={onOpenAside}
+                    onDiveIntoQuestion={onDiveIntoQuestion}
+                    onParkQuestion={onParkQuestion}
                   />
                   <LearningEvidenceButtons
                     citations={latestUpdate.citations}

@@ -1,0 +1,3 @@
+-- Remove named topic sections introduced by migration 28.
+
+REMOVE TABLE IF EXISTS learning_section;

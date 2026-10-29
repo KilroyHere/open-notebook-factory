@@ -13,6 +13,10 @@ vi.mock('@/components/sources/MessageActions', () => ({
   MessageActions: () => null,
 }))
 
+vi.mock('./ModelSelector', () => ({
+  ModelSelector: () => <button type="button">model-picker</button>,
+}))
+
 describe('ChatPanel composer', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -106,5 +110,55 @@ describe('ChatPanel composer', () => {
     fireEvent.keyDown(textarea, { key: 'Enter', ctrlKey: true })
 
     expect(onSendMessage).not.toHaveBeenCalled()
+  })
+
+  it('keeps a title outside workspace mode', () => {
+    render(
+      <ChatPanel
+        messages={[]}
+        isStreaming={false}
+        contextIndicators={null}
+        onSendMessage={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText('chat.chatWith')).toBeInTheDocument()
+  })
+
+  it('shows the current session on the composer and hides the chat title in the workspace', () => {
+    render(
+      <ChatPanel
+        workspaceMode
+        messages={[]}
+        isStreaming={false}
+        contextIndicators={null}
+        notebookContextStats={{
+          sourcesInsights: 0,
+          sourcesFull: 0,
+          notesCount: 0,
+        }}
+        onSendMessage={vi.fn()}
+        onModelChange={vi.fn()}
+        sessions={[
+          {
+            id: 's1',
+            title: 'ELBO',
+            created: '2026-10-29T12:00:00Z',
+            updated: '2026-10-29T12:00:00Z',
+          },
+        ]}
+        currentSessionId="s1"
+        onCreateSession={vi.fn()}
+        onSelectSession={vi.fn()}
+        onDeleteSession={vi.fn()}
+      />
+    )
+
+    expect(screen.queryByText('chat.chatWith')).not.toBeInTheDocument()
+    expect(screen.queryByText('chat.model')).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'chat.sessions: ELBO' })
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'model-picker' })).toBeInTheDocument()
   })
 })
