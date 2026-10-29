@@ -25,7 +25,10 @@ import {
 } from '@/lib/types/api'
 import { useTranslation } from '@/lib/hooks/use-translation'
 import { createLearningUpdateDraft } from '@/lib/utils/learning-asides'
-import { LearningEvidenceButtons } from '@/components/notebooks/LearningThreadLinks'
+import {
+  LearningEvidenceButtons,
+  LearningQuestionList,
+} from '@/components/notebooks/LearningThreadLinks'
 
 interface LearningAsidePanelProps {
   open: boolean
@@ -48,6 +51,8 @@ interface LearningAsidePanelProps {
   ) => Promise<unknown>
   onNavigateToMessage: (messageId: string) => void
   onReferenceClick?: (type: string, id: string) => void
+  onDiveIntoQuestion?: (parent: LearningAside, question: string) => void
+  onParkQuestion?: (parent: LearningAside, question: string) => void
 }
 
 const statusTranslationKeys: Record<LearningAsideStatus, string> = {
@@ -80,6 +85,8 @@ export function LearningAsidePanel({
   onUpdateStatus,
   onNavigateToMessage,
   onReferenceClick,
+  onDiveIntoQuestion,
+  onParkQuestion,
 }: LearningAsidePanelProps) {
   const { t } = useTranslation()
   const [showList, setShowList] = useState(!activeAside)
@@ -97,6 +104,9 @@ export function LearningAsidePanel({
       .find((message) => message.type === 'ai')?.content ?? ''
   const latestAnswerDraft = createLearningUpdateDraft(latestAnswerContent)
   const latestUpdate = activeAside?.updates.at(-1)
+  const parentAside = activeAside?.parent_aside_id
+    ? asides.find((aside) => aside.id === activeAside.parent_aside_id)
+    : undefined
 
   useEffect(() => {
     if (activeAsideId) {
@@ -253,7 +263,17 @@ export function LearningAsidePanel({
                   {t('learningAsides.mainThread')}
                 </button>
                 <span aria-hidden>/</span>
-                <span>{t('learningAsides.origin')}</span>
+                {parentAside ? (
+                  <button
+                    type="button"
+                    className="max-w-[12rem] truncate hover:text-foreground hover:underline"
+                    onClick={() => onSelectAside(parentAside.id)}
+                  >
+                    {parentAside.title}
+                  </button>
+                ) : (
+                  <span>{t('learningAsides.origin')}</span>
+                )}
                 <span aria-hidden>/</span>
                 <span className="truncate">{activeAside.title}</span>
               </div>
@@ -263,18 +283,31 @@ export function LearningAsidePanel({
               <p className="line-clamp-3 break-words text-sm">
                 {activeAside.anchor.content}
               </p>
-              {activeAside.anchor.message_id && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="mt-2"
-                  onClick={() =>
-                    returnToMainMessage(activeAside.anchor.message_id!)
-                  }
-                >
-                  <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
-                  {t('learningAsides.backToOrigin')}
-                </Button>
+              {(parentAside || activeAside.anchor.message_id) && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {parentAside && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onSelectAside(parentAside.id)}
+                    >
+                      <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
+                      {t('learningAsides.backToParent')}
+                    </Button>
+                  )}
+                  {activeAside.anchor.message_id && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        returnToMainMessage(activeAside.anchor.message_id!)
+                      }
+                    >
+                      <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
+                      {t('learningAsides.backToOrigin')}
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
 
@@ -313,14 +346,14 @@ export function LearningAsidePanel({
                     )}
                     {latestUpdate.open_questions.length > 0 && (
                       <div className="mt-3 border-t pt-3">
-                        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                          {t('learningAsides.openQuestions')}
-                        </p>
-                        <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-                          {latestUpdate.open_questions.map((question) => (
-                            <li key={question}>{question}</li>
-                          ))}
-                        </ul>
+                        <LearningQuestionList
+                          questions={latestUpdate.open_questions}
+                          asides={asides}
+                          parentAside={activeAside}
+                          onOpenAside={onSelectAside}
+                          onDiveIntoQuestion={onDiveIntoQuestion}
+                          onParkQuestion={onParkQuestion}
+                        />
                       </div>
                     )}
                     <LearningEvidenceButtons

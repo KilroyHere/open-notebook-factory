@@ -72,6 +72,8 @@ interface ChatPanelProps {
   learningAsides?: LearningAside[]
   onOpenLearningAside?: (asideId: string) => void
   onNavigateToMessage?: (messageId: string) => void
+  onDiveIntoQuestion?: (parent: LearningAside, question: string) => void
+  onParkQuestion?: (parent: LearningAside, question: string) => void
   workspaceMode?: boolean
 }
 
@@ -99,6 +101,8 @@ export function ChatPanel({
   learningAsides = [],
   onOpenLearningAside,
   onNavigateToMessage,
+  onDiveIntoQuestion,
+  onParkQuestion,
   workspaceMode = false
 }: ChatPanelProps) {
   const { t } = useTranslation()
@@ -233,6 +237,8 @@ export function ChatPanel({
                   learningAsides={learningAsides}
                   onOpenLearningAside={onOpenLearningAside}
                   onNavigateToMessage={onNavigateToMessage}
+                  onDiveIntoQuestion={onDiveIntoQuestion}
+                  onParkQuestion={onParkQuestion}
                   wide={workspaceMode}
                 />
               ))
@@ -399,6 +405,8 @@ interface ChatMessageProps {
   learningAsides?: LearningAside[]
   onOpenLearningAside?: (asideId: string) => void
   onNavigateToMessage?: (messageId: string) => void
+  onDiveIntoQuestion?: (parent: LearningAside, question: string) => void
+  onParkQuestion?: (parent: LearningAside, question: string) => void
   wide?: boolean
 }
 
@@ -410,6 +418,8 @@ const ChatMessage = memo(function ChatMessage({
   learningAsides = [],
   onOpenLearningAside,
   onNavigateToMessage,
+  onDiveIntoQuestion,
+  onParkQuestion,
   wide = false
 }: ChatMessageProps) {
   const appliedUpdates = learningMergesForMessage(learningAsides, message.id)
@@ -455,8 +465,11 @@ const ChatMessage = memo(function ChatMessage({
             key={`${aside.id}:${update.id}`}
             aside={aside}
             update={update}
+            asides={learningAsides}
             onOpenAside={onOpenLearningAside}
             onReferenceClick={onReferenceClick}
+            onDiveIntoQuestion={onDiveIntoQuestion}
+            onParkQuestion={onParkQuestion}
           />
         ))}
         {message.type === 'ai' && (
@@ -475,6 +488,8 @@ const ChatMessage = memo(function ChatMessage({
                 onOpenAside={onOpenLearningAside}
                 onNavigateToMessage={onNavigateToMessage}
                 onReferenceClick={onReferenceClick}
+                onDiveIntoQuestion={onDiveIntoQuestion}
+                onParkQuestion={onParkQuestion}
               />
             )}
           </>

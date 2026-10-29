@@ -57,6 +57,9 @@ function createLearningMock(overrides: Record<string, unknown> = {}) {
     sendMessage: vi.fn(),
     resolveAside: vi.fn(),
     updateStatus: vi.fn(),
+    sections: [],
+    syncSections: vi.fn(),
+    updateSection: vi.fn(),
     ...overrides,
   } as unknown as ReturnType<typeof useLearningAsides>
 }

@@ -213,6 +213,52 @@ class LearningAsideResponse(BaseModel):
     updated: str
 
 
+class LearningSectionResponse(BaseModel):
+    id: str
+    journey_id: str
+    title: str
+    pinned: bool
+    start_message_id: str
+    created: str
+    updated: str
+
+
+class SyncLearningSectionItem(BaseModel):
+    start_message_id: str = Field(min_length=1, max_length=200)
+    title: str = Field(min_length=1, max_length=200)
+
+    @field_validator("title")
+    @classmethod
+    def validate_title_not_blank(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("Section title cannot be empty")
+        return stripped
+
+
+class SyncLearningSectionsRequest(BaseModel):
+    notebook_id: str
+    main_session_id: str
+    sections: List[SyncLearningSectionItem] = Field(
+        default_factory=list, max_length=200
+    )
+
+
+class UpdateLearningSectionRequest(BaseModel):
+    title: Optional[str] = Field(None, max_length=200)
+    pinned: Optional[bool] = None
+
+    @field_validator("title")
+    @classmethod
+    def validate_title_not_blank(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("Section title cannot be empty")
+        return stripped
+
+
 class LearningJourneyResponse(BaseModel):
     id: str
     notebook_id: str
@@ -222,6 +268,7 @@ class LearningJourneyResponse(BaseModel):
     status: Literal["active", "archived"]
     asides: List[LearningAsideResponse] = Field(default_factory=list)
     updates: List[LearningUpdateResponse] = Field(default_factory=list)
+    sections: List[LearningSectionResponse] = Field(default_factory=list)
     created: str
     updated: str
 

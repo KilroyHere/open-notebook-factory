@@ -1,0 +1,10 @@
+-- Migration 28: named topic sections for a learning journey.
+
+DEFINE TABLE IF NOT EXISTS learning_section SCHEMAFULL;
+DEFINE FIELD IF NOT EXISTS journey ON TABLE learning_section TYPE record<learning_journey>;
+DEFINE FIELD IF NOT EXISTS title ON TABLE learning_section TYPE string;
+DEFINE FIELD IF NOT EXISTS pinned ON TABLE learning_section TYPE bool DEFAULT false;
+DEFINE FIELD IF NOT EXISTS start_message_id ON TABLE learning_section TYPE string;
+DEFINE FIELD IF NOT EXISTS created ON learning_section DEFAULT time::now() VALUE $before OR time::now();
+DEFINE FIELD IF NOT EXISTS updated ON learning_section DEFAULT time::now() VALUE time::now();
+DEFINE INDEX IF NOT EXISTS idx_learning_section_journey_message ON TABLE learning_section COLUMNS journey, start_message_id UNIQUE;

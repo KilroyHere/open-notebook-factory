@@ -158,6 +158,8 @@ class LearningJourney(ObjectModel):
         """Delete a journey, its updates, asides, and child chat sessions."""
         from open_notebook.domain.notebook import ChatSession
 
+        for section in await LearningSection.get_for_journey(self.id or ""):
+            await section.delete()
         for aside in await self.get_asides(include_discarded=True):
             for update in await aside.get_updates():
                 await update.delete()
@@ -266,3 +268,69 @@ class LearningUpdate(ObjectModel):
             "citations": self.citations,
             "applied_message_id": self.applied_message_id,
         }
+
+
+class LearningSection(ObjectModel):
+    """A named span of the main thread, opened by one human message."""
+
+    table_name: ClassVar[str] = "learning_section"
+
+    journey: str
+    title: str = Field(min_length=1, max_length=200)
+    pinned: bool = False
+    start_message_id: str = Field(min_length=1, max_length=200)
+
+    @field_validator("title")
+    @classmethod
+    def title_must_not_be_blank(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise InvalidInputError("Section title cannot be empty")
+        return stripped
+
+    def _prepare_save_data(self) -> Dict[str, Any]:
+        data = super()._prepare_save_data()
+        if data.get("journey"):
+            data["journey"] = ensure_record_id(data["journey"])
+        return data
+
+    @classmethod
+    async def get_for_journey(cls, journey_id: str) -> List["LearningSection"]:
+        if not journey_id:
+            return []
+        try:
+            rows = await repo_query(
+                """
+                SELECT * FROM learning_section
+                WHERE journey = $journey
+                ORDER BY created ASC
+                """,
+                {"journey": ensure_record_id(journey_id)},
+            )
+            return [cls(**row) for row in rows]
+        except Exception as exc:
+            logger.exception(f"Failed to list sections for journey {journey_id}")
+            raise DatabaseOperationError("Failed to list learning sections") from exc
+
+    @classmethod
+    async def ensure_for_turns(
+        cls, journey_id: str, turns: List[tuple[str, str]]
+    ) -> List["LearningSection"]:
+        """Create a section for each new human turn. Existing names stay put."""
+        existing = await cls.get_for_journey(journey_id)
+        known = {section.start_message_id for section in existing}
+        for message_id, title in turns:
+            if message_id in known:
+                continue
+            section = cls(
+                journey=journey_id,
+                title=title,
+                start_message_id=message_id,
+                pinned=False,
+            )
+            try:
+                await section.save()
+            except DatabaseOperationError:
+                logger.exception(f"Failed to create section for message {message_id}")
+            known.add(message_id)
+        return await cls.get_for_journey(journey_id)

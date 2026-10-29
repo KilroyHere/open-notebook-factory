@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Chat outline sections keep their names.** Each human turn becomes a topic section on that journey. Rename it or pin it, and the outline keeps that name after a reload. Pinned sections stay at the top. Nested dives remain under the turn they came from.
+- **Open questions can start a nested dive.** From a resolved aside, Dive in opens a child conversation on the same journey, and Park question saves that child without leaving the thread you are reading. The outline and map nest the child under its parent branch, and the dive breadcrumb returns to that parent.
 - **Learning asides keep prerequisite questions out of the main notebook chat.** Open any assistant answer as a durable side conversation, follow the tangent independently, park or resume it later, and explicitly resolve its useful conclusion back into the main chat context or save it as a note. Asides retain their originating message, remain hidden from the normal session list, and surface a resume prompt when a learner returns.
 - **One-command Debian/Ubuntu development prerequisites.** `scripts/install-dev-prerequisites.sh` installs and verifies Node.js 22, uv with Python 3.12, Docker Engine with Compose v2, Git, Make and ffmpeg on a clean machine. It is idempotent, has a read-only `--check` mode, and can leave Docker or ffmpeg to an existing system installation.
 

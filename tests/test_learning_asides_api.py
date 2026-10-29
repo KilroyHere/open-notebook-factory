@@ -13,6 +13,7 @@ from open_notebook.domain.learning import (
     AsideAnchor,
     LearningAside,
     LearningJourney,
+    LearningSection,
     LearningUpdate,
 )
 
@@ -161,6 +162,249 @@ async def test_create_aside_persists_child_session_and_journey_navigation(client
     assert journey.active_session == "chat_session:child"
     relate.assert_awaited_once_with("notebook:one")
     save_journey.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_create_nested_aside_stays_on_the_parent_journey(client):
+    journey = _journey()
+    parent = _aside(
+        id="learning_aside:parent",
+        chat_session="chat_session:parent-dive",
+        parent_session="chat_session:main",
+    )
+    parent_session = SimpleNamespace(model_override="model:parent")
+
+    async def save_session(session):
+        session.id = "chat_session:nested"
+        session.created = NOW
+        session.updated = NOW
+
+    saved = {}
+
+    async def save_aside(aside):
+        aside.id = "learning_aside:nested"
+        aside.created = NOW
+        aside.updated = NOW
+        saved["aside"] = aside
+
+    with (
+        patch(
+            "api.routers.learning._verify_notebook_session",
+            new_callable=AsyncMock,
+            return_value=(
+                "chat_session:parent-dive",
+                SimpleNamespace(id="notebook:one"),
+                parent_session,
+            ),
+        ),
+        patch(
+            "api.routers.learning._snapshot_parent_context",
+            new_callable=AsyncMock,
+            return_value=[],
+        ),
+        patch(
+            "api.routers.learning._get_aside",
+            new_callable=AsyncMock,
+            return_value=parent,
+        ),
+        patch(
+            "api.routers.learning.LearningJourney.get",
+            new_callable=AsyncMock,
+            return_value=journey,
+        ),
+        patch(
+            "api.routers.learning.LearningJourney.get_or_create",
+            new_callable=AsyncMock,
+        ) as get_or_create,
+        patch(
+            "api.routers.learning.LearningAside.get_for_chat_session",
+            new_callable=AsyncMock,
+        ) as get_for_session,
+        patch("api.routers.learning.ChatSession.save", new=save_session),
+        patch(
+            "api.routers.learning.ChatSession.relate_to_notebook",
+            new_callable=AsyncMock,
+        ),
+        patch("api.routers.learning.LearningAside.save", new=save_aside),
+        patch("api.routers.learning.LearningJourney.save", new_callable=AsyncMock),
+        patch(
+            "api.routers.learning._aside_response",
+            new_callable=AsyncMock,
+            side_effect=lambda aside: _aside_response(aside),
+        ),
+    ):
+        response = client.post(
+            "/api/learning/asides",
+            json={
+                "notebook_id": "notebook:one",
+                "parent_session_id": "chat_session:parent-dive",
+                "parent_aside_id": "learning_aside:parent",
+                "title": "Gaussian prior",
+                "anchor": {
+                    "type": "message",
+                    "content": "Why choose a Gaussian prior?",
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json()["parent_aside_id"] == "learning_aside:parent"
+    assert response.json()["chat_session_id"] == "chat_session:nested"
+    assert saved["aside"].parent_aside == "learning_aside:parent"
+    assert saved["aside"].journey == journey.id
+    get_or_create.assert_not_called()
+    get_for_session.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_create_aside_rejects_discarded_parent(client):
+    parent = _aside(
+        status="discarded",
+        chat_session="chat_session:parent-dive",
+    )
+    with (
+        patch(
+            "api.routers.learning._verify_notebook_session",
+            new_callable=AsyncMock,
+            return_value=(
+                "chat_session:parent-dive",
+                SimpleNamespace(id="notebook:one"),
+                SimpleNamespace(model_override=None),
+            ),
+        ),
+        patch(
+            "api.routers.learning._snapshot_parent_context",
+            new_callable=AsyncMock,
+            return_value=[],
+        ),
+        patch(
+            "api.routers.learning._get_aside",
+            new_callable=AsyncMock,
+            return_value=parent,
+        ),
+        patch(
+            "api.routers.learning.ChatSession.save",
+            new_callable=AsyncMock,
+        ) as save_session,
+    ):
+        response = client.post(
+            "/api/learning/asides",
+            json={
+                "notebook_id": "notebook:one",
+                "parent_session_id": "chat_session:parent-dive",
+                "parent_aside_id": "learning_aside:aside",
+                "anchor": {
+                    "type": "message",
+                    "content": "Why choose a Gaussian prior?",
+                },
+            },
+        )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Discarded asides cannot parent a new dive"
+    save_session.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_sync_sections_keeps_an_existing_name(client):
+    journey = _journey()
+    section = LearningSection(
+        id="learning_section:one",
+        journey=journey.id or "",
+        title="Evidence lower bound",
+        pinned=True,
+        start_message_id="human:one",
+        created=NOW,
+        updated=NOW,
+    )
+    with (
+        patch(
+            "api.routers.learning._verify_notebook_session",
+            new_callable=AsyncMock,
+            return_value=(
+                "chat_session:main",
+                SimpleNamespace(id="notebook:one"),
+                SimpleNamespace(),
+            ),
+        ),
+        patch(
+            "api.routers.learning.LearningJourney.get_or_create",
+            new_callable=AsyncMock,
+            return_value=journey,
+        ),
+        patch(
+            "api.routers.learning.LearningSection.ensure_for_turns",
+            new_callable=AsyncMock,
+            return_value=[section],
+        ) as ensure,
+    ):
+        response = client.post(
+            "/api/learning/sections/sync",
+            json={
+                "notebook_id": "notebook:one",
+                "main_session_id": "chat_session:main",
+                "sections": [
+                    {
+                        "start_message_id": "human:one",
+                        "title": "Explain the ELBO",
+                    }
+                ],
+            },
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body[0]["title"] == "Evidence lower bound"
+    assert body[0]["pinned"] is True
+    assert body[0]["start_message_id"] == "human:one"
+    ensure.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_update_section_renames_and_pins(client):
+    section = LearningSection(
+        id="learning_section:one",
+        journey="learning_journey:journey",
+        title="Evidence lower bound",
+        pinned=False,
+        start_message_id="human:one",
+        created=NOW,
+        updated=NOW,
+    )
+
+    async def save(saved):
+        saved.updated = NOW
+
+    with (
+        patch(
+            "api.routers.learning.LearningSection.get",
+            new_callable=AsyncMock,
+            return_value=section,
+        ),
+        patch("api.routers.learning.LearningSection.save", new=save),
+    ):
+        response = client.patch(
+            "/api/learning/sections/one",
+            json={"title": "ELBO derivation", "pinned": True},
+        )
+
+    assert response.status_code == 200
+    assert response.json()["title"] == "ELBO derivation"
+    assert response.json()["pinned"] is True
+    assert section.title == "ELBO derivation"
+    assert section.pinned is True
+
+
+def test_sync_sections_rejects_a_blank_title(client):
+    response = client.post(
+        "/api/learning/sections/sync",
+        json={
+            "notebook_id": "notebook:one",
+            "main_session_id": "chat_session:main",
+            "sections": [{"start_message_id": "human:one", "title": "  "}],
+        },
+    )
+    assert response.status_code == 422
 
 
 @pytest.mark.asyncio

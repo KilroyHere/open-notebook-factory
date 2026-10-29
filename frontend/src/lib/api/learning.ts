@@ -5,6 +5,7 @@ import {
   LearningAsideStatus,
   LearningJourney,
   LearningJourneyResume,
+  LearningSection,
   ResolveLearningAsideRequest,
   SendLearningAsideMessageRequest,
 } from '@/lib/types/api'
@@ -79,6 +80,29 @@ export const learningApi = {
   ) => {
     const response = await apiClient.post<LearningAside>(
       `/learning/asides/${asideId}/resolve`,
+      data
+    )
+    return response.data
+  },
+
+  syncSections: async (data: {
+    notebook_id: string
+    main_session_id: string
+    sections: Array<{ start_message_id: string; title: string }>
+  }) => {
+    const response = await apiClient.post<LearningSection[]>(
+      '/learning/sections/sync',
+      data
+    )
+    return response.data
+  },
+
+  updateSection: async (
+    sectionId: string,
+    data: { title?: string; pinned?: boolean }
+  ) => {
+    const response = await apiClient.patch<LearningSection>(
+      `/learning/sections/${sectionId}`,
       data
     )
     return response.data

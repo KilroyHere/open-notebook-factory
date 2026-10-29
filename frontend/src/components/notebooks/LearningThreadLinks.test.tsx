@@ -138,6 +138,85 @@ describe('LearningThreadLinks', () => {
     expect(onReferenceClick).toHaveBeenCalledWith('source_insight', 'lemma')
   })
 
+  it('starts or parks a nested dive from an open question', () => {
+    const onDiveIntoQuestion = vi.fn()
+    const onParkQuestion = vi.fn()
+    const aside: LearningAside = {
+      ...resolvedAside,
+      updates: [
+        {
+          ...resolvedAside.updates[0],
+          open_questions: ['Why choose a Gaussian prior?'],
+        },
+      ],
+    }
+    render(
+      <LearningThreadLinks
+        messageId="ai:origin"
+        asides={[aside]}
+        onOpenAside={vi.fn()}
+        onNavigateToMessage={vi.fn()}
+        onDiveIntoQuestion={onDiveIntoQuestion}
+        onParkQuestion={onParkQuestion}
+      />
+    )
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'learningAsides.diveIn' })
+    )
+    expect(onDiveIntoQuestion).toHaveBeenCalledWith(
+      aside,
+      'Why choose a Gaussian prior?'
+    )
+    fireEvent.click(
+      screen.getByRole('button', { name: 'learningAsides.parkQuestion' })
+    )
+    expect(onParkQuestion).toHaveBeenCalledWith(
+      aside,
+      'Why choose a Gaussian prior?'
+    )
+  })
+
+  it('opens the existing child dive for a question', () => {
+    const onOpenAside = vi.fn()
+    const child: LearningAside = {
+      ...resolvedAside,
+      id: 'learning_aside:child',
+      parent_aside_id: resolvedAside.id,
+      title: 'Gaussian prior',
+      status: 'parked',
+      anchor: { type: 'message', content: 'Why choose a Gaussian prior?' },
+      updates: [],
+    }
+    const parent: LearningAside = {
+      ...resolvedAside,
+      updates: [
+        {
+          ...resolvedAside.updates[0],
+          open_questions: ['Why choose a Gaussian prior?'],
+        },
+      ],
+    }
+    render(
+      <LearningThreadLinks
+        messageId="ai:origin"
+        asides={[parent, child]}
+        onOpenAside={onOpenAside}
+        onNavigateToMessage={vi.fn()}
+        onDiveIntoQuestion={vi.fn()}
+        onParkQuestion={vi.fn()}
+      />
+    )
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Why choose a Gaussian prior?' })
+    )
+    expect(onOpenAside).toHaveBeenCalledWith('learning_aside:child')
+    expect(
+      screen.queryByRole('button', { name: 'learningAsides.diveIn' })
+    ).not.toBeInTheDocument()
+  })
+
   it('omits branches anchored to another message', () => {
     const { container } = render(
       <LearningThreadLinks
