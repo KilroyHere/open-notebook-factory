@@ -264,7 +264,8 @@ export const deDE = {
     recentlyViewed: "Zuletzt angesehen",
     toggleRecentlyViewed: "Zuletzt angesehen ein-/ausblenden",
     lastViewed: "Angesehen {{time}}",
-    knowledge: "Wissen",
+    studio: "Studio",
+    backToNotebooks: "Zurück zu den Notizbüchern",
   },
   sources: {
     newSource: "Neue Quelle",
@@ -443,7 +444,6 @@ export const deDE = {
     pressToSend: "Drücke {{key}} zum Senden",
     createToStart: "Erstelle eine Sitzung, um zu starten.",
     chatWithNotebook: "Mit Notebook chatten",
-    unableToLoadChat: "Chat konnte nicht geladen werden",
     noDescription: "Keine Beschreibung",
     startByCreating: "Erstelle zuerst dein erstes Notebook, um deine Recherche zu organisieren.",
     messagesCount: "{{count}} Nachrichten",
@@ -512,6 +512,9 @@ export const deDE = {
     unpinSection: "Abschnitt lösen",
     sectionTitlePlaceholder: "Abschnittstitel",
     sectionSaveFailed: "Abschnitt konnte nicht gespeichert werden",
+    statsSummary: "Übersicht der Lernreise",
+    statsLearned: "Gelernt",
+    statsSavedForLater: "Für später gemerkt",
     status: {
       active: "Aktiv",
       parked: "Geparkt",

@@ -259,7 +259,8 @@ export const enUS = {
     recentlyViewed: "Recently Viewed",
     toggleRecentlyViewed: "Toggle recently viewed",
     lastViewed: "Viewed {{time}}",
-    knowledge: "Knowledge",
+    studio: "Studio",
+    backToNotebooks: "Back to notebooks",
   },
   sources: {
     title: "Sources",
@@ -438,7 +439,6 @@ export const enUS = {
     pressToSend: "Press {{key}} to send",
     createToStart: "Create a session to start.",
     chatWithNotebook: "Chat with Notebook",
-    unableToLoadChat: "Unable to load chat",
     noDescription: "No description",
     startByCreating: "Start by creating your first notebook to organize your research.",
     messagesCount: "{{count}} messages",
@@ -507,6 +507,9 @@ export const enUS = {
     unpinSection: "Unpin section",
     sectionTitlePlaceholder: "Section title",
     sectionSaveFailed: "Could not save the section",
+    statsSummary: "Journey summary",
+    statsLearned: "Learned",
+    statsSavedForLater: "Saved for later",
     status: {
       active: "Active",
       parked: "Parked",

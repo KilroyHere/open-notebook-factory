@@ -261,7 +261,8 @@ export const caES = {
     recentlyViewed: "Vistos recentment",
     toggleRecentlyViewed: "Commuta els vistos recentment",
     lastViewed: "Vist {{time}}",
-    knowledge: "Coneixement",
+    studio: "Estudi",
+    backToNotebooks: "Torna als quaderns",
   },
   sources: {
     newSource: "Font nova",
@@ -440,7 +441,6 @@ export const caES = {
     pressToSend: "Prem {{key}} per enviar",
     createToStart: "Crea una sessió per començar.",
     chatWithNotebook: "Xat amb el quadern",
-    unableToLoadChat: "No es pot carregar el xat",
     noDescription: "Sense descripció",
     startByCreating: "Comença creant el teu primer quadern per organitzar la teva recerca.",
     messagesCount: "{{count}} missatges",
@@ -509,6 +509,9 @@ export const caES = {
     unpinSection: "Deixa de fixar",
     sectionTitlePlaceholder: "Títol de la secció",
     sectionSaveFailed: "No s'ha pogut desar la secció",
+    statsSummary: "Resum del recorregut",
+    statsLearned: "Après",
+    statsSavedForLater: "Desat per a més tard",
     status: {
       active: "Actiu",
       parked: "Aparcat",

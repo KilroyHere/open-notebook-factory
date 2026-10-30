@@ -261,7 +261,8 @@ export const itIT = {
     recentlyViewed: "Visti di recente",
     toggleRecentlyViewed: "Mostra/nascondi visti di recente",
     lastViewed: "Visto {{time}}",
-    knowledge: "Conoscenza",
+    studio: "Studio",
+    backToNotebooks: "Torna ai notebook",
   },
   sources: {
     newSource: "Nuova fonte",
@@ -440,7 +441,6 @@ export const itIT = {
     pressToSend: "Premi {{key}} per inviare",
     createToStart: "Crea una sessione per iniziare.",
     chatWithNotebook: "Chatta con il quaderno",
-    unableToLoadChat: "Impossibile caricare la chat",
     noDescription: "Nessuna descrizione",
     startByCreating: "Inizia creando il tuo primo quaderno per organizzare la tua ricerca.",
     messagesCount: "{{count}} messaggi",
@@ -509,6 +509,9 @@ export const itIT = {
     unpinSection: "Rimuovi fissaggio",
     sectionTitlePlaceholder: "Titolo della sezione",
     sectionSaveFailed: "Impossibile salvare la sezione",
+    statsSummary: "Riepilogo del percorso",
+    statsLearned: "Imparato",
+    statsSavedForLater: "Salvato per dopo",
     status: {
       active: "Attiva",
       parked: "In sospeso",

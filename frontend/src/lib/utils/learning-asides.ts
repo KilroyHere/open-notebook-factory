@@ -139,3 +139,35 @@ export function stripCitationMarkers(text: string): string {
     .join('\n')
     .trim()
 }
+
+export interface JourneyStats {
+  /** Resolved asides whose latest conclusion is in the main chat context. */
+  learned: number
+  /** Open questions on latest conclusions that no dive has picked up yet. */
+  openQuestions: number
+  /** Asides parked to come back to. */
+  savedForLater: number
+}
+
+/** Summary counts for a journey, from the asides the journey API returns. */
+export function journeyStats(asides: LearningAside[]): JourneyStats {
+  const stats: JourneyStats = { learned: 0, openQuestions: 0, savedForLater: 0 }
+  for (const aside of asides) {
+    if (aside.status === 'discarded') continue
+    if (aside.status === 'parked') stats.savedForLater++
+    const latest = aside.updates.at(-1)
+    if (!latest || latest.superseded) continue
+    if (aside.status === 'resolved' && latest.include_in_main) stats.learned++
+    stats.openQuestions += normalizeOpenQuestions(latest.open_questions).filter(
+      (question) => !childDiveForQuestion(asides, aside.id, question)
+    ).length
+  }
+  return stats
+}
+
+/** The first few words of a conclusion as plain text, for a compact label. */
+export function leadingWords(content: string, count = 8): string {
+  const words = toPlainTextPreview(content).split(/\s+/).filter(Boolean)
+  if (words.length <= count) return words.join(' ')
+  return `${words.slice(0, count).join(' ')}…`
+}

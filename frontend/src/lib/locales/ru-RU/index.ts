@@ -261,7 +261,8 @@ export const ruRU = {
     recentlyViewed: "Недавно просмотренные",
     toggleRecentlyViewed: "Показать/скрыть недавно просмотренные",
     lastViewed: "Просмотрено {{time}}",
-    knowledge: "Знания",
+    studio: "Студия",
+    backToNotebooks: "Назад к блокнотам",
   },
   sources: {
     newSource: "Новый источник",
@@ -440,7 +441,6 @@ export const ruRU = {
     pressToSend: "Нажмите {{key}} для отправки",
     createToStart: "Создайте сессию для начала.",
     chatWithNotebook: "Чат с блокнотом",
-    unableToLoadChat: "Не удалось загрузить чат",
     noDescription: "Без описания",
     startByCreating: "Начните с создания первого блокнота для организации исследований.",
     messagesCount: "Сообщений: {{count}}",
@@ -509,6 +509,9 @@ export const ruRU = {
     unpinSection: "Открепить раздел",
     sectionTitlePlaceholder: "Название раздела",
     sectionSaveFailed: "Не удалось сохранить раздел",
+    statsSummary: "Сводка пути",
+    statsLearned: "Изучено",
+    statsSavedForLater: "Отложено на потом",
     status: {
       active: "Активно",
       parked: "Отложено",

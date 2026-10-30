@@ -261,7 +261,8 @@ export const zhTW = {
     recentlyViewed: "最近檢視",
     toggleRecentlyViewed: "切換最近檢視",
     lastViewed: "檢視於{{time}}",
-    knowledge: "資料",
+    studio: "工作室",
+    backToNotebooks: "返回筆記本",
   },
   sources: {
     newSource: "新增來源",
@@ -440,7 +441,6 @@ export const zhTW = {
     pressToSend: "按 {{key}} 發送",
     createToStart: "新增一個會話以開始。",
     chatWithNotebook: "與筆記本對話",
-    unableToLoadChat: "無法載入聊天",
     noDescription: "暫無描述",
     startByCreating: "從新增您的第一個筆記本開始，組織您的研究。",
     messagesCount: "{{count}} 條訊息",
@@ -509,6 +509,9 @@ export const zhTW = {
     unpinSection: "取消固定",
     sectionTitlePlaceholder: "章節標題",
     sectionSaveFailed: "無法儲存章節",
+    statsSummary: "學習旅程概覽",
+    statsLearned: "已學到",
+    statsSavedForLater: "稍後再看",
     status: {
       active: "進行中",
       parked: "已暫存",

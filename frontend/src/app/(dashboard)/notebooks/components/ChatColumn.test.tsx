@@ -1,15 +1,14 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, it, expect, vi } from 'vitest'
 import { ChatColumn } from './ChatColumn'
-import { useNotes } from '@/lib/hooks/use-notes'
 import { useNotebookChat } from '@/lib/hooks/use-notebook-chat'
 import { useLearningAsides } from '@/lib/hooks/use-learning-asides'
-import type { SourceListResponse } from '@/lib/types/api'
+import { useNotebookWorkspace } from '@/lib/hooks/use-notebook-workspace'
+import type { NoteResponse, SourceListResponse } from '@/lib/types/api'
 
 const { openModal } = vi.hoisted(() => ({ openModal: vi.fn() }))
 
 // Mock the hooks
-vi.mock('@/lib/hooks/use-notes')
 vi.mock('@/lib/hooks/use-notebook-chat')
 vi.mock('@/lib/hooks/use-learning-asides')
 vi.mock('@/lib/hooks/use-modal-manager', () => ({
@@ -19,12 +18,25 @@ vi.mock('@/components/sources/ChatPanel', () => ({
   ChatPanel: () => <div data-testid="chat-panel" />
 }))
 
-// Type-safe mock factory for useNotes hook
-function createNotesMock(overrides: { isLoading?: boolean } = {}) {
-  return {
-    data: [],
-    isLoading: overrides.isLoading ?? false,
-  } as unknown as ReturnType<typeof useNotes>
+const NO_SOURCES: SourceListResponse[] = []
+const NO_NOTES: NoteResponse[] = []
+const CONTEXT = { sources: {}, notes: {} }
+
+// The page owns the workspace; this harness does the same for one column.
+function renderColumn({
+  sources = NO_SOURCES,
+  isLoading = false,
+}: { sources?: SourceListResponse[]; isLoading?: boolean } = {}) {
+  function Harness() {
+    const workspace = useNotebookWorkspace({
+      notebookId: 'test-notebook',
+      sources,
+      notes: NO_NOTES,
+      contextSelections: CONTEXT,
+    })
+    return <ChatColumn workspace={workspace} isLoading={isLoading} />
+  }
+  return render(<Harness />)
 }
 
 // Type-safe mock factory for useNotebookChat hook
@@ -66,34 +78,23 @@ function createLearningMock(overrides: Record<string, unknown> = {}) {
 }
 
 describe('ChatColumn', () => {
-  const baseProps = {
-    notebookId: 'test-notebook',
-    contextSelections: {
-      sources: {},
-      notes: {}
-    },
-    sources: [],
-  }
-
   beforeEach(() => {
     vi.mocked(useLearningAsides).mockReturnValue(createLearningMock())
   })
 
   it('shows loading spinner when fetching data', () => {
-    vi.mocked(useNotes).mockReturnValue(createNotesMock({ isLoading: true }))
     vi.mocked(useNotebookChat).mockReturnValue(createChatMock())
 
-    render(<ChatColumn {...baseProps} sourcesLoading={true} />)
+    renderColumn({ isLoading: true })
 
     // Should show loading spinner
     expect(screen.getByTestId('loading-spinner')).toBeInTheDocument()
   })
 
   it('renders chat panel when data is loaded', () => {
-    vi.mocked(useNotes).mockReturnValue(createNotesMock({ isLoading: false }))
     vi.mocked(useNotebookChat).mockReturnValue(createChatMock())
 
-    render(<ChatColumn {...baseProps} sourcesLoading={false} />)
+    renderColumn()
 
     // Should show chat panel
     expect(screen.getByTestId('chat-panel')).toBeInTheDocument()
@@ -127,7 +128,6 @@ describe('ChatColumn', () => {
       created: '2026-10-28T00:01:00Z',
       updated: '2026-10-28T00:01:00Z',
     }
-    vi.mocked(useNotes).mockReturnValue(createNotesMock())
     vi.mocked(useNotebookChat).mockReturnValue(
       createChatMock({ currentSessionId: 'chat_session:main' })
     )
@@ -142,7 +142,7 @@ describe('ChatColumn', () => {
       })
     )
 
-    render(<ChatColumn {...baseProps} sourcesLoading={false} />)
+    renderColumn()
     fireEvent.click(screen.getByRole('button', { name: 'learningAsides.resume' }))
 
     expect(screen.getByText('learningAsides.resumePrompt')).toBeInTheDocument()
@@ -151,7 +151,6 @@ describe('ChatColumn', () => {
 
   it('opens cited evidence from a resolved aside in the existing modal', () => {
     openModal.mockClear()
-    vi.mocked(useNotes).mockReturnValue(createNotesMock())
     vi.mocked(useNotebookChat).mockReturnValue(createChatMock())
     vi.mocked(useLearningAsides).mockReturnValue(
       createLearningMock({
@@ -189,18 +188,14 @@ describe('ChatColumn', () => {
       })
     )
 
-    render(
-      <ChatColumn
-        {...baseProps}
-        sources={[
-          {
-            id: 'source:paper',
-            title: 'Attention Is All You Need',
-          } as SourceListResponse,
-        ]}
-        sourcesLoading={false}
-      />
-    )
+    renderColumn({
+      sources: [
+        {
+          id: 'source:paper',
+          title: 'Attention Is All You Need',
+        } as SourceListResponse,
+      ],
+    })
     // The button names the notebook's source, not its record ID.
     expect(
       screen.queryByRole('button', { name: /paper/ })
@@ -210,47 +205,6 @@ describe('ChatColumn', () => {
     )
 
     expect(openModal).toHaveBeenCalledWith('source', 'paper')
-  })
-
-  it('returns to the conversation when a journey branch is opened', () => {
-    const openAside = vi.fn()
-    const onLeaveJourney = vi.fn()
-    vi.mocked(useNotes).mockReturnValue(createNotesMock())
-    vi.mocked(useNotebookChat).mockReturnValue(createChatMock())
-    vi.mocked(useLearningAsides).mockReturnValue(
-      createLearningMock({
-        asides: [
-          {
-            id: 'learning_aside:b',
-            journey_id: 'learning_journey:one',
-            parent_session_id: 'chat_session:main',
-            chat_session_id: 'chat_session:b',
-            title: 'Current active aside',
-            status: 'active',
-            anchor: { type: 'message', content: 'Current anchor' },
-            messages: [],
-            updates: [],
-            created: '2026-10-28T00:01:00Z',
-            updated: '2026-10-28T00:01:00Z',
-          },
-        ],
-        openAside,
-      })
-    )
-
-    render(
-      <ChatColumn
-        {...baseProps}
-        sourcesLoading={false}
-        mobileSurface="journey"
-        onLeaveJourney={onLeaveJourney}
-      />
-    )
-    fireEvent.click(screen.getByText('Current active aside'))
-
-    expect(onLeaveJourney).toHaveBeenCalled()
-    expect(openAside).toHaveBeenCalledWith('learning_aside:b')
-    expect(screen.queryByTestId('chat-panel')).not.toBeInTheDocument()
   })
 
   describe('Dive in', () => {
@@ -288,8 +242,7 @@ describe('ChatColumn', () => {
         updates: [],
       })
       const sendMessage = vi.fn().mockResolvedValue(undefined)
-      vi.mocked(useNotes).mockReturnValue(createNotesMock())
-      vi.mocked(useNotebookChat).mockReturnValue(createChatMock())
+        vi.mocked(useNotebookChat).mockReturnValue(createChatMock())
       vi.mocked(useLearningAsides).mockReturnValue(
         createLearningMock({
           panelOpen: true,
@@ -300,7 +253,7 @@ describe('ChatColumn', () => {
         })
       )
 
-      render(<ChatColumn {...baseProps} sourcesLoading={false} />)
+      renderColumn()
       fireEvent.click(
         screen.getAllByRole('button', { name: 'learningAsides.diveIn' })[0]
       )
@@ -324,8 +277,7 @@ describe('ChatColumn', () => {
     it('does not ask when the dive could not be created', async () => {
       const createAside = vi.fn().mockRejectedValue(new Error('nope'))
       const sendMessage = vi.fn()
-      vi.mocked(useNotes).mockReturnValue(createNotesMock())
-      vi.mocked(useNotebookChat).mockReturnValue(createChatMock())
+        vi.mocked(useNotebookChat).mockReturnValue(createChatMock())
       vi.mocked(useLearningAsides).mockReturnValue(
         createLearningMock({
           panelOpen: true,
@@ -336,7 +288,7 @@ describe('ChatColumn', () => {
         })
       )
 
-      render(<ChatColumn {...baseProps} sourcesLoading={false} />)
+      renderColumn()
       fireEvent.click(
         screen.getAllByRole('button', { name: 'learningAsides.diveIn' })[0]
       )

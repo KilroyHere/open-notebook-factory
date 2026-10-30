@@ -261,7 +261,8 @@ export const trTR = {
     recentlyViewed: "Son Görüntülenenler",
     toggleRecentlyViewed: "Son görüntülenenleri aç/kapat",
     lastViewed: "{{time}} görüntülendi",
-    knowledge: "Bilgi",
+    studio: "Stüdyo",
+    backToNotebooks: "Not defterlerine dön",
   },
   sources: {
     newSource: "Yeni Kaynak",
@@ -440,7 +441,6 @@ export const trTR = {
     pressToSend: "Göndermek için {{key}} tuşuna basın",
     createToStart: "Başlamak için bir oturum oluşturun.",
     chatWithNotebook: "Defter ile Sohbet Et",
-    unableToLoadChat: "Sohbet yüklenemedi",
     noDescription: "Açıklama yok",
     startByCreating: "Araştırmanızı düzenlemek için ilk defterinizi oluşturun.",
     messagesCount: "{{count}} mesaj",
@@ -509,6 +509,9 @@ export const trTR = {
     unpinSection: "Sabitlemeyi kaldır",
     sectionTitlePlaceholder: "Bölüm başlığı",
     sectionSaveFailed: "Bölüm kaydedilemedi",
+    statsSummary: "Yolculuk özeti",
+    statsLearned: "Öğrenilen",
+    statsSavedForLater: "Sonraya kaydedilen",
     status: {
       active: "Etkin",
       parked: "Ertelendi",

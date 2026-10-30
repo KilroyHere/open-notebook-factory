@@ -261,7 +261,8 @@ export const frFR = {
     recentlyViewed: "Consultés récemment",
     toggleRecentlyViewed: "Afficher/masquer les éléments récents",
     lastViewed: "Consulté {{time}}",
-    knowledge: "Connaissances",
+    studio: "Studio",
+    backToNotebooks: "Retour aux carnets",
   },
   sources: {
     newSource: "Nouvelle Source",
@@ -440,7 +441,6 @@ export const frFR = {
     pressToSend: "Appuyez sur {{key}} pour envoyer",
     createToStart: "Créez une session pour commencer.",
     chatWithNotebook: "Discuter avec le Carnet",
-    unableToLoadChat: "Impossible de charger le chat",
     noDescription: "Aucune description",
     startByCreating: "Commencez par créer votre premier carnet pour organiser vos recherches.",
     messagesCount: "{{count}} messages",
@@ -509,6 +509,9 @@ export const frFR = {
     unpinSection: "Désépingler la section",
     sectionTitlePlaceholder: "Titre de la section",
     sectionSaveFailed: "Impossible d'enregistrer la section",
+    statsSummary: "Résumé du parcours",
+    statsLearned: "Appris",
+    statsSavedForLater: "Gardé pour plus tard",
     status: {
       active: "Actif",
       parked: "En attente",

@@ -97,10 +97,9 @@ describe('LearningJourneyRail', () => {
     ).toBeInTheDocument()
   })
 
-  it('keeps a sheet visible without the desktop rail width', () => {
+  it('fills the Studio panel at every width, leaving the frame to Studio', () => {
     const { container } = render(
       <LearningJourneyRail
-        presentation="sheet"
         messages={messages}
         asides={[aside]}
         activeAsideId={null}
@@ -111,7 +110,7 @@ describe('LearningJourneyRail', () => {
     )
 
     const root = container.firstElementChild as HTMLElement
-    expect(root).toHaveAttribute('data-presentation', 'sheet')
+    expect(root).toHaveAttribute('data-journey')
     expect(root.classList.contains('flex')).toBe(true)
     expect(root.classList.contains('h-full')).toBe(true)
     expect(root.classList.contains('flex-col')).toBe(true)
@@ -119,9 +118,9 @@ describe('LearningJourneyRail', () => {
     expect(root.classList.contains('lg:block')).toBe(false)
     expect(root.classList.contains('lg:hidden')).toBe(false)
     expect(root.classList.contains('w-72')).toBe(false)
-    expect(
-      screen.queryByRole('button', { name: 'Collapse learningAsides.journey' })
-    ).not.toBeInTheDocument()
+    // Studio owns the collapse control and the panel title.
+    expect(screen.queryByRole('button', { name: /^Collapse / })).toBeNull()
+    expect(screen.queryByRole('heading')).toBeNull()
   })
 
   it('nests parked asides and lists open questions under the resolved aside', () => {

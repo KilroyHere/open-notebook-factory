@@ -261,7 +261,8 @@ export const bnIN = {
     recentlyViewed: "সম্প্রতি দেখা",
     toggleRecentlyViewed: "সম্প্রতি দেখা টগল করুন",
     lastViewed: "{{time}} দেখা হয়েছে",
-    knowledge: "জ্ঞান",
+    studio: "স্টুডিও",
+    backToNotebooks: "নোটবুকে ফিরে যান",
   },
   sources: {
     newSource: "নতুন উৎস",
@@ -440,7 +441,6 @@ export const bnIN = {
     pressToSend: "পাঠাতে {{key}} চাপুন",
     createToStart: "শুরু করতে একটি সেশন তৈরি করুন।",
     chatWithNotebook: "নোটবুকের সাথে চ্যাট করুন",
-    unableToLoadChat: "চ্যাট লোড করতে অক্ষম",
     noDescription: "কোন বিবরণ নেই",
     startByCreating: "আপনার ঠৈ সাজানোর জন্য প্রথম নোটবুক তৈরি করে শুরু করুন।",
     messagesCount: "{{count}}টি বার্তা",
@@ -509,6 +509,9 @@ export const bnIN = {
     unpinSection: "পিন সরান",
     sectionTitlePlaceholder: "বিভাগের শিরোনাম",
     sectionSaveFailed: "বিভাগটি সংরক্ষণ করা যায়নি",
+    statsSummary: "যাত্রার সারাংশ",
+    statsLearned: "শেখা হয়েছে",
+    statsSavedForLater: "পরের জন্য রাখা",
     status: {
       active: "সক্রিয়",
       parked: "স্থগিত",

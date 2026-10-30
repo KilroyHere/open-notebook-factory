@@ -261,7 +261,8 @@ export const esES = {
     recentlyViewed: "Vistos recientemente",
     toggleRecentlyViewed: "Alternar vistos recientemente",
     lastViewed: "Visto {{time}}",
-    knowledge: "Conocimiento",
+    studio: "Estudio",
+    backToNotebooks: "Volver a los cuadernos",
   },
   sources: {
     newSource: "Nueva fuente",
@@ -440,7 +441,6 @@ export const esES = {
     pressToSend: "Presiona {{key}} para enviar",
     createToStart: "Crea una sesión para comenzar.",
     chatWithNotebook: "Chat con cuaderno",
-    unableToLoadChat: "No se pudo cargar el chat",
     noDescription: "Sin descripción",
     startByCreating: "Comienza creando tu primer cuaderno para organizar tu investigación.",
     messagesCount: "{{count}} mensajes",
@@ -509,6 +509,9 @@ export const esES = {
     unpinSection: "Quitar fijación",
     sectionTitlePlaceholder: "Título de la sección",
     sectionSaveFailed: "No se pudo guardar la sección",
+    statsSummary: "Resumen del recorrido",
+    statsLearned: "Aprendido",
+    statsSavedForLater: "Guardado para después",
     status: {
       active: "Activo",
       parked: "Aparcado",

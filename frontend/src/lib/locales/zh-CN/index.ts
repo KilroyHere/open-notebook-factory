@@ -261,7 +261,8 @@ export const zhCN = {
     recentlyViewed: "最近查看",
     toggleRecentlyViewed: "切换最近查看",
     lastViewed: "查看于{{time}}",
-    knowledge: "资料",
+    studio: "工作室",
+    backToNotebooks: "返回笔记本",
   },
   sources: {
     newSource: "新建来源",
@@ -440,7 +441,6 @@ export const zhCN = {
     pressToSend: "按 {{key}} 发送",
     createToStart: "创建一个会话以开始。",
     chatWithNotebook: "与笔记本对话",
-    unableToLoadChat: "无法加载聊天",
     noDescription: "暂无描述",
     startByCreating: "从创建您的第一个笔记本开始，组织您的研究。",
     messagesCount: "{{count}} 条消息",
@@ -509,6 +509,9 @@ export const zhCN = {
     unpinSection: "取消固定",
     sectionTitlePlaceholder: "章节标题",
     sectionSaveFailed: "无法保存章节",
+    statsSummary: "学习旅程概览",
+    statsLearned: "已学到",
+    statsSavedForLater: "稍后再看",
     status: {
       active: "进行中",
       parked: "已暂存",

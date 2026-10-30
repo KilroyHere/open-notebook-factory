@@ -29,6 +29,7 @@ export function CollapsibleColumn({
         <Tooltip>
           <TooltipTrigger asChild>
             <button
+              type="button"
               onClick={onToggle}
               className={cn(
                 'flex min-h-0 flex-1 flex-col items-center justify-center gap-3',
@@ -40,6 +41,7 @@ export function CollapsibleColumn({
                 'py-6'
               )}
               aria-label={`Expand ${collapsedLabel}`}
+              aria-expanded={false}
             >
               <CollapsedIcon className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors flex-shrink-0" />
               <div
@@ -86,6 +88,7 @@ export function createCollapseButton(
               }}
               className="h-7 w-7 hover:bg-accent"
               aria-label={`Collapse ${label}`}
+              aria-expanded
             >
               <Icon className="h-4 w-4" />
             </Button>

@@ -261,7 +261,8 @@ export const plPL = {
     recentlyViewed: "Ostatnio przeglądane",
     toggleRecentlyViewed: "Przełącz ostatnio przeglądane",
     lastViewed: "Wyświetlono {{time}}",
-    knowledge: "Wiedza",
+    studio: "Studio",
+    backToNotebooks: "Wróć do notatników",
   },
   sources: {
     newSource: "Nowe źródło",
@@ -440,7 +441,6 @@ export const plPL = {
     pressToSend: "Naciśnij {{key}}, aby wysłać",
     createToStart: "Utwórz sesję, aby rozpocząć.",
     chatWithNotebook: "Czat z notatnikiem",
-    unableToLoadChat: "Nie można załadować czatu",
     noDescription: "Brak opisu",
     startByCreating: "Zacznij od utworzenia pierwszego notatnika, aby uporządkować swoje badania.",
     messagesCount: "Wiadomości: {{count}}",
@@ -509,6 +509,9 @@ export const plPL = {
     unpinSection: "Odepnij sekcję",
     sectionTitlePlaceholder: "Tytuł sekcji",
     sectionSaveFailed: "Nie udało się zapisać sekcji",
+    statsSummary: "Podsumowanie ścieżki",
+    statsLearned: "Nauczone",
+    statsSavedForLater: "Zapisane na później",
     status: {
       active: "Aktywna",
       parked: "Odłożona",

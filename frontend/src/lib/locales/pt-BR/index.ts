@@ -261,7 +261,8 @@ export const ptBR = {
     recentlyViewed: "Vistos recentemente",
     toggleRecentlyViewed: "Alternar vistos recentemente",
     lastViewed: "Visto {{time}}",
-    knowledge: "Conhecimento",
+    studio: "Estúdio",
+    backToNotebooks: "Voltar aos cadernos",
   },
   sources: {
     newSource: "Nova Fonte",
@@ -440,7 +441,6 @@ export const ptBR = {
     pressToSend: "Pressione {{key}} para enviar",
     createToStart: "Crie uma sessão para começar.",
     chatWithNotebook: "Conversar com Caderno",
-    unableToLoadChat: "Não foi possível carregar o chat",
     noDescription: "Sem descrição",
     startByCreating: "Comece criando seu primeiro caderno para organizar sua pesquisa.",
     messagesCount: "{{count}} mensagens",
@@ -509,6 +509,9 @@ export const ptBR = {
     unpinSection: "Desafixar seção",
     sectionTitlePlaceholder: "Título da seção",
     sectionSaveFailed: "Não foi possível salvar a seção",
+    statsSummary: "Resumo da jornada",
+    statsLearned: "Aprendido",
+    statsSavedForLater: "Salvo para depois",
     status: {
       active: "Ativo",
       parked: "Adiado",

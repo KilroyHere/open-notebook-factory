@@ -61,4 +61,12 @@ describe('NotebookHeader', () => {
     expect(headerRow?.className).toContain('flex-col')
     expect(headerRow?.className).toContain('sm:flex-row')
   })
+
+  it('links back to the notebook list', () => {
+    render(<NotebookHeader notebook={notebook} />)
+
+    expect(
+      screen.getByRole('link', { name: 'notebooks.backToNotebooks' })
+    ).toHaveAttribute('href', '/notebooks')
+  })
 })

@@ -16,23 +16,17 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import {
-  CollapsibleColumn,
-  createCollapseButton,
-} from '@/components/notebooks/CollapsibleColumn'
 import { LearningQuestionList } from '@/components/notebooks/LearningThreadLinks'
 import {
   LearningAside,
   LearningSection,
   NotebookChatMessage,
 } from '@/lib/types/api'
-import { useNotebookColumnsStore } from '@/lib/stores/notebook-columns-store'
 import { useTranslation } from '@/lib/hooks/use-translation'
 import {
   childDiveForQuestion,
   toPlainTextPreview,
 } from '@/lib/utils/learning-asides'
-import { cn } from '@/lib/utils'
 
 interface LearningJourneyRailProps {
   messages: NotebookChatMessage[]
@@ -46,7 +40,6 @@ interface LearningJourneyRailProps {
   sections?: LearningSection[]
   onRenameSection?: (sectionId: string, title: string) => void
   onTogglePinSection?: (sectionId: string, pinned: boolean) => void
-  presentation?: 'rail' | 'sheet'
 }
 
 function rootAsides(asides: LearningAside[]): LearningAside[] {
@@ -516,10 +509,8 @@ export function LearningJourneyRail({
   sections = [],
   onRenameSection,
   onTogglePinSection,
-  presentation = 'rail',
 }: LearningJourneyRailProps) {
   const { t } = useTranslation()
-  const { journeyCollapsed, toggleJourney } = useNotebookColumnsStore()
   const [tab, setTab] = useState('outline')
   const [mapExpanded, setMapExpanded] = useState(false)
 
@@ -527,7 +518,6 @@ export function LearningJourneyRail({
   const roots = rootAsides(visibleAsides)
   const { turns, loose } = buildOutline(messages, roots)
   const outlineGroups = groupOutlineTurns(turns, sections)
-  const label = t('learningAsides.journey')
 
   const closeMap = () => {
     setMapExpanded(false)
@@ -544,12 +534,11 @@ export function LearningJourneyRail({
     />
   )
 
-  const column = (
-    <aside
-      className={cn(
-        'relative flex h-full min-h-0 w-full flex-1 flex-col',
-        presentation === 'sheet' ? 'bg-card' : 'border-l bg-muted/20'
-      )}
+  // The Studio column owns the frame (title, collapse); this fills it.
+  return (
+    <div
+      data-journey
+      className="relative flex h-full min-h-0 w-full min-w-0 flex-1 flex-col"
     >
       {mapExpanded && (
         <div className="absolute inset-0 z-20 flex min-h-0 flex-col bg-card">
@@ -571,14 +560,6 @@ export function LearningJourneyRail({
           </ScrollArea>
         </div>
       )}
-      <div className="border-b px-4 py-3">
-        <div className="flex items-center gap-2">
-          <GitBranch className="h-4 w-4 text-teal" />
-          <h2 className="min-w-0 flex-1 text-sm font-semibold">{label}</h2>
-          {presentation === 'rail' &&
-            createCollapseButton(toggleJourney, label, 'right')}
-        </div>
-      </div>
       <Tabs
         value={tab}
         onValueChange={setTab}
@@ -685,36 +666,6 @@ export function LearningJourneyRail({
           </div>
         </TabsContent>
       </Tabs>
-    </aside>
-  )
-
-  if (presentation === 'sheet') {
-    return (
-      <div
-        data-presentation="sheet"
-        className="flex h-full min-h-0 w-full min-w-0 flex-col"
-      >
-        {column}
-      </div>
-    )
-  }
-
-  return (
-    <div
-      data-presentation="rail"
-      className={cn(
-        'hidden min-h-0 shrink-0 flex-col lg:flex',
-        journeyCollapsed ? 'w-12' : 'w-72 xl:w-80'
-      )}
-    >
-      <CollapsibleColumn
-        isCollapsed={journeyCollapsed}
-        onToggle={toggleJourney}
-        collapsedIcon={GitBranch}
-        collapsedLabel={label}
-      >
-        {column}
-      </CollapsibleColumn>
     </div>
   )
 }

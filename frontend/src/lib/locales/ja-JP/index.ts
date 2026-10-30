@@ -261,7 +261,8 @@ export const jaJP = {
     recentlyViewed: "最近表示した項目",
     toggleRecentlyViewed: "最近表示した項目の表示切替",
     lastViewed: "{{time}}に表示",
-    knowledge: "ナレッジ",
+    studio: "スタジオ",
+    backToNotebooks: "ノートブック一覧に戻る",
   },
   sources: {
     newSource: "新規ソース",
@@ -440,7 +441,6 @@ export const jaJP = {
     pressToSend: "{{key}}を押して送信",
     createToStart: "セッションを作成して開始",
     chatWithNotebook: "ノートブックとチャット",
-    unableToLoadChat: "チャットを読み込めません",
     noDescription: "説明なし",
     startByCreating: "最初のノートブックを作成してリサーチを整理しましょう。",
     messagesCount: "{{count}}件のメッセージ",
@@ -509,6 +509,9 @@ export const jaJP = {
     unpinSection: "固定を解除",
     sectionTitlePlaceholder: "セクション名",
     sectionSaveFailed: "セクションを保存できませんでした",
+    statsSummary: "学習ジャーニーの概要",
+    statsLearned: "学んだこと",
+    statsSavedForLater: "後で見る",
     status: {
       active: "進行中",
       parked: "保留中",
