@@ -54,7 +54,7 @@ A session is one conversation; its messages are saved and reloaded when you come
 
 Use an aside when an answer raises a prerequisite or tangent that you want to explore without filling the main conversation with the detour.
 
-1. Under an assistant answer, click **Open as an aside**.
+1. Under an assistant answer, click **Go deeper** (its tooltip reads "Open as an aside").
 2. Ask follow-up questions in the center conversation. The aside retains the selected answer and the parent conversation up to that point. **Back to origin message** returns you to the message that started it. When that link is available, the aside does not also quote the starting passage. A dive opened from a question, with no origin message, still shows the question.
 3. **Park** it to return later, **Discard** it if the tangent was not useful, or **Resolve aside** when you have an answer.
 4. Before resolving, edit the proposed conclusion and decide whether to use it in the main conversation, save it as a note, or both.

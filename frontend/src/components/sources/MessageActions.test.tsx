@@ -7,12 +7,15 @@ vi.mock('@/lib/hooks/use-notes', () => ({
 }))
 
 describe('MessageActions', () => {
-  it('labels the aside action visibly and keeps its accessible name', () => {
+  it('names the aside action by its visible label', () => {
     const onOpenAside = vi.fn()
     render(<MessageActions content="Answer" onOpenAside={onOpenAside} />)
 
-    const button = screen.getByRole('button', { name: 'learningAsides.open' })
-    expect(button).toHaveTextContent('learningAsides.goDeeper')
+    // WCAG 2.5.3 label in name: the accessible name is the visible text.
+    const button = screen.getByRole('button', {
+      name: 'learningAsides.goDeeper',
+    })
+    expect(button).not.toHaveAttribute('aria-label')
     fireEvent.click(button)
     expect(onOpenAside).toHaveBeenCalledOnce()
   })
