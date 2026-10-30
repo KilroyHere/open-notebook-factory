@@ -334,7 +334,7 @@ test('Go deeper on a passage in a full-height dive opens the new dive with the c
   await expect(diveComposer(page)).toBeFocused()
 })
 
-test('switching chat session while a reply is on its way shows the session switched to, and the turn stays in its own', async ({
+test('switching chat session while a reply is on its way shows the session switched to, which takes questions meanwhile', async ({
   page,
   api,
 }) => {
@@ -344,7 +344,7 @@ test('switching chat session while a reply is on its way shows the session switc
   const newer = api.addSession('Newer chat')
   api.addMessage(newer.messages, 'human', 'Question in the newer chat')
   api.addMessage(newer.messages, 'ai', 'Answer in the newer chat')
-  api.chatReplies.push('Reply to the follow-up')
+  // The mock answers each question with "A mock answer to: <question>".
   const answerNow = api.hold('POST', /^\/chat\/execute$/)
   await openNotebook(page)
   await expect(chatMessage(page, 'Answer in the newer chat')).toBeVisible()
@@ -352,22 +352,27 @@ test('switching chat session while a reply is on its way shows the session switc
   await mainComposer(page).fill('Follow-up in the newer chat')
   await mainComposer(page).press('ControlOrMeta+Enter')
   await expect(chatMessage(page, 'Follow-up in the newer chat')).toBeVisible()
+  await expect(mainComposer(page)).toBeDisabled()
 
-  // The learner opens the older chat while the model answers.
+  // The learner opens the older chat while the model answers: it shows its
+  // own conversation, and takes a question of its own.
   await switchChatSession(page, 'Newer chat', 'Older chat')
   await expect(chatMessage(page, 'Answer in the older chat')).toBeVisible()
   await expect(chatMessage(page, 'Follow-up in the newer chat')).toHaveCount(0)
+  await mainComposer(page).fill('Question asked meanwhile')
+  await mainComposer(page).press('ControlOrMeta+Enter')
+  await expect(chatMessage(page, 'Question asked meanwhile')).toBeVisible()
 
-  // The reply comes, and the newer chat is read again once the page has
-  // it; the older chat is still the one on screen.
-  const readAgain = () =>
-    api.callsTo('GET', `/chat/sessions/${newer.id}`).length
+  // Both replies come, and the newer chat is read again once the page has
+  // its reply; the older chat shows only its own.
+  const readAgain = () => api.callsTo('GET', `/chat/sessions/${newer.id}`).length
   const readsBefore = readAgain()
   answerNow()
+  await expect(chatMessage(page, 'A mock answer to: Question asked meanwhile')).toBeVisible()
   await expect.poll(readAgain).toBeGreaterThan(readsBefore)
   await nextFrames(page)
   await expect(chatMessage(page, 'Answer in the older chat')).toBeVisible()
-  await expect(chatMessage(page, 'Reply to the follow-up')).toHaveCount(0)
+  await expect(chatMessage(page, 'Follow-up in the newer chat')).toHaveCount(0)
 
   // Each journey's outline names only its own session's questions.
   const misplacedSections = () =>
@@ -384,10 +389,12 @@ test('switching chat session while a reply is on its way shows the session switc
       })
   expect(misplacedSections()).toEqual([])
 
-  // Back in the newer chat, the turn is there, and its question gets a
+  // Back in the newer chat, its turn is there, and its question gets a
   // section in that chat's journey.
   await switchChatSession(page, 'Older chat', 'Newer chat')
-  await expect(chatMessage(page, 'Reply to the follow-up')).toBeVisible()
+  await expect(
+    chatMessage(page, 'A mock answer to: Follow-up in the newer chat')
+  ).toBeVisible()
   const followUp = newer.messages.find((m) => m.content === 'Follow-up in the newer chat')
   await expect
     .poll(() =>

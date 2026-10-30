@@ -449,6 +449,103 @@ describe('useNotebookChat messages', () => {
     await waitFor(() => expect(result.current.messages).toEqual(stored[A.id]))
   })
 
+  describe('with two sessions', () => {
+    const A = { ...session, id: 'chat_session:A', title: 'A' }
+    const B = { ...session, id: 'chat_session:B', title: 'B' }
+    let stored: Record<string, NotebookChatMessage[]>
+    const contents = (messages: NotebookChatMessage[]) =>
+      messages.map((message) => message.content)
+
+    beforeEach(() => {
+      stored = {
+        [A.id]: [
+          { id: 'human:a', type: 'human', content: 'question in A' },
+          { id: 'ai:a', type: 'ai', content: 'answer in A' },
+        ],
+        [B.id]: [
+          { id: 'human:b', type: 'human', content: 'question in B' },
+          { id: 'ai:b', type: 'ai', content: 'answer in B' },
+        ],
+      }
+      vi.mocked(chatApi.listSessions).mockResolvedValue([A, B])
+      vi.mocked(chatApi.getSession).mockImplementation(async (id: string) => ({
+        ...(id === A.id ? A : B),
+        messages: stored[id],
+      }))
+    })
+
+    it('says a reply is on its way only in the session it was asked in', async () => {
+      const answer = deferred<typeof turn>()
+      vi.mocked(chatApi.sendMessage).mockReturnValue(answer.promise)
+      const { result } = renderChat()
+      await waitFor(() => expect(result.current.messages).toEqual(stored[A.id]))
+      let sending: Promise<unknown> = Promise.resolve()
+      await act(async () => {
+        sending = result.current.sendMessage('follow-up in A')
+      })
+      expect(result.current.isSending).toBe(true)
+
+      act(() => result.current.switchSession(B.id))
+      await waitFor(() => expect(result.current.messages).toEqual(stored[B.id]))
+      expect(result.current.isSending).toBe(false)
+
+      act(() => result.current.switchSession(A.id))
+      expect(result.current.isSending).toBe(true)
+      await act(async () => {
+        answer.resolve({ session_id: A.id, messages: stored[A.id] })
+        await sending
+      })
+      expect(result.current.isSending).toBe(false)
+    })
+
+    it('keeps each session\'s question when another session asks while it is answered', async () => {
+      const answerA = deferred<typeof turn>()
+      const answerB = deferred<typeof turn>()
+      vi.mocked(chatApi.sendMessage)
+        .mockReturnValueOnce(answerA.promise)
+        .mockReturnValueOnce(answerB.promise)
+      const { result } = renderChat()
+      await waitFor(() => expect(result.current.messages).toEqual(stored[A.id]))
+
+      let sendingA: Promise<unknown> = Promise.resolve()
+      await act(async () => {
+        sendingA = result.current.sendMessage('follow-up in A')
+      })
+      act(() => result.current.switchSession(B.id))
+      await waitFor(() => expect(result.current.messages).toEqual(stored[B.id]))
+      let sendingB: Promise<unknown> = Promise.resolve()
+      await act(async () => {
+        sendingB = result.current.sendMessage('follow-up in B')
+      })
+      expect(contents(result.current.messages)).toEqual([
+        'question in B',
+        'answer in B',
+        'follow-up in B',
+      ])
+
+      // A still shows its own question while both are answered...
+      act(() => result.current.switchSession(A.id))
+      expect(contents(result.current.messages)).toEqual([
+        'question in A',
+        'answer in A',
+        'follow-up in A',
+      ])
+      expect(result.current.isSending).toBe(true)
+
+      // ...and each reply lands in its own session.
+      stored[A.id] = [...stored[A.id], { id: 'human:a2', type: 'human', content: 'follow-up in A' }, { id: 'ai:a2', type: 'ai', content: 'reply in A' }]
+      stored[B.id] = [...stored[B.id], { id: 'human:b2', type: 'human', content: 'follow-up in B' }, { id: 'ai:b2', type: 'ai', content: 'reply in B' }]
+      await act(async () => {
+        answerB.resolve({ session_id: B.id, messages: stored[B.id] })
+        answerA.resolve({ session_id: A.id, messages: stored[A.id] })
+        await Promise.all([sendingA, sendingB])
+      })
+      expect(result.current.messages).toEqual(stored[A.id])
+      act(() => result.current.switchSession(B.id))
+      await waitFor(() => expect(result.current.messages).toEqual(stored[B.id]))
+    })
+  })
+
   it('keeps the reply when a read sent before it comes back after it, and reads the session again', async () => {
     const earlierRead = deferred<NotebookChatSessionWithMessages>()
     vi.mocked(chatApi.getSession)
