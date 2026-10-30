@@ -136,29 +136,31 @@ class LearningJourney(ObjectModel):
         main_session_id: str,
         objective: Optional[str] = None,
     ) -> "LearningJourney":
-        existing = await cls.get_for_main_session(main_session_id)
-        if existing:
-            if objective is not None and objective != existing.objective:
-                existing.objective = objective
-                await existing.save()
-            return existing
-
-        journey = cls(
-            notebook=notebook_id,
-            main_session=main_session_id,
-            active_session=main_session_id,
-            objective=objective,
-        )
-        try:
+        journey = await cls.get_for_main_session(main_session_id)
+        if journey is None:
+            journey = cls(
+                notebook=notebook_id,
+                main_session=main_session_id,
+                active_session=main_session_id,
+                objective=objective,
+            )
+            try:
+                await journey.save()
+                return journey
+            except (DatabaseOperationError, RuntimeError):
+                # Two requests (two asides, or an aside and a section sync) can
+                # both find no journey and both create one. The unique
+                # main-session index rejects the second; repo_create reports
+                # that, like a transaction conflict, as RuntimeError. Use the
+                # journey that won instead of failing.
+                winner = await cls.get_for_main_session(main_session_id)
+                if winner is None:
+                    raise
+                journey = winner
+        if objective is not None and objective != journey.objective:
+            journey.objective = objective
             await journey.save()
-            return journey
-        except DatabaseOperationError:
-            # The unique main-session index can race when two asides are opened
-            # together. Resolve the winner instead of surfacing a false failure.
-            existing = await cls.get_for_main_session(main_session_id)
-            if existing:
-                return existing
-            raise
+        return journey
 
     async def get_asides(
         self, include_discarded: bool = False
@@ -470,7 +472,18 @@ class LearningSection(ObjectModel):
             )
             try:
                 await section.save()
-            except DatabaseOperationError:
-                logger.exception(f"Failed to create section for message {message_id}")
+            except (DatabaseOperationError, RuntimeError):
+                # A concurrent sync can create the same section first: the
+                # unique (journey, start_message_id) index or a transaction
+                # conflict rejects this one, as RuntimeError from repo_create.
+                # Keep the section that won; fail if there is none.
+                created = {
+                    stored.start_message_id
+                    for stored in await cls.get_for_journey(journey_id)
+                }
+                if message_id not in created:
+                    raise
+                logger.debug(f"Section for {message_id} was created concurrently")
+                known.update(created)
             known.add(message_id)
         return await cls.get_for_journey(journey_id)
