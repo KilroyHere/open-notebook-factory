@@ -497,6 +497,7 @@ export const ptBR = {
     resumePrompt: "Abrir aparte: {{title}}",
     mainThread: "Conversa principal",
     journey: "Jornada de aprendizado",
+    journeyTab: "Jornada",
     returnToMain: "Voltar à conversa principal",
     origin: "Origem",
     backToOrigin: "Voltar à mensagem de origem",

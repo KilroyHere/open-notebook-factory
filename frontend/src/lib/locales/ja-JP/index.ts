@@ -497,6 +497,7 @@ export const jaJP = {
     resumePrompt: "補足会話を開く：{{title}}",
     mainThread: "メインスレッド",
     journey: "学習ジャーニー",
+    journeyTab: "ジャーニー",
     returnToMain: "メインスレッドに戻る",
     origin: "起点",
     backToOrigin: "起点のメッセージに戻る",

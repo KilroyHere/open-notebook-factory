@@ -497,6 +497,7 @@ export const bnIN = {
     resumePrompt: "পার্শ্ব আলোচনা খুলুন: {{title}}",
     mainThread: "মূল ধারা",
     journey: "শেখার যাত্রা",
+    journeyTab: "যাত্রা",
     returnToMain: "মূল ধারায় ফিরুন",
     origin: "উৎস",
     backToOrigin: "উৎস বার্তায় ফিরুন",

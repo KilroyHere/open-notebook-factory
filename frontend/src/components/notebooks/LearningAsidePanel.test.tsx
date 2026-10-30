@@ -65,6 +65,10 @@ describe('LearningAsidePanel', () => {
         onSelectAside={onSelectAside}
       />
     )
+    // The list keeps the long title; Studio's tab uses the short one.
+    expect(
+      screen.getByRole('region', { name: 'learningAsides.journey' })
+    ).toBeInTheDocument()
 
     fireEvent.click(screen.getByText('Why does Jensen apply?'))
 

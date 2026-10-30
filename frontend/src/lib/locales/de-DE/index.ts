@@ -500,6 +500,7 @@ export const deDE = {
     resumePrompt: "Exkurs öffnen: {{title}}",
     mainThread: "Hauptverlauf",
     journey: "Lernreise",
+    journeyTab: "Lernreise",
     returnToMain: "Zum Hauptverlauf",
     origin: "Ursprung",
     backToOrigin: "Zur Ursprungsnachricht",

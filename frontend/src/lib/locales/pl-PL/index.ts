@@ -497,6 +497,7 @@ export const plPL = {
     resumePrompt: "Otwórz dygresję: {{title}}",
     mainThread: "Główny wątek",
     journey: "Ścieżka nauki",
+    journeyTab: "Ścieżka",
     returnToMain: "Wróć do głównego wątku",
     origin: "Początek",
     backToOrigin: "Wróć do wiadomości źródłowej",

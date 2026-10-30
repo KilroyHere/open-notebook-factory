@@ -495,6 +495,7 @@ export const enUS = {
     resumePrompt: "Open aside: {{title}}",
     mainThread: "Main thread",
     journey: "Learning journey",
+    journeyTab: "Journey",
     returnToMain: "Return to main thread",
     origin: "Origin",
     backToOrigin: "Back to origin message",

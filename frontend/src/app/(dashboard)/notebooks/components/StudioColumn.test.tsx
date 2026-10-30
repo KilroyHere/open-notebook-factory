@@ -78,7 +78,7 @@ describe('StudioColumn', () => {
     render(<StudioColumn workspace={createWorkspace([aside])} notes={notes} />)
 
     expect(
-      screen.getByRole('tab', { name: 'learningAsides.journey' })
+      screen.getByRole('tab', { name: 'learningAsides.journeyTab' })
     ).toHaveAttribute('data-state', 'active')
     expect(
       screen.getByLabelText('learningAsides.statsSummary')
@@ -90,7 +90,7 @@ describe('StudioColumn', () => {
     const { rerender } = render(
       <StudioColumn workspace={createWorkspace()} notes={notes} />
     )
-    openTab('learningAsides.journey')
+    openTab('learningAsides.journeyTab')
     rerender(<StudioColumn workspace={createWorkspace([aside])} notes={notes} />)
     openTab('common.notes')
     rerender(<StudioColumn workspace={createWorkspace([aside])} notes={notes} />)
@@ -118,7 +118,7 @@ describe('StudioColumn', () => {
     expect(screen.queryByRole('tab')).toBeNull()
     fireEvent.click(expand)
     expect(
-      screen.getByRole('tab', { name: 'learningAsides.journey' })
+      screen.getByRole('tab', { name: 'learningAsides.journeyTab' })
     ).toBeInTheDocument()
   })
 

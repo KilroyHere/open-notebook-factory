@@ -497,6 +497,7 @@ export const zhTW = {
     resumePrompt: "開啟支線討論：{{title}}",
     mainThread: "主對話",
     journey: "學習旅程",
+    journeyTab: "旅程",
     returnToMain: "返回主對話",
     origin: "起點",
     backToOrigin: "返回起點訊息",

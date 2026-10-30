@@ -79,7 +79,8 @@ export function StudioColumn({
         >
           <TabsTrigger value="journey" className="gap-1.5">
             <GitBranch className="h-3.5 w-3.5" />
-            {t('learningAsides.journey')}
+            {/* The short name fits beside Notes in a narrow column. */}
+            {t('learningAsides.journeyTab')}
           </TabsTrigger>
           <TabsTrigger value="notes" className="gap-1.5">
             <StickyNote className="h-3.5 w-3.5" />

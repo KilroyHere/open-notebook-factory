@@ -497,6 +497,7 @@ export const zhCN = {
     resumePrompt: "打开旁支讨论：{{title}}",
     mainThread: "主对话",
     journey: "学习旅程",
+    journeyTab: "旅程",
     returnToMain: "返回主对话",
     origin: "起点",
     backToOrigin: "返回起点消息",

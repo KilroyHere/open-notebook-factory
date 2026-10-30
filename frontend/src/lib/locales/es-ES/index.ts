@@ -497,6 +497,7 @@ export const esES = {
     resumePrompt: "Abrir aparte: {{title}}",
     mainThread: "Hilo principal",
     journey: "Recorrido de aprendizaje",
+    journeyTab: "Recorrido",
     returnToMain: "Volver al hilo principal",
     origin: "Origen",
     backToOrigin: "Volver al mensaje de origen",

@@ -497,6 +497,7 @@ export const frFR = {
     resumePrompt: "Ouvrir l’aparté : {{title}}",
     mainThread: "Fil principal",
     journey: "Parcours d’apprentissage",
+    journeyTab: "Parcours",
     returnToMain: "Retour au fil principal",
     origin: "Origine",
     backToOrigin: "Retour au message d’origine",

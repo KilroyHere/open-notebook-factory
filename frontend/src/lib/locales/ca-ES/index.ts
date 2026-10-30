@@ -497,6 +497,7 @@ export const caES = {
     resumePrompt: "Obre l’incís: {{title}}",
     mainThread: "Fil principal",
     journey: "Itinerari d’aprenentatge",
+    journeyTab: "Itinerari",
     returnToMain: "Torna al fil principal",
     origin: "Origen",
     backToOrigin: "Torna al missatge d’origen",

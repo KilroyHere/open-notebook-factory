@@ -497,6 +497,7 @@ export const ruRU = {
     resumePrompt: "Открыть ответвление: {{title}}",
     mainThread: "Основная ветка",
     journey: "Путь обучения",
+    journeyTab: "Путь",
     returnToMain: "Вернуться в основную ветку",
     origin: "Источник",
     backToOrigin: "Вернуться к исходному сообщению",

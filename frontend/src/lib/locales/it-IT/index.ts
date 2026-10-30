@@ -497,6 +497,7 @@ export const itIT = {
     resumePrompt: "Apri digressione: {{title}}",
     mainThread: "Conversazione principale",
     journey: "Percorso di apprendimento",
+    journeyTab: "Percorso",
     returnToMain: "Torna alla conversazione principale",
     origin: "Origine",
     backToOrigin: "Torna al messaggio di origine",

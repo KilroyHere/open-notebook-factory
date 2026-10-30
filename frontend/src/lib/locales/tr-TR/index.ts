@@ -497,6 +497,7 @@ export const trTR = {
     resumePrompt: "Yan konuşmayı aç: {{title}}",
     mainThread: "Ana konuşma",
     journey: "Öğrenme yolculuğu",
+    journeyTab: "Yolculuk",
     returnToMain: "Ana konuşmaya dön",
     origin: "Başlangıç",
     backToOrigin: "Başlangıç mesajına dön",
