@@ -382,23 +382,30 @@ async def create_aside(request: CreateLearningAsideRequest):
         kind=LEARNING_ASIDE_SESSION_KIND,
     )
     await child_session.save()
-    await child_session.relate_to_notebook(
-        normalize_record_id("notebook", request.notebook_id)
-    )
-
-    aside = LearningAside(
-        journey=journey.id or "",
-        parent_aside=parent_aside.id if parent_aside else None,
-        parent_session=parent_session_id,
-        chat_session=child_session.id or "",
-        title=title,
-        anchor=anchor,
-        context_snapshot=context_snapshot,
-    )
     try:
+        await child_session.relate_to_notebook(
+            normalize_record_id("notebook", request.notebook_id)
+        )
+        aside = LearningAside(
+            journey=journey.id or "",
+            parent_aside=parent_aside.id if parent_aside else None,
+            parent_session=parent_session_id,
+            chat_session=child_session.id or "",
+            title=title,
+            anchor=anchor,
+            context_snapshot=context_snapshot,
+        )
         await aside.save()
     except Exception:
-        await child_session.delete()
+        # No aside points at the child session yet. Remove it, so a failed
+        # create leaves no hidden session behind (one that never got its
+        # notebook relation would not even go with the notebook).
+        try:
+            await child_session.delete()
+        except Exception:
+            logger.exception(
+                f"Could not remove {child_session.id} after its aside failed"
+            )
         raise
 
     journey.active_session = child_session.id

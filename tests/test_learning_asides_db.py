@@ -454,3 +454,42 @@ async def test_a_discarded_asides_conclusion_stays_out_of_main_chat():
         "Dropped conclusion",
         "Kept conclusion",
     ]
+
+
+# --- Creating an aside ---------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_a_failed_aside_create_leaves_no_child_session():
+    from langchain_core.messages import AIMessage
+
+    from api.models import AsideAnchorRequest, CreateLearningAsideRequest
+    from api.routers.learning import create_aside
+
+    async with memory_database() as db:
+        notebook, main = await notebook_with_main_session()
+        request = CreateLearningAsideRequest(
+            notebook_id=notebook.id or "",
+            parent_session_id=main.id or "",
+            anchor=AsideAnchorRequest(
+                type="message", message_id="ai-1", content="The ELBO bound."
+            ),
+        )
+        with (
+            patch(
+                "api.routers.learning._raw_session_messages",
+                return_value=[AIMessage(content="The ELBO bound.", id="ai-1")],
+            ),
+            patch.object(
+                ChatSession,
+                "relate_to_notebook",
+                side_effect=DatabaseOperationError("The database is unavailable"),
+            ),
+        ):
+            with pytest.raises(DatabaseOperationError, match="unavailable"):
+                await create_aside(request)
+        sessions = await db.query("SELECT VALUE id FROM chat_session")
+        asides = await count(db, "learning_aside")
+
+    assert [str(session) for session in sessions] == [main.id]
+    assert asides == 0

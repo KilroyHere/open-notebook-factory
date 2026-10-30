@@ -172,6 +172,96 @@ async def test_create_aside_persists_child_session_and_journey_navigation(client
 
 
 @pytest.mark.parametrize(
+    ("failing_step", "cleanup_fails"),
+    [
+        ("api.routers.learning.ChatSession.relate_to_notebook", False),
+        ("api.routers.learning.LearningAside.save", False),
+        # The original error still surfaces when the cleanup fails too.
+        ("api.routers.learning.ChatSession.relate_to_notebook", True),
+        ("api.routers.learning.LearningAside.save", True),
+    ],
+    ids=[
+        "relate-fails",
+        "aside-save-fails",
+        "relate-and-cleanup-fail",
+        "aside-save-and-cleanup-fail",
+    ],
+)
+def test_failed_aside_create_removes_its_child_session(
+    client, failing_step, cleanup_fails
+):
+    from open_notebook.exceptions import DatabaseOperationError
+
+    async def save_session(session):
+        session.id = "chat_session:child"
+        session.created = NOW
+        session.updated = NOW
+
+    patches = {
+        "api.routers.learning.ChatSession.relate_to_notebook": AsyncMock(),
+        "api.routers.learning.LearningAside.save": AsyncMock(),
+    }
+    patches[failing_step] = AsyncMock(
+        side_effect=DatabaseOperationError("The database is unavailable")
+    )
+    delete = AsyncMock(
+        side_effect=RuntimeError("Failed to delete record") if cleanup_fails else None
+    )
+    with (
+        patch(
+            "api.routers.learning._verify_notebook_session",
+            new_callable=AsyncMock,
+            return_value=(
+                "chat_session:main",
+                SimpleNamespace(id="notebook:one"),
+                SimpleNamespace(model_override=None),
+            ),
+        ),
+        patch(
+            "api.routers.learning._snapshot_parent_context",
+            new_callable=AsyncMock,
+            return_value=[],
+        ),
+        patch(
+            "api.routers.learning.LearningAside.get_for_chat_session",
+            new_callable=AsyncMock,
+            return_value=None,
+        ),
+        patch(
+            "api.routers.learning.LearningJourney.get_or_create",
+            new_callable=AsyncMock,
+            return_value=_journey(),
+        ),
+        patch("api.routers.learning.ChatSession.save", new=save_session),
+        patch("api.routers.learning.ChatSession.delete", new=delete),
+        patch(
+            "api.routers.learning.ChatSession.relate_to_notebook",
+            new=patches["api.routers.learning.ChatSession.relate_to_notebook"],
+        ),
+        patch(
+            "api.routers.learning.LearningAside.save",
+            new=patches["api.routers.learning.LearningAside.save"],
+        ),
+        patch(
+            "api.routers.learning.LearningJourney.save", new_callable=AsyncMock
+        ) as save_journey,
+    ):
+        response = client.post(
+            "/api/learning/asides",
+            json={
+                "notebook_id": "notebook:one",
+                "parent_session_id": "chat_session:main",
+                "anchor": {"type": "message", "content": "Why Jensen?"},
+            },
+        )
+
+    assert response.status_code == 500
+    assert response.json()["detail"] == "The database is unavailable"
+    delete.assert_awaited_once()
+    save_journey.assert_not_called()
+
+
+@pytest.mark.parametrize(
     ("url", "body", "parent_patch", "relate_patch"),
     [
         (
