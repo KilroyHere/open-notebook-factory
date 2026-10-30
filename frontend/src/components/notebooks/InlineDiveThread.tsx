@@ -180,14 +180,18 @@ export function InlineDiveThread(props: InlineDiveThreadProps) {
     else controller.onExpand(aside.id)
   }
 
-  // Discarding removes the thread; the cursor goes back to its answer.
+  // Saved for later, a dive folds to its row; discarded, it disappears and
+  // the cursor goes back to its answer.
   const updateStatus = async (
     asideId: string,
     status: Exclude<LearningAsideStatus, 'resolved'>
   ) => {
     const answer = containerRef.current?.closest<HTMLElement>('[tabindex="-1"]')
     await controller?.onUpdateStatus(asideId, status)
-    if (status === 'discarded' && document.activeElement === document.body) {
+    if (status === 'parked') {
+      controller?.onCollapse(asideId)
+      rowRef.current?.focus({ preventScroll: true })
+    } else if (status === 'discarded' && document.activeElement === document.body) {
       answer?.focus({ preventScroll: true })
     }
   }

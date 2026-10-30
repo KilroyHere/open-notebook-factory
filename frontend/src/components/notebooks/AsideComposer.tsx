@@ -45,7 +45,9 @@ export function AsideComposer({
   const [input, setInputState] = useState(() => drafts.get(asideId) ?? '')
   const inputRef = useRef(input)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const handledFocusRequest = useRef(0)
+  // Only requests made while the box is on screen count: a dive folded and
+  // unfolded again does not grab the cursor (or a phone's keyboard).
+  const handledFocusRequest = useRef(focusRequest)
 
   const setInput = (value: string) => {
     inputRef.current = value

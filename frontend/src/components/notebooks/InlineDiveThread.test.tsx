@@ -310,6 +310,12 @@ describe('InlineDiveThread', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'learningAsides.saveForLater' }))
     expect(spies.onUpdateStatus).toHaveBeenCalledWith(dive.id, 'parked')
+    // Saved for later, the dive folds to its row, which keeps the cursor.
+    await waitFor(() =>
+      expect(row(/Why Jensen applies/)).toHaveAttribute('aria-expanded', 'false')
+    )
+    expect(document.activeElement).toBe(row(/Why Jensen applies/))
+    fireEvent.click(row(/Why Jensen applies/))
 
     fireEvent.click(screen.getByRole('button', { name: 'learningAsides.discard' }))
     await waitFor(() =>
@@ -497,6 +503,22 @@ describe('InlineDiveThread', () => {
     expect(document.activeElement).toBe(
       screen.getByLabelText('learningAsides.askPlaceholder')
     )
+  })
+
+  it('does not grab the cursor again when a focused dive is unfolded later', async () => {
+    const attention: DiveAttention = { asideId: dive.id, scroll: null, focus: true }
+    const { rerender } = render(
+      <Harness asides={[dive]} initialExpanded={dive.id} overrides={{ attention }} />
+    )
+    const box = () => screen.getByLabelText('learningAsides.askPlaceholder')
+    await waitFor(() => expect(document.activeElement).toBe(box()))
+
+    rerender(<Harness asides={[dive]} initialExpanded={dive.id} />)
+    fireEvent.click(row(/Why Jensen applies/))
+    fireEvent.click(row(/Why Jensen applies/))
+
+    expect(box()).toBeInTheDocument()
+    expect(document.activeElement).not.toBe(box())
   })
 
   it('keeps the clicked row in place when a dive above it folds', () => {
