@@ -15,7 +15,7 @@ Behavior notes:
 """
 
 from dataclasses import dataclass
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
 from fastapi import HTTPException
 from loguru import logger
@@ -24,6 +24,7 @@ from pydantic import BaseModel, Field
 from open_notebook.database.repository import ensure_record_id, repo_query
 from open_notebook.domain.learning import LearningJourney, LearningUpdate
 from open_notebook.domain.notebook import ChatSession, Source
+from open_notebook.utils.token_utils import token_count
 
 
 # Shared response models
@@ -64,6 +65,33 @@ _MODEL_VISIBLE_UPDATE_FIELDS = (
     "citations",
 )
 
+# Token budget for the accepted learning conclusions sent with one main-chat
+# turn. Without a cap, every conclusion a learner ever accepted would ride along
+# on every turn, and a long journey would crowd out the sources and the
+# conversation itself. Each conclusion is measured as the model sees it (its
+# conclusion, relevance, open questions and citations, rendered like the rest
+# of the context dict) with token_count(), which falls back to an estimate when
+# the tokenizer is unavailable. The newest conclusions are kept first; the first
+# one that does not fit ends the selection, so it and every older one are left
+# out of the turn, and POST /chat/context reports how many as
+# learning_updates_omitted. 4,000 tokens is about 3,000 English words: roughly
+# ten to twenty typical conclusions, while the prompt stays compact (ADR-014).
+LEARNING_UPDATES_TOKEN_BUDGET = 4_000
+
+
+def _model_visible_update(entry: Dict[str, Any]) -> Dict[str, Any]:
+    """The fields of a learning-update context entry that the model may see."""
+    return {
+        field: entry[field]
+        for field in _MODEL_VISIBLE_UPDATE_FIELDS
+        if entry.get(field)
+    }
+
+
+def _model_visible_text(update: LearningUpdate) -> str:
+    """An accepted update rendered the way the prompt shows it."""
+    return str(_model_visible_update(update.as_context_entry()))
+
 
 def model_facing_context(context: Dict[str, Any]) -> Dict[str, Any]:
     """Return a copy of chat context that is safe to render into a prompt.
@@ -79,11 +107,7 @@ def model_facing_context(context: Dict[str, Any]) -> Dict[str, Any]:
         prepared.pop("learning_updates", None)
         return prepared
     visible = [
-        {
-            field: item[field]
-            for field in _MODEL_VISIBLE_UPDATE_FIELDS
-            if item.get(field)
-        }
+        _model_visible_update(item)
         for item in updates
         if isinstance(item, dict) and item.get("conclusion")
     ]
@@ -99,15 +123,54 @@ def model_facing_context(context: Dict[str, Any]) -> Dict[str, Any]:
 _SERVER_LEARNING_KEYS = ("learning_updates", "learning_updates_instruction")
 
 
+def _created_timestamp(update: LearningUpdate) -> float:
+    return update.created.timestamp() if update.created else float("-inf")
+
+
+def fit_learning_updates_to_budget(
+    updates: Sequence[LearningUpdate], budget_tokens: int
+) -> Tuple[Tuple[LearningUpdate, ...], int]:
+    """Keep the newest accepted updates that fit in ``budget_tokens``.
+
+    Updates are taken newest first, by ``created``, with the later position in
+    ``updates`` winning a tie, and kept while their running token total fits.
+    The first update that does not fit ends the selection, so what is kept is
+    always the most recent run of conclusions: an older, shorter one never takes
+    the place of a newer one. Returns the kept updates in their input order
+    (oldest first, the order the prompt lists them in) and how many were left
+    out.
+    """
+    newest_first = sorted(
+        range(len(updates)),
+        key=lambda index: (_created_timestamp(updates[index]), index),
+        reverse=True,
+    )
+    kept: Set[int] = set()
+    used = 0
+    for index in newest_first:
+        used += token_count(_model_visible_text(updates[index]))
+        if used > budget_tokens:
+            break
+        kept.add(index)
+    selected = tuple(update for index, update in enumerate(updates) if index in kept)
+    return selected, len(updates) - len(selected)
+
+
 @dataclass(frozen=True)
 class MainLearningContext:
     """The accepted learning updates that go with a main-chat turn."""
 
     updates: Tuple[LearningUpdate, ...] = ()
+    # Accepted updates left out because LEARNING_UPDATES_TOKEN_BUDGET was full.
+    omitted: int = 0
 
     def context_entries(self) -> List[Dict[str, Any]]:
         """The updates as ``learning_updates`` context entries, record IDs included."""
         return [update.as_context_entry() for update in self.updates]
+
+    def model_text(self) -> str:
+        """The updates as the model sees them, for token and character counts."""
+        return "".join(_model_visible_text(update) for update in self.updates)
 
 
 async def load_main_learning_context(
@@ -119,18 +182,26 @@ async def load_main_learning_context(
     ``POST /chat/context`` returns its result for display and
     ``POST /chat/execute`` sends the same result to the model, so the two cannot
     disagree. The updates are the latest, included version of each aside on the
-    journey whose main session is ``session_id``; an aside's own session has no
-    journey and gets none. When ``notebook_id`` is given, a journey that belongs
-    to another notebook contributes nothing.
+    journey whose main session is ``session_id``, cut to the newest ones that
+    fit in LEARNING_UPDATES_TOKEN_BUDGET; an aside's own session has no journey
+    and gets none. When ``notebook_id`` is given, a journey that belongs to
+    another notebook contributes nothing.
     """
     journey = await LearningJourney.get_for_main_session(session_id)
     if journey is None:
         return MainLearningContext()
     if notebook_id is not None and journey.notebook != notebook_id:
         return MainLearningContext()
-    return MainLearningContext(
-        updates=tuple(await journey.get_updates(include_unmerged=False))
+    accepted = await journey.get_updates(include_unmerged=False)
+    updates, omitted = fit_learning_updates_to_budget(
+        accepted, LEARNING_UPDATES_TOKEN_BUDGET
     )
+    if omitted:
+        logger.debug(
+            f"Left {omitted} accepted learning update(s) out of {session_id}: "
+            f"over the {LEARNING_UPDATES_TOKEN_BUDGET}-token budget"
+        )
+    return MainLearningContext(updates=updates, omitted=omitted)
 
 
 def main_chat_model_context(

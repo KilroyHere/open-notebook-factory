@@ -1,5 +1,6 @@
 """API coverage for learning-aside lifecycle and context integration."""
 
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from types import SimpleNamespace
 from typing import Any
@@ -741,12 +742,20 @@ def test_main_chat_prompt_forbids_citing_learning_ids():
     assert "Never cite or mention internal record IDs" in rendered
 
 
-def _execute_main_chat(client, request_context, learning, notebook_rows=()):
+def _execute_main_chat(client, request_context, learning=None, notebook_rows=()):
     """POST /api/chat/execute with the database and model mocked out.
 
-    Returns the response, the context the model received, the loader mock and
-    the backlink mock.
+    ``learning`` is what the learning-context loader returns; with None the
+    real loader runs (patch the journey lookups instead). Returns the response,
+    the context the model received, the loader mock and the backlink mock.
     """
+    from api.routers._chat_shared import load_main_learning_context
+
+    loader = (
+        AsyncMock(wraps=load_main_learning_context)
+        if learning is None
+        else AsyncMock(return_value=learning)
+    )
     captured: dict[str, Any] = {}
 
     def fake_invoke(graph, state, config, user_message):
@@ -781,9 +790,7 @@ def _execute_main_chat(client, request_context, learning, notebook_rows=()):
         ),
         patch("api.routers.chat.invoke_chat_turn", new=fake_invoke),
         patch(
-            "api.routers.chat.load_main_learning_context",
-            new_callable=AsyncMock,
-            return_value=learning,
+            "api.routers.chat.load_main_learning_context", new=loader
         ) as load_learning,
         patch(
             "api.routers.chat._mark_learning_updates_applied",
@@ -1405,3 +1412,240 @@ def test_journey_listing_can_still_include_transcripts(client):
     assert response.status_code == 200
     assert response.json()["asides"][0]["messages"][0]["content"] == "Hello"
     assert raw_messages.await_count == 2
+
+
+# --- Token budget for accepted conclusions -----------------------------------
+
+
+def _priced_update(name: str, cost: int, minute: int | None = None, **fields):
+    """An accepted update whose prompt text costs ``cost`` fake tokens."""
+    return LearningUpdate(
+        id=f"learning_update:{name}",
+        aside=f"learning_aside:{name}",
+        conclusion=f"{name} cost={cost}",
+        created=None if minute is None else datetime(2026, 10, 28, 12, minute),
+        **fields,
+    )
+
+
+def _fake_token_count(text: str) -> int:
+    """Charge each update the cost written into its conclusion."""
+    import re
+
+    return sum(int(cost) for cost in re.findall(r"cost=(\d+)", text))
+
+
+def _fit(updates, budget):
+    from api.routers._chat_shared import fit_learning_updates_to_budget
+
+    with patch("api.routers._chat_shared.token_count", new=_fake_token_count):
+        kept, omitted = fit_learning_updates_to_budget(updates, budget)
+    return [update.id for update in kept], omitted
+
+
+def test_budget_keeps_every_update_that_fits():
+    updates = [_priced_update("a", 100, 1), _priced_update("b", 100, 2)]
+
+    assert _fit(updates, 200) == (["learning_update:a", "learning_update:b"], 0)
+
+
+def test_budget_keeps_the_newest_updates_in_chronological_order():
+    updates = [
+        _priced_update("oldest", 100, 1),
+        _priced_update("middle", 100, 2),
+        _priced_update("newest", 100, 3),
+    ]
+
+    assert _fit(updates, 250) == (
+        ["learning_update:middle", "learning_update:newest"],
+        1,
+    )
+
+
+def test_budget_ranks_by_creation_time_not_list_position():
+    updates = [
+        _priced_update("newest", 100, 3),
+        _priced_update("oldest", 100, 1),
+        _priced_update("middle", 100, 2),
+    ]
+
+    # The oldest is left out; the kept ones keep their list order.
+    assert _fit(updates, 200) == (
+        ["learning_update:newest", "learning_update:middle"],
+        1,
+    )
+
+
+def test_budget_stops_at_the_first_update_that_does_not_fit():
+    updates = [
+        _priced_update("old-short", 10, 1),
+        _priced_update("long", 150, 2),
+        _priced_update("newest", 100, 3),
+    ]
+
+    # "long" does not fit after "newest"; the shorter, older update behind it
+    # is not used to fill the gap.
+    assert _fit(updates, 200) == (["learning_update:newest"], 2)
+
+
+def test_budget_leaves_everything_out_when_the_newest_alone_is_too_large():
+    updates = [_priced_update("small", 10, 1), _priced_update("huge", 500, 2)]
+
+    assert _fit(updates, 200) == ([], 2)
+
+
+def test_budget_treats_later_list_positions_as_newer_without_timestamps():
+    updates = [_priced_update("first", 100), _priced_update("second", 100)]
+
+    assert _fit(updates, 150) == (["learning_update:second"], 1)
+
+
+def test_budget_measures_the_model_visible_update():
+    from api.routers._chat_shared import fit_learning_updates_to_budget
+
+    update = LearningUpdate(
+        id="learning_update:one",
+        aside="learning_aside:one",
+        conclusion="Jensen gives a lower bound.",
+        relevance="First derivation step.",
+        open_questions=["Why a Gaussian prior?"],
+        citations=["source:paper"],
+        applied_message_id="ai:earlier",
+    )
+    measured: list[str] = []
+
+    def count(text: str) -> int:
+        measured.append(text)
+        return 1
+
+    with patch("api.routers._chat_shared.token_count", new=count):
+        fit_learning_updates_to_budget([update], 10)
+
+    [text] = measured
+    for visible in (
+        "Jensen gives a lower bound.",
+        "First derivation step.",
+        "Why a Gaussian prior?",
+        "source:paper",
+    ):
+        assert visible in text
+    assert "learning_update:" not in text
+    assert "ai:earlier" not in text
+
+
+@contextmanager
+def _journey_with_updates(updates, budget):
+    """A main-session journey with these accepted updates and token budget."""
+    with (
+        patch(
+            "api.routers._chat_shared.LearningJourney.get_for_main_session",
+            new_callable=AsyncMock,
+            return_value=_journey(),
+        ),
+        patch(
+            "api.routers._chat_shared.LearningJourney.get_updates",
+            new_callable=AsyncMock,
+            return_value=updates,
+        ),
+        patch("api.routers._chat_shared.LEARNING_UPDATES_TOKEN_BUDGET", budget),
+        patch("api.routers._chat_shared.token_count", new=_fake_token_count),
+    ):
+        yield
+
+
+@pytest.mark.asyncio
+async def test_learning_context_applies_the_budget():
+    from api.routers._chat_shared import load_main_learning_context
+
+    updates = [_priced_update("old", 300, 1), _priced_update("new", 300, 2)]
+    with _journey_with_updates(updates, 400):
+        learning = await load_main_learning_context(
+            "chat_session:main", notebook_id="notebook:one"
+        )
+
+    assert [update.id for update in learning.updates] == ["learning_update:new"]
+    assert learning.omitted == 1
+
+
+def test_build_context_reports_updates_left_out_by_the_budget(client):
+    updates = [
+        _priced_update("oldest", 300, 1),
+        _priced_update("middle", 300, 2),
+        _priced_update("newest", 300, 3),
+    ]
+    with (
+        patch(
+            "api.routers.chat.Notebook.get",
+            new_callable=AsyncMock,
+            return_value=SimpleNamespace(id="notebook:one"),
+        ),
+        patch(
+            "api.routers.chat.build_notebook_context",
+            new_callable=AsyncMock,
+            return_value=({"sources": [], "notes": []}, ""),
+        ),
+        _journey_with_updates(updates, 700),
+    ):
+        response = client.post(
+            "/api/chat/context",
+            json={
+                "notebook_id": "notebook:one",
+                "session_id": "main",
+                "context_config": {"sources": {}, "notes": {}},
+            },
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert [entry["id"] for entry in body["context"]["learning_updates"]] == [
+        "learning_update:middle",
+        "learning_update:newest",
+    ]
+    assert body["learning_updates_omitted"] == 1
+    # Only what is sent is counted.
+    assert "oldest" not in str(body["context"])
+    assert body["char_count"] == len(
+        "{'conclusion': 'middle cost=300'}{'conclusion': 'newest cost=300'}"
+    )
+
+
+def test_build_context_without_a_session_omits_nothing(client):
+    with (
+        patch(
+            "api.routers.chat.Notebook.get",
+            new_callable=AsyncMock,
+            return_value=SimpleNamespace(id="notebook:one"),
+        ),
+        patch(
+            "api.routers.chat.build_notebook_context",
+            new_callable=AsyncMock,
+            return_value=({"sources": [], "notes": []}, "Base context"),
+        ),
+    ):
+        response = client.post(
+            "/api/chat/context",
+            json={
+                "notebook_id": "notebook:one",
+                "context_config": {"sources": {}, "notes": {}},
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json()["learning_updates_omitted"] == 0
+    assert "learning_updates" not in response.json()["context"]
+
+
+def test_execute_chat_sends_and_links_only_updates_within_the_budget(client):
+    updates = [_priced_update("old", 300, 1), _priced_update("new", 300, 2)]
+    with _journey_with_updates(updates, 400):
+        response, model_context, _, mark_applied = _execute_main_chat(
+            client, {}, notebook_rows=[{"out": "notebook:one"}]
+        )
+
+    assert response.status_code == 200
+    assert model_context["learning_updates"] == [{"conclusion": "new cost=300"}]
+    # The update left out was not used, so it is not linked to this reply.
+    assert mark_applied.await_args is not None
+    assert [update.id for update in mark_applied.await_args.args[0]] == [
+        "learning_update:new"
+    ]

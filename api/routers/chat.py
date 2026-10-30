@@ -104,6 +104,14 @@ class BuildContextResponse(BaseModel):
     context: Dict[str, Any] = Field(..., description="Built context data")
     token_count: int = Field(..., description="Estimated token count")
     char_count: int = Field(..., description="Character count")
+    learning_updates_omitted: int = Field(
+        0,
+        description=(
+            "Accepted learning updates left out of context.learning_updates (and "
+            "of the model's context) because their token budget was full; the "
+            "oldest are left out first"
+        ),
+    )
 
 
 async def _mark_learning_updates_applied(
@@ -469,44 +477,28 @@ async def build_context(request: BuildContextRequest):
             notebook, request.context_config
         )
 
+        learning_updates_omitted = 0
         if request.session_id:
-            # The same loader feeds POST /chat/execute, so what is counted
-            # and shown here is what the model receives.
+            # The same loader feeds POST /chat/execute, so what is listed and
+            # counted here is what the model receives: the newest accepted
+            # updates within their token budget.
             learning = await load_main_learning_context(
                 normalize_record_id("chat_session", request.session_id),
                 notebook_id=str(notebook.id),
             )
             if learning.updates:
                 context_data["learning_updates"] = learning.context_entries()
-                update_text = "\n\n".join(
-                    "\n".join(
-                        part
-                        for part in [
-                            f"Conclusion: {update.conclusion}",
-                            (
-                                f"Relevance: {update.relevance}"
-                                if update.relevance
-                                else ""
-                            ),
-                            (
-                                "Citations: " + ", ".join(update.citations)
-                                if update.citations
-                                else ""
-                            ),
-                        ]
-                        if part
-                    )
-                    for update in learning.updates
-                )
-                total_content = (
-                    f"{total_content}\n\n# Accepted learning updates\n\n{update_text}"
-                ).strip()
+                total_content += learning.model_text()
+            learning_updates_omitted = learning.omitted
 
         char_count = len(total_content)
         estimated_tokens = token_count(total_content) if total_content else 0
 
         return BuildContextResponse(
-            context=context_data, token_count=estimated_tokens, char_count=char_count
+            context=context_data,
+            token_count=estimated_tokens,
+            char_count=char_count,
+            learning_updates_omitted=learning_updates_omitted,
         )
     except HTTPException:
         raise
