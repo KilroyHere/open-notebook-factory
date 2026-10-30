@@ -316,28 +316,34 @@ export function useNotebookWorkspace({
     [knownAsides, updateStatus, createAside]
   )
 
-  // Every human turn becomes a named outline section on the journey, once
-  // the API has stored it: a question on its way only has a temporary ID.
+  // Every human turn becomes a named outline section on the journey of the
+  // session it was asked in (chat.messages are always the selected
+  // session's), once the API has stored it: a question on its way only has
+  // a temporary ID. What was already named is kept per session.
   const sections = learning.sections
   const syncSections = learning.syncSections
-  const syncedSectionIds = useRef(new Set<string>())
+  const namedSections = useRef(new Map<string, Set<string>>())
   useEffect(() => {
-    if (!chat.currentSessionId || !syncSections) return
+    const sessionId = chat.currentSessionId
+    if (!sessionId || !syncSections) return
+    let named = namedSections.current.get(sessionId)
+    if (!named) {
+      named = new Set<string>()
+      namedSections.current.set(sessionId, named)
+    }
     const known = new Set(
       (sections ?? []).map((section) => section.start_message_id)
     )
     const missing = chat.messages.filter((message) => {
       if (message.type !== 'human' || !message.id) return false
       if (isPendingMessage(message)) return false
-      if (known.has(message.id) || syncedSectionIds.current.has(message.id)) {
-        return false
-      }
+      if (known.has(message.id) || named.has(message.id)) return false
       return Boolean(
         createAsideTitle(message.content) || message.content.trim()
       )
     })
     if (missing.length === 0) return
-    for (const message of missing) syncedSectionIds.current.add(message.id)
+    for (const message of missing) named.add(message.id)
     void syncSections(
       missing.map((message) => ({
         start_message_id: message.id,
@@ -346,7 +352,7 @@ export function useNotebookWorkspace({
           message.content.trim().slice(0, 72),
       }))
     ).catch(() => {
-      for (const message of missing) syncedSectionIds.current.delete(message.id)
+      for (const message of missing) named.delete(message.id)
     })
   }, [chat.currentSessionId, chat.messages, sections, syncSections])
 

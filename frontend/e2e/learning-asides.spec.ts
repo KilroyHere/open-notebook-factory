@@ -26,6 +26,7 @@ import {
   nextFrames,
   openNotebook,
   studio,
+  switchChatSession,
   watchChatMessage,
   whatYouLearned,
 } from './support/notebook-page'
@@ -331,4 +332,73 @@ test('Go deeper on a passage in a full-height dive opens the new dive with the c
   })
   await expect(page.getByRole('region', { name: /Without the scaling/i })).toBeVisible()
   await expect(diveComposer(page)).toBeFocused()
+})
+
+test('switching chat session while a reply is on its way shows the session switched to, and the turn stays in its own', async ({
+  page,
+  api,
+}) => {
+  const older = api.addSession('Older chat')
+  api.addMessage(older.messages, 'human', 'Question in the older chat')
+  api.addMessage(older.messages, 'ai', 'Answer in the older chat')
+  const newer = api.addSession('Newer chat')
+  api.addMessage(newer.messages, 'human', 'Question in the newer chat')
+  api.addMessage(newer.messages, 'ai', 'Answer in the newer chat')
+  api.chatReplies.push('Reply to the follow-up')
+  const answerNow = api.hold('POST', /^\/chat\/execute$/)
+  await openNotebook(page)
+  await expect(chatMessage(page, 'Answer in the newer chat')).toBeVisible()
+
+  await mainComposer(page).fill('Follow-up in the newer chat')
+  await mainComposer(page).press('ControlOrMeta+Enter')
+  await expect(chatMessage(page, 'Follow-up in the newer chat')).toBeVisible()
+
+  // The learner opens the older chat while the model answers.
+  await switchChatSession(page, 'Newer chat', 'Older chat')
+  await expect(chatMessage(page, 'Answer in the older chat')).toBeVisible()
+  await expect(chatMessage(page, 'Follow-up in the newer chat')).toHaveCount(0)
+
+  // The reply comes, and the newer chat is read again once the page has
+  // it; the older chat is still the one on screen.
+  const readAgain = () =>
+    api.callsTo('GET', `/chat/sessions/${newer.id}`).length
+  const readsBefore = readAgain()
+  answerNow()
+  await expect.poll(readAgain).toBeGreaterThan(readsBefore)
+  await nextFrames(page)
+  await expect(chatMessage(page, 'Answer in the older chat')).toBeVisible()
+  await expect(chatMessage(page, 'Reply to the follow-up')).toHaveCount(0)
+
+  // Each journey's outline names only its own session's questions.
+  const misplacedSections = () =>
+    api
+      .callsTo<{ main_session_id: string; sections: Array<{ start_message_id: string }> }>(
+        'POST',
+        '/learning/sections/sync'
+      )
+      .flatMap(({ body }) => {
+        const session = api.sessions.find((item) => item.id === body.main_session_id)
+        return body.sections
+          .filter((section) => !session?.messages.some((m) => m.id === section.start_message_id))
+          .map((section) => `${section.start_message_id} in ${body.main_session_id}`)
+      })
+  expect(misplacedSections()).toEqual([])
+
+  // Back in the newer chat, the turn is there, and its question gets a
+  // section in that chat's journey.
+  await switchChatSession(page, 'Older chat', 'Newer chat')
+  await expect(chatMessage(page, 'Reply to the follow-up')).toBeVisible()
+  const followUp = newer.messages.find((m) => m.content === 'Follow-up in the newer chat')
+  await expect
+    .poll(() =>
+      api
+        .callsTo<{ main_session_id: string; sections: Array<{ start_message_id: string }> }>(
+          'POST',
+          '/learning/sections/sync'
+        )
+        .filter(({ body }) => body.sections.some((s) => s.start_message_id === followUp?.id))
+        .map(({ body }) => body.main_session_id)
+    )
+    .toEqual([newer.id])
+  expect(misplacedSections()).toEqual([])
 })

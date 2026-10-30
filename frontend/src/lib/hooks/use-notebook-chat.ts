@@ -24,6 +24,16 @@ import {
 import type { ContextSelections } from '@/lib/types/notebook-context'
 import { isPendingMessage, PENDING_MESSAGE_PREFIX } from '@/lib/utils/chat-messages'
 
+/** A turn's session as the turn shows it: its question last, then the reply. */
+interface TurnView {
+  sessionId: string
+  messages: NotebookChatMessage[]
+  /** The model has not answered yet. */
+  answering: boolean
+}
+
+const NO_MESSAGES: NotebookChatMessage[] = []
+
 interface UseNotebookChatParams {
   notebookId: string
   sources: SourceListResponse[]
@@ -54,7 +64,7 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
-  const [messages, setMessages] = useState<NotebookChatMessage[]>([])
+  const [turnView, setTurnView] = useState<TurnView | null>(null)
   const [isSending, setIsSending] = useState(false)
   // Pending model override for when user changes model before a session exists
   const [pendingModelOverride, setPendingModelOverride] = useState<string | null>(null)
@@ -77,18 +87,17 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
     enabled: !!notebookId && !!currentSessionId
   })
 
-  // Turns on their way. A read of the session that lands meanwhile predates
-  // the turn (a new session's first read is empty), so it must not replace
-  // the question shown while the model answers.
-  const turnsInFlight = useRef(0)
-
-  // Show the session's messages as read from the API.
-  useEffect(() => {
-    if (turnsInFlight.current > 0) return
-    if (currentSession?.messages) {
-      setMessages(currentSession.messages)
-    }
-  }, [currentSession])
+  // The messages on screen are always the selected session's: as the API
+  // last returned them, or as a turn of that session has them while the
+  // model answers (a read landing meanwhile predates the turn; a new
+  // session's first read is empty), and after it until the session is read.
+  const messages = useMemo(() => {
+    const turnShown =
+      turnView?.sessionId === currentSessionId &&
+      (turnView.answering || !currentSession)
+    if (turnView && turnShown) return turnView.messages
+    return currentSession?.messages ?? NO_MESSAGES
+  }, [turnView, currentSessionId, currentSession])
 
   // Auto-select most recent session when sessions are loaded
   useEffect(() => {
@@ -147,8 +156,8 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
       })
       if (currentSessionId === deletedId) {
         setCurrentSessionId(null)
-        setMessages([])
       }
+      setTurnView((view) => (view?.sessionId === deletedId ? null : view))
       toast.success(t('chat.sessionDeleted'))
     },
     onError: (err: unknown) => {
@@ -260,9 +269,19 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
       content: message,
       timestamp: new Date().toISOString()
     }
-    const sessionKey = QUERY_KEYS.notebookChatSession(sessionId)
-    turnsInFlight.current += 1
-    setMessages(prev => [...prev, userMessage])
+    const turnSessionId = sessionId
+    const sessionKey = QUERY_KEYS.notebookChatSession(turnSessionId)
+    // The question shows at once, after what the session shows now. The turn
+    // only ever changes its own session's view, whichever session is
+    // selected when the reply comes.
+    const stored = queryClient.getQueryData<NotebookChatSessionWithMessages>(sessionKey)
+    setTurnView((view) => {
+      const shown =
+        view?.sessionId === turnSessionId && (view.answering || !stored)
+          ? view.messages
+          : stored?.messages ?? NO_MESSAGES
+      return { sessionId: turnSessionId, messages: [...shown, userMessage], answering: true }
+    })
     setIsSending(true)
 
     try {
@@ -283,15 +302,22 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
         sessionKey,
         (cached) => (cached ? { ...cached, messages: response.messages } : cached)
       )
-      setMessages(response.messages)
+      setTurnView({ sessionId: turnSessionId, messages: response.messages, answering: false })
     } catch (err: unknown) {
       const error = err as { response?: { data?: { detail?: string } }, message?: string };
       console.error('Error sending message:', error)
       toast.error(getApiErrorMessage(error.response?.data?.detail || error.message, (key) => t(key), 'apiErrors.failedToSendMessage'))
       // Remove optimistic message on error
-      setMessages(prev => prev.filter(msg => !isPendingMessage(msg)))
+      setTurnView((view) =>
+        view?.sessionId === turnSessionId
+          ? {
+              sessionId: turnSessionId,
+              messages: view.messages.filter((msg) => !isPendingMessage(msg)),
+              answering: false,
+            }
+          : view
+      )
     } finally {
-      turnsInFlight.current -= 1
       setIsSending(false)
     }
 
@@ -299,6 +325,12 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
     // flight (one with no data yet is not restarted), so cancel that first.
     await queryClient.cancelQueries({ queryKey: sessionKey, exact: true })
     await queryClient.refetchQueries({ queryKey: sessionKey, exact: true })
+    // Once read, the session shows as stored (unless another turn started).
+    if (queryClient.getQueryData(sessionKey)) {
+      setTurnView((view) =>
+        view?.sessionId === turnSessionId && !view.answering ? null : view
+      )
+    }
   }, [
     notebookId,
     currentSessionId,
