@@ -141,10 +141,14 @@ export function InlineDiveThread(props: InlineDiveThreadProps) {
     if (!expanded) setShowTranscript(false)
   }, [expanded])
 
-  // Bring the thread into view or focus its question box when asked to.
+  // Bring the thread into view or focus its question box when asked to,
+  // while it shows the dive. A folded row leaves the request to the view
+  // that does (the full-height view, where the main chat stays mounted
+  // under it): taking it here would clear it before that view saw it.
   const attention = controller?.attention
   const onAttended = controller?.onAttended
   useEffect(() => {
+    if (!expanded) return
     if (!attention || attention.asideId !== aside.id || !onAttended) return
     if (attention.focus) setFocusRequest((count) => count + 1)
     // Wait for the chat's own scroll to the latest message when it mounts
@@ -156,7 +160,7 @@ export function InlineDiveThread(props: InlineDiveThreadProps) {
       }
     }, 0)
     return () => window.clearTimeout(timer)
-  }, [attention, aside.id, onAttended])
+  }, [expanded, attention, aside.id, onAttended])
 
   // Expanding this dive can fold another one above it; keep this row where
   // the learner clicked it.

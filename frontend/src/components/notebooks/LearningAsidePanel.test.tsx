@@ -1074,6 +1074,29 @@ describe('LearningAsidePanel', () => {
       expect(onAttended).toHaveBeenCalledWith(attention)
     })
 
+    it('puts the cursor in the question box of a dive that replaces the aside list', () => {
+      // A dive opened full height shows the aside list while it is created,
+      // then the dive and the request for the cursor in the same render.
+      const onAttended = vi.fn()
+      const { rerender } = render(
+        <LearningAsidePanel {...baseProps} activeAside={undefined} onAttended={onAttended} />
+      )
+      const attention = { asideId: aside.id, scroll: null, focus: true }
+      rerender(
+        <LearningAsidePanel
+          {...baseProps}
+          activeAside={aside}
+          attention={attention}
+          onAttended={onAttended}
+        />
+      )
+
+      expect(document.activeElement).toBe(
+        screen.getByLabelText('learningAsides.askPlaceholder')
+      )
+      expect(onAttended).toHaveBeenCalledWith(attention)
+    })
+
     it('leaves a request for another dive to that dive', () => {
       const onAttended = vi.fn()
       render(

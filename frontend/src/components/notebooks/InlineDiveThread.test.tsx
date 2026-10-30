@@ -605,6 +605,21 @@ describe('InlineDiveThread', () => {
     )
   })
 
+  it('leaves a request for a dive it does not show expanded to the view that does', async () => {
+    // The full-height view shows the dive; its row here stays folded.
+    const attention: DiveAttention = { asideId: dive.id, scroll: 'nearest', focus: true }
+    const { container } = render(<Harness asides={[dive]} overrides={{ attention }} />)
+    const scroller = container.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]'
+    )!
+    scroller.scrollTo = vi.fn()
+    // Wait as long as an expanded thread would before reporting back.
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)))
+
+    expect(spies.onAttended).not.toHaveBeenCalled()
+    expect(scroller.scrollTo).not.toHaveBeenCalled()
+  })
+
   it('does not grab the cursor again when a focused dive is unfolded later', async () => {
     const attention: DiveAttention = { asideId: dive.id, scroll: null, focus: true }
     const { rerender } = render(

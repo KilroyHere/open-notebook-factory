@@ -79,3 +79,10 @@ export async function nextFrames(page: Page, count = 2): Promise<void> {
     }
   }, count)
 }
+
+/** Open another main-chat session with the session picker. */
+export async function switchChatSession(page: Page, from: string, to: string): Promise<void> {
+  await page.getByRole('button', { name: new RegExp(`^Sessions: ${from}`) }).click()
+  await page.getByRole('dialog').getByRole('button', { name: new RegExp(to) }).click()
+  await expect(page.getByRole('button', { name: new RegExp(`^Sessions: ${to}`) })).toBeVisible()
+}
