@@ -30,6 +30,8 @@ export const QUERY_KEYS = {
   sourceChatSession: (sourceId: string, sessionId: string) => ['source-chat', sourceId, 'sessions', sessionId] as const,
   notebookChatSessions: (notebookId: string) => ['notebook-chat', notebookId, 'sessions'] as const,
   notebookChatSession: (sessionId: string) => ['notebook-chat', 'sessions', sessionId] as const,
+  /** Every chat context built for a notebook (one entry per selection and session). */
+  notebookChatContext: (notebookId: string) => ['notebook-chat', notebookId, 'context'] as const,
   learningJourney: (notebookId: string, sessionId: string) => ['learning', notebookId, sessionId] as const,
   learningAside: (asideId: string) => ['learning', 'asides', asideId] as const,
   learningResume: (notebookId: string, sessionId: string) => ['learning', notebookId, sessionId, 'resume'] as const,

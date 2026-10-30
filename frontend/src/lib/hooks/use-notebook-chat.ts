@@ -1,20 +1,26 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
+import {
+  keepPreviousData,
+  useQuery,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { getApiErrorMessage } from '@/lib/utils/error-handler'
 import { useTranslation } from '@/lib/hooks/use-translation'
 import { chatApi } from '@/lib/api/chat'
 import { QUERY_KEYS } from '@/lib/api/query-client'
 import {
+  BuildContextRequest,
   NotebookChatMessage,
   CreateNotebookChatSessionRequest,
   UpdateNotebookChatSessionRequest,
   SourceListResponse,
   NoteResponse
 } from '@/lib/types/api'
-import { ContextSelections } from '@/app/(dashboard)/notebooks/[id]/page'
+import type { ContextSelections } from '@/lib/types/notebook-context'
 
 interface UseNotebookChatParams {
   notebookId: string
@@ -23,14 +29,31 @@ interface UseNotebookChatParams {
   contextSelections: ContextSelections
 }
 
+/** What each source and note sends with a turn, by ID, in the API's terms. */
+function buildContextConfig(
+  sources: SourceListResponse[],
+  notes: NoteResponse[],
+  selections: ContextSelections
+): BuildContextRequest['context_config'] {
+  const config: BuildContextRequest['context_config'] = { sources: {}, notes: {} }
+  for (const source of sources) {
+    const mode = selections.sources[source.id]
+    config.sources[source.id] =
+      mode === 'insights' ? 'insights' : mode === 'full' ? 'full content' : 'not in'
+  }
+  for (const note of notes) {
+    config.notes[note.id] =
+      selections.notes[note.id] === 'full' ? 'full content' : 'not in'
+  }
+  return config
+}
+
 export function useNotebookChat({ notebookId, sources, notes, contextSelections }: UseNotebookChatParams) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
   const [messages, setMessages] = useState<NotebookChatMessage[]>([])
   const [isSending, setIsSending] = useState(false)
-  const [tokenCount, setTokenCount] = useState<number>(0)
-  const [charCount, setCharCount] = useState<number>(0)
   // Pending model override for when user changes model before a session exists
   const [pendingModelOverride, setPendingModelOverride] = useState<string | null>(null)
 
@@ -129,49 +152,57 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
     }
   })
 
-  // Build context from sources and notes based on user selections
-  const buildContext = useCallback(async () => {
-    // Build context_config mapping IDs to selection modes
-    const context_config: { sources: Record<string, string>, notes: Record<string, string> } = {
-      sources: {},
-      notes: {}
-    }
-
-    // Map source selections
-    sources.forEach(source => {
-      const mode = contextSelections.sources[source.id]
-      if (mode === 'insights') {
-        context_config.sources[source.id] = 'insights'
-      } else if (mode === 'full') {
-        context_config.sources[source.id] = 'full content'
-      } else {
-        context_config.sources[source.id] = 'not in'
-      }
-    })
-
-    // Map note selections
-    notes.forEach(note => {
-      const mode = contextSelections.notes[note.id]
-      if (mode === 'full') {
-        context_config.notes[note.id] = 'full content'
-      } else {
-        context_config.notes[note.id] = 'not in'
-      }
-    })
-
-    // Call API to build context with actual content
-    const response = await chatApi.buildContext({
+  // The context a turn sends, built by the API from the selected sources and
+  // notes plus the session's accepted learning conclusions. Each request has
+  // its own cache entry, so a late reply for an older selection never
+  // overwrites the counts of the current one, and anything that changes what
+  // main chat receives can invalidate QUERY_KEYS.notebookChatContext.
+  const contextRequest = useMemo<BuildContextRequest>(
+    () => ({
       notebook_id: notebookId,
       session_id: currentSessionId ?? undefined,
-      context_config
-    })
+      context_config: buildContextConfig(sources, notes, contextSelections),
+    }),
+    [notebookId, currentSessionId, sources, notes, contextSelections]
+  )
+  const contextQuery = useMemo(
+    () => ({
+      queryKey: [...QUERY_KEYS.notebookChatContext(notebookId), contextRequest] as const,
+      queryFn: () => chatApi.buildContext(contextRequest),
+      retry: false,
+      // An entry carries the full text a turn would send; drop it as soon as
+      // its selection is no longer the current one.
+      gcTime: 0,
+    }),
+    [notebookId, contextRequest]
+  )
+  const { data: context } = useQuery({
+    ...contextQuery,
+    enabled: !!notebookId,
+    // Keep showing the last counts while a new selection is counted.
+    placeholderData: keepPreviousData,
+  })
 
-    // Store token and char counts
-    setTokenCount(response.token_count)
-    setCharCount(response.char_count)
+  // A source or note can change without changing the selection (a source
+  // finishes processing, gets an insight, a note is edited): count again.
+  const countedContent = useRef({ sources, notes })
+  useEffect(() => {
+    const previous = countedContent.current
+    countedContent.current = { sources, notes }
+    if (previous.sources === sources && previous.notes === notes) return
+    void queryClient.invalidateQueries(
+      { queryKey: QUERY_KEYS.notebookChatContext(notebookId) },
+      // A count already on its way for a new selection is not restarted.
+      { cancelRefetch: false }
+    )
+  }, [notebookId, notes, queryClient, sources])
 
+  // What a turn sends is always built fresh, never taken from the cache; the
+  // reply also updates the counts.
+  const buildContext = useCallback(async () => {
+    const response = await queryClient.query({ ...contextQuery, staleTime: 0 })
     return response.context
-  }, [notebookId, currentSessionId, sources, notes, contextSelections])
+  }, [contextQuery, queryClient])
 
   // Send message (synchronous, no streaming)
   const sendMessage = useCallback(async (message: string, modelOverride?: string) => {
@@ -288,18 +319,6 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
     }
   }, [currentSessionId, updateSessionMutation])
 
-  // Update token/char counts when context selections change
-  useEffect(() => {
-    const updateContextCounts = async () => {
-      try {
-        await buildContext()
-      } catch (error) {
-        console.error('Error updating context counts:', error)
-      }
-    }
-    updateContextCounts()
-  }, [buildContext])
-
   return {
     // State
     sessions,
@@ -308,8 +327,8 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
     messages,
     isSending,
     loadingSessions,
-    tokenCount,
-    charCount,
+    tokenCount: context?.token_count ?? 0,
+    charCount: context?.char_count ?? 0,
     pendingModelOverride,
 
     // Actions
