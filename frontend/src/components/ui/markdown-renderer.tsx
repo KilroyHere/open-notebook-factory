@@ -39,8 +39,8 @@ import tsx from 'react-syntax-highlighter/dist/esm/languages/prism/tsx'
 import typescript from 'react-syntax-highlighter/dist/esm/languages/prism/typescript'
 import yaml from 'react-syntax-highlighter/dist/esm/languages/prism/yaml'
 
-import type {ExtraProps} from 'react-markdown'
-import type {ComponentProps, ElementType} from 'react'
+import { useMemo, type ComponentProps, type ElementType, type ReactNode } from 'react'
+import type { ExtraProps, Options } from 'react-markdown'
 
 const LANGUAGES = {
   bash, c, cpp, csharp, css, diff, docker, go, java, javascript, json, jsx,
@@ -55,57 +55,135 @@ type Components = {
   [Key in Extract<ElementType, string>]?: ElementType<ComponentProps<Key> & ExtraProps>
 }
 
-export function MarkdownRenderer({ children, components = {}}: { children: React.ReactNode , components?: Components }) {
+type ChildrenProps = { children?: ReactNode }
 
+// The element overrides are defined once, outside any render. A component
+// created during a render is a new type on every render, so React would
+// rebuild the whole answer's DOM each time (dropping a text selection in
+// it, among other things).
+function Paragraph({ children }: ChildrenProps) {
+  return <p className="mb-4">{children}</p>
+}
+function Heading1({ children }: ChildrenProps) {
+  return <h1 className="mb-4 mt-6">{children}</h1>
+}
+function Heading2({ children }: ChildrenProps) {
+  return <h2 className="mb-3 mt-5">{children}</h2>
+}
+function Heading3({ children }: ChildrenProps) {
+  return <h3 className="mb-3 mt-4">{children}</h3>
+}
+function Heading4({ children }: ChildrenProps) {
+  return <h4 className="mb-2 mt-4">{children}</h4>
+}
+function Heading5({ children }: ChildrenProps) {
+  return <h5 className="mb-2 mt-3">{children}</h5>
+}
+function Heading6({ children }: ChildrenProps) {
+  return <h6 className="mb-2 mt-3">{children}</h6>
+}
+function ListItem({ children }: ChildrenProps) {
+  return <li className="mb-1">{children}</li>
+}
+function UnorderedList({ children }: ChildrenProps) {
+  return <ul className="mb-4 space-y-1">{children}</ul>
+}
+function OrderedList({ children }: ChildrenProps) {
+  return <ol className="mb-4 space-y-1">{children}</ol>
+}
+function Table({ children }: ChildrenProps) {
+  return (
+    <div className="my-4 overflow-x-auto">
+      <table className="min-w-full border-collapse border border-border">{children}</table>
+    </div>
+  )
+}
+function TableHead({ children }: ChildrenProps) {
+  return <thead className="bg-muted">{children}</thead>
+}
+function TableBody({ children }: ChildrenProps) {
+  return <tbody>{children}</tbody>
+}
+function TableRow({ children }: ChildrenProps) {
+  return <tr className="border-b border-border">{children}</tr>
+}
+function TableHeaderCell({ children }: ChildrenProps) {
+  return <th className="border border-border px-3 py-2 text-left font-semibold">{children}</th>
+}
+function TableCell({ children }: ChildrenProps) {
+  return <td className="border border-border px-3 py-2">{children}</td>
+}
+
+/** A code block (highlighted in the current theme) or inline code. */
+function Code({ children, className }: ChildrenProps & { className?: string }) {
   const { getEffectiveTheme } = useThemeStore()
   const isDark = getEffectiveTheme() === 'dark'
+  const match = /language-(\w+)/.exec(className || '')
+  const isBlock = match || String(children).includes('\n')
+  return isBlock ? (
+    <SyntaxHighlighter
+      language={match ? match[1] : 'text'}
+      style={isDark ? darkTheme : lightTheme}
+      PreTag="div"
+      className="text-sm border border-border"
+    >
+      {String(children)}
+    </SyntaxHighlighter>
+  ) : (
+    <code className="bg-border rounded px-1 py-0.5">{children}</code>
+  )
+}
+
+const BASE_COMPONENTS: Components = {
+  p: Paragraph,
+  h1: Heading1,
+  h2: Heading2,
+  h3: Heading3,
+  h4: Heading4,
+  h5: Heading5,
+  h6: Heading6,
+  li: ListItem,
+  ul: UnorderedList,
+  ol: OrderedList,
+  table: Table,
+  thead: TableHead,
+  tbody: TableBody,
+  tr: TableRow,
+  th: TableHeaderCell,
+  td: TableCell,
+  code: Code,
+}
+
+const REMARK_PLUGINS = [remarkGfm, remarkMath]
+const REHYPE_PLUGINS: NonNullable<Options['rehypePlugins']> = [[rehypeKatex, KATEX_OPTIONS]]
+
+/**
+ * Markdown with GFM, math and highlighted code. `components` overrides
+ * elements; pass components that keep their identity across renders (not
+ * ones created during a render), or the overridden elements are rebuilt on
+ * every render.
+ */
+export function MarkdownRenderer({
+  children,
+  components,
+}: {
+  children: ReactNode
+  components?: Components
+}) {
+  const allComponents = useMemo(
+    () => (components ? { ...BASE_COMPONENTS, ...components } : BASE_COMPONENTS),
+    [components]
+  )
 
   return (
     <div className="prose prose-sm prose-neutral dark:prose-invert max-w-none break-words [&_.katex-display]:overflow-x-auto [&_.katex-display]:overflow-y-hidden [&_.katex-display]:py-0.5 prose-headings:font-semibold prose-a:text-primary prose-a:break-all prose-code:before:content-none prose-code:after:content-none prose-pre:p-0 prose-pre:bg-transparent prose-p:mb-4 prose-p:leading-7 prose-li:mb-2">
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm, remarkMath]}
-          rehypePlugins={[[rehypeKatex, KATEX_OPTIONS]]}
-          components={{...{
-            p: ({ children }) => <p className="mb-4">{children}</p>,
-            h1: ({ children }) => <h1 className="mb-4 mt-6">{children}</h1>,
-            h2: ({ children }) => <h2 className="mb-3 mt-5">{children}</h2>,
-            h3: ({ children }) => <h3 className="mb-3 mt-4">{children}</h3>,
-            h4: ({ children }) => <h4 className="mb-2 mt-4">{children}</h4>,
-            h5: ({ children }) => <h5 className="mb-2 mt-3">{children}</h5>,
-            h6: ({ children }) => <h6 className="mb-2 mt-3">{children}</h6>,
-            li: ({ children }) => <li className="mb-1">{children}</li>,
-            ul: ({ children }) => <ul className="mb-4 space-y-1">{children}</ul>,
-            ol: ({ children }) => <ol className="mb-4 space-y-1">{children}</ol>,
-            table: ({ children }) => (
-              <div className="my-4 overflow-x-auto">
-                <table className="min-w-full border-collapse border border-border">{children}</table>
-              </div>
-            ),
-            thead: ({ children }) => <thead className="bg-muted">{children}</thead>,
-            tbody: ({ children }) => <tbody>{children}</tbody>,
-            tr: ({ children }) => <tr className="border-b border-border">{children}</tr>,
-            th: ({ children }) => <th className="border border-border px-3 py-2 text-left font-semibold">{children}</th>,
-            td: ({ children }) => <td className="border border-border px-3 py-2">{children}</td>,
-            code: ({ children, className }) => {
-              const match = /language-(\w+)/.exec(className || '')
-              const isBlock = match || String(children).includes('\n')
-              return isBlock ? (
-                <SyntaxHighlighter
-                  language={match ? match[1] : 'text'}
-                  style={isDark ? darkTheme : lightTheme}
-                  PreTag="div"
-                  className="text-sm border border-border"
-                >
-                  {String(children)}
-                </SyntaxHighlighter>
-              ) : (
-                <code className="bg-border rounded px-1 py-0.5">{children}</code>
-              )
-            },
-          }, ...components}}
-        >
-          {String(children)}
-        </ReactMarkdown>
-      </div>
+      <ReactMarkdown
+        remarkPlugins={REMARK_PLUGINS}
+        rehypePlugins={REHYPE_PLUGINS}
+        components={allComponents}
+      >
+        {String(children)}
+      </ReactMarkdown>
+    </div>
   )
 }

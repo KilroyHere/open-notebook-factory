@@ -450,3 +450,41 @@ describe('useNotebookWorkspace outline sections', () => {
     expect(syncSections).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('useNotebookWorkspace actions', () => {
+  it('keeps the actions answers use across a render that changes none of their inputs', () => {
+    vi.mocked(useNotebookChat).mockReturnValue({
+      messages: [{ id: 'human:1', type: 'human', content: 'Explain the ELBO.' }, answer],
+      currentSessionId: 'chat_session:main',
+      buildContext: vi.fn(),
+      tokenCount: 0,
+      charCount: 0,
+    } as unknown as ReturnType<typeof useNotebookChat>)
+    vi.mocked(useLearningAsides).mockReturnValue(learningMock())
+    const { result, rerender } = renderHook(() =>
+      useNotebookWorkspace({
+        notebookId: 'notebook:1',
+        sources: [],
+        notes: [],
+        contextSelections: { sources: {}, notes: {} },
+      })
+    )
+    const before = result.current
+
+    rerender()
+
+    // Each answer is memoized on these: a new function would render every
+    // answer again (and, before, rebuild its text and drop a selection).
+    for (const action of [
+      'openAside',
+      'openAsideFromMessage',
+      'openAsideFromSelection',
+      'openAsideFromDiveSelection',
+      'diveIntoQuestion',
+      'parkQuestion',
+      'navigateToMainMessage',
+    ] as const) {
+      expect(result.current[action], action).toBe(before[action])
+    }
+  })
+})

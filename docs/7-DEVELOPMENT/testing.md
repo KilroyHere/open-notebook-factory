@@ -106,7 +106,7 @@ npx playwright show-report             # the HTML report of the last run
 - Check what the app sent with `api.callsTo(method, path)`; each call has the parsed JSON `body`. Use `api.failNext(...)` for an error response and `api.hold(...)` to keep requests waiting while you look at the UI in between.
 - When a page calls an endpoint the mock doesn't know, the test fails with that endpoint's name: add a handler to the `routes` table in `mock-api.ts`, with the shapes from `src/lib/types/api.ts`.
 - Find elements by role, label or placeholder, and match labels that may be reworded with a regular expression. Wait on UI state (`expect(...)` assertions, `expect.poll` over `api.calls`), never on timeouts.
-- Each re-render of the notebook page rebuilds the Markdown of every answer, which drops a text selection inside it. The selection test therefore retries the select-and-click with `expect(...).toPass()`.
+- To prove something never happens, not even for a moment (a question leaving the chat while the model answers), record it in the page with a MutationObserver instead of polling: `watchChatMessage` in `e2e/support/notebook-page.ts` does this for chat messages.
 
 Reports and traces go to `frontend/playwright-report/` and `frontend/e2e/test-results/` (both ignored by git). Vitest skips `e2e/` (`frontend/vitest.config.ts`), and `npm run lint` covers it. CI runs the suite in `.github/workflows/e2e.yml` on pull requests to `main` (and on demand) and uploads the report and traces as the `playwright-report` artifact when it fails.
 

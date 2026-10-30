@@ -39,6 +39,10 @@ import { cn } from '@/lib/utils'
 import type { ReferenceTitles } from '@/lib/utils/learning-asides'
 import { isSendShortcut, sendShortcutHint } from '@/lib/utils/composer-shortcut'
 
+// One shared default, so the memoized messages see the same list on every
+// render of a chat without dives.
+const NO_ASIDES: LearningAside[] = []
+
 interface ChatPanelProps {
   messages: SourceChatMessage[]
   isStreaming: boolean
@@ -99,7 +103,7 @@ export function ChatPanel({
   onGoDeeperOnSelection,
   onOpenAsides,
   asideCount = 0,
-  learningAsides = [],
+  learningAsides = NO_ASIDES,
   onOpenLearningAside,
   onNavigateToMessage,
   onDiveIntoQuestion,
@@ -470,7 +474,7 @@ const ChatMessage = memo(function ChatMessage({
   onReferenceClick,
   onOpenAside,
   onGoDeeperOnSelection,
-  learningAsides = [],
+  learningAsides = NO_ASIDES,
   onOpenLearningAside,
   onNavigateToMessage,
   onDiveIntoQuestion,

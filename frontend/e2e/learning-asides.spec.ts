@@ -252,16 +252,11 @@ test('selecting part of an answer offers Go deeper, which opens a dive about tha
   await openNotebook(page)
 
   const answer = chatMessage(page, 'Self-attention lets every token')
-  const passage = answer.getByText(/^Multi-head attention runs several/)
+  await answer.getByText(/^Multi-head attention runs several/).selectText()
+
   const toolbar = page.getByRole('toolbar', { name: /Selected text/i })
-  // While the page's data loads, each re-render of the notebook page
-  // re-creates the answer's text nodes, which drops a selection inside it
-  // (and the toolbar with it). Select again until the toolbar's Go deeper
-  // is clicked; the block ends with that click, so it happens only once.
-  await expect(async () => {
-    await passage.selectText({ timeout: 2_000 })
-    await toolbar.getByRole('button', { name: 'Go deeper' }).click({ timeout: 2_000 })
-  }).toPass({ timeout: 15_000 })
+  await expect(toolbar).toBeVisible()
+  await toolbar.getByRole('button', { name: 'Go deeper' }).click()
 
   // The dive is anchored to the passage, its citations written back as
   // markers, and opens under the answer quoting it.

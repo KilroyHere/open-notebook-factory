@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
 import { useTranslation } from '@/lib/hooks/use-translation'
 import {
@@ -12,8 +13,6 @@ import {
   referenceTitleKey,
   type ReferenceTitles,
 } from '@/lib/utils/learning-asides'
-
-const noop = () => undefined
 
 const TYPE_LABEL_KEYS: Record<ReferenceType, string> = {
   source: 'common.source',
@@ -39,23 +38,35 @@ export function ReferencedMarkdown({
   referenceTitles?: ReferenceTitles
 }) {
   const { t } = useTranslation()
-  const labels: CompactReferenceLabels | undefined = referenceTitles
-    ? {
-        title: (type, id) => referenceTitles[referenceTitleKey(type, id)],
-        typeLabel: (type) => t(TYPE_LABEL_KEYS[type]),
-      }
-    : undefined
-  const markdownWithCompactRefs = convertReferencesToCompactMarkdown(
-    content,
-    t('common.references'),
-    labels
-  )
-  const LinkComponent = createCompactReferenceLinkComponent(
-    onReferenceClick ?? noop
-  )
+  const markdownWithCompactRefs = useMemo(() => {
+    const labels: CompactReferenceLabels | undefined = referenceTitles
+      ? {
+          title: (type, id) => referenceTitles[referenceTitleKey(type, id)],
+          typeLabel: (type) => t(TYPE_LABEL_KEYS[type]),
+        }
+      : undefined
+    return convertReferencesToCompactMarkdown(
+      content,
+      t('common.references'),
+      labels
+    )
+  }, [content, referenceTitles, t])
+
+  // One link component for the life of this answer: a new one on every
+  // render would rebuild each citation (and drop a selection across it).
+  // Clicks reach the latest handler through the ref.
+  const onClickRef = useRef(onReferenceClick)
+  useEffect(() => {
+    onClickRef.current = onReferenceClick
+  })
+  const [components] = useState(() => ({
+    a: createCompactReferenceLinkComponent((type, id) =>
+      onClickRef.current?.(type, id)
+    ),
+  }))
 
   return (
-    <MarkdownRenderer components={{ a: LinkComponent }}>
+    <MarkdownRenderer components={components}>
       {markdownWithCompactRefs}
     </MarkdownRenderer>
   )

@@ -116,6 +116,19 @@ describe('useLearningAsides', () => {
     vi.mocked(learningApi.createAside).mockResolvedValue(aside)
   })
 
+  it('keeps one empty aside list while the session has no journey', async () => {
+    const { result, rerender } = renderAsides()
+    await waitFor(() => expect(learningApi.getJourney).toHaveBeenCalled())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    const before = result.current.asides
+
+    rerender({ mainSessionId: 'chat_session:main' })
+
+    // Answers are memoized on the list: a new [] would render them all again.
+    expect(result.current.asides).toEqual([])
+    expect(result.current.asides).toBe(before)
+  })
+
   it('creates an inline dive without covering the chat', async () => {
     let finish: (value: LearningAside) => void = () => undefined
     vi.mocked(learningApi.createAside).mockImplementation(
