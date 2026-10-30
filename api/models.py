@@ -1,6 +1,7 @@
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic.json_schema import SkipJsonSchema
 
 
 # Notebook models
@@ -154,10 +155,14 @@ def _reject_null(value: Any) -> Any:
 
 
 class UpdateLearningAsideRequest(BaseModel):
-    """Fields to change. Leave a field out to keep it; null is rejected."""
+    """Fields to change. Leave a field out to keep it; null is rejected.
 
-    title: Optional[str] = Field(None, min_length=1, max_length=200)
-    status: Optional[Literal["active", "parked", "discarded"]] = None
+    ``SkipJsonSchema[None]`` keeps "left out" working while the API docs
+    describe the fields without null, which ``_no_null`` rejects.
+    """
+
+    title: Union[str, SkipJsonSchema[None]] = Field(None, min_length=1, max_length=200)
+    status: Union[Literal["active", "parked", "discarded"], SkipJsonSchema[None]] = None
 
     _no_null = field_validator("title", "status", mode="before")(_reject_null)
 
@@ -302,10 +307,13 @@ class SyncLearningSectionsRequest(BaseModel):
 
 
 class UpdateLearningSectionRequest(BaseModel):
-    """Fields to change. Leave a field out to keep it; null is rejected."""
+    """Fields to change. Leave a field out to keep it; null is rejected.
 
-    title: Optional[str] = Field(None, max_length=200)
-    pinned: Optional[bool] = None
+    See UpdateLearningAsideRequest for ``SkipJsonSchema[None]``.
+    """
+
+    title: Union[str, SkipJsonSchema[None]] = Field(None, max_length=200)
+    pinned: Union[bool, SkipJsonSchema[None]] = None
 
     _no_null = field_validator("title", "pinned", mode="before")(_reject_null)
 

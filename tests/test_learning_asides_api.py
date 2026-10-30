@@ -634,6 +634,24 @@ def test_patch_aside_rejects_null_fields(client, field):
     save_journey.assert_not_called()
 
 
+@pytest.mark.parametrize(
+    ("schema", "field"),
+    [
+        ("UpdateLearningAsideRequest", "title"),
+        ("UpdateLearningAsideRequest", "status"),
+        ("UpdateLearningSectionRequest", "title"),
+        ("UpdateLearningSectionRequest", "pinned"),
+    ],
+)
+def test_patch_schemas_do_not_advertise_null(client, schema, field):
+    """These fields can be left out but reject null, and the API docs say so."""
+    components = client.get("/openapi.json").json()["components"]["schemas"]
+    definition = components[schema]["properties"][field]
+
+    assert "null" not in str(definition)
+    assert field not in components[schema].get("required", [])
+
+
 @pytest.mark.parametrize("field", ["title", "pinned"])
 def test_patch_section_rejects_null_fields(client, field):
     section = LearningSection(
