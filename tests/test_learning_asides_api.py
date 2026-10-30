@@ -532,6 +532,45 @@ def test_patch_aside_rejects_illegal_status_changes(client, current, requested, 
     save_journey.assert_not_called()
 
 
+@pytest.mark.parametrize("field", ["title", "status"])
+def test_patch_aside_rejects_null_fields(client, field):
+    aside = _aside()
+
+    response, save_aside, save_journey = _patch_aside(client, aside, {field: None})
+
+    assert response.status_code == 422
+    assert response.json()["detail"][0]["loc"] == ["body", field]
+    save_aside.assert_not_called()
+    save_journey.assert_not_called()
+
+
+@pytest.mark.parametrize("field", ["title", "pinned"])
+def test_patch_section_rejects_null_fields(client, field):
+    section = LearningSection(
+        id="learning_section:one",
+        journey="learning_journey:journey",
+        title="Evidence lower bound",
+        start_message_id="human:one",
+        created=NOW,
+        updated=NOW,
+    )
+    with (
+        patch(
+            "api.routers.learning.LearningSection.get",
+            new_callable=AsyncMock,
+            return_value=section,
+        ),
+        patch(
+            "api.routers.learning.LearningSection.save", new_callable=AsyncMock
+        ) as save,
+    ):
+        response = client.patch("/api/learning/sections/one", json={field: None})
+
+    assert response.status_code == 422
+    assert response.json()["detail"][0]["loc"] == ["body", field]
+    save.assert_not_called()
+
+
 @pytest.mark.parametrize("status", ["resolved", "discarded"])
 def test_patch_aside_can_rename_a_closed_aside(client, status):
     aside = _aside(status=status)

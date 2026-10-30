@@ -74,6 +74,8 @@ To leave one conclusion out of main chat without re-resolving its aside, send `P
 
 `PATCH /api/learning/asides/{id}` renames an aside or changes its status: active and parked switch between each other, and either can be discarded. A resolved aside keeps its status (resolve it again to change its conclusion) and a discarded one stays discarded; asking for any other change returns 400, and asking for the current status changes nothing.
 
+In `PATCH /api/learning/asides/{id}` and `PATCH /api/learning/sections/{id}`, leave a field out to keep its value. An explicit `null` (for `title`, `status` or `pinned`) returns 422.
+
 ## Async operations
 
 Source processing, embedding and podcast generation run on the background worker (see [architecture.md](architecture.md#background-jobs)). The endpoint that starts them returns right away with a record and/or a job id:

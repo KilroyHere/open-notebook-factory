@@ -146,9 +146,20 @@ class CreateLearningAsideRequest(BaseModel):
         return stripped
 
 
+def _reject_null(value: Any) -> Any:
+    """Refuse an explicit null for a PATCH field that may only be left out."""
+    if value is None:
+        raise ValueError("must not be null; leave the field out to keep its value")
+    return value
+
+
 class UpdateLearningAsideRequest(BaseModel):
+    """Fields to change. Leave a field out to keep it; null is rejected."""
+
     title: Optional[str] = Field(None, min_length=1, max_length=200)
     status: Optional[Literal["active", "parked", "discarded"]] = None
+
+    _no_null = field_validator("title", "status", mode="before")(_reject_null)
 
     @field_validator("title")
     @classmethod
@@ -291,8 +302,12 @@ class SyncLearningSectionsRequest(BaseModel):
 
 
 class UpdateLearningSectionRequest(BaseModel):
+    """Fields to change. Leave a field out to keep it; null is rejected."""
+
     title: Optional[str] = Field(None, max_length=200)
     pinned: Optional[bool] = None
+
+    _no_null = field_validator("title", "pinned", mode="before")(_reject_null)
 
     @field_validator("title")
     @classmethod
