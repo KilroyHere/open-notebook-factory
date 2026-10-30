@@ -46,28 +46,24 @@ The workspace pages have a sidebar on the left (it can be collapsed to icons). T
 
 ## The Notebook Page
 
-Opening a notebook shows its header, then a conversation-first workspace. On a wide screen the chat fills the center and the remaining window height, so the message list scrolls and the composer stays at the bottom. Sources and notes share a collapsible **Knowledge** rail on the left, and the **Learning journey** rail on the right holds the chat outline and an aside map. A nested dive started from an open question sits under its parent branch in both the outline and the map. Outline headings are named sections you can rename or pin; those names stay after a reload. Both rails can be collapsed so the conversation uses the full width.
+Opening a notebook shows its header, then three panels: **Sources** on the left, the chat in the center and **Studio** on the right. Inside a notebook the app sidebar shrinks to its icon rail to leave room for the panels; other pages keep the sidebar the way you set it. The arrow before the notebook name goes back to the notebook list. On a wide screen the chat fills the remaining window height, so the message list scrolls and the composer stays at the bottom. Messages keep a readable width and are centered when the column is wider. Sources and Studio can each be collapsed so the conversation uses the full width; the page remembers which ones you collapsed.
 
 ```
-┌────────────────────────────────────────────────────────────────────┐
-│ Notebook name (click to edit)              [Archive] [Delete]      │
-│ Description (one line, click to edit)                              │
-├──────────────────┬──────────────────────────────┬──────────────────┤
-│ KNOWLEDGE        │                              │ LEARNING JOURNEY │
-│ [Sources] [Notes]│  messages, with numbered     │ [Outline] [Map]  │
-│ [Context] [Add]  │  references and aside        │                  │
-│ ┌──────────────┐ │  summaries                   │ 1. question      │
-│ │ paper.pdf    │ │                              │    └ deep dive   │
-│ │ File · 2  ◐ ⋮│ │ [Asides] [Current session]   │                  │
-│ └──────────────┘ │ [Ask anything...] [Model]    │                  │
-└──────────────────┴──────────────────────────────┴──────────────────┘
+┌───┬────────────────────────────────────────────────────────────────────┐
+│ ▪ │ ← Notebook name (click to edit)              [Archive] [Delete]    │
+│ ▪ │   Description (one line, click to edit)                            │
+│ ▪ ├──────────────────┬────────────────────────────┬────────────────────┤
+│ ▪ │ SOURCES          │   messages, with numbered  │ [Journey] [Notes]  │
+│   │ [Context] [Add]  │   references               │ Learned 2 · Open   │
+│   │ ┌──────────────┐ │   └ Deep dive · title    ▾ │ questions 1 · ...  │
+│   │ │ paper.pdf    │ │   └ ✓ Learned: …         ▾ │ [Outline] [Map]    │
+│   │ │ File · 2  ◐ ⋮│ │ [Asides] [Current session] │ 1. question        │
+│   │ └──────────────┘ │ ╭ Ask anything...        ╮ │    └ deep dive     │
+│   │                  │ ╰ 2 sources  [Model] [➤] ╯ │                    │
+└───┴──────────────────┴────────────────────────────┴────────────────────┘
 ```
 
-On small screens the workspace becomes four tabs, **Sources**, **Notes**, **Chat** and **Journey**, with Chat selected first. Journey shows the same outline and map as the wide-screen rail. Opening a branch or a message there switches back to Chat.
-
-### Knowledge rail
-
-The left rail has **Sources** and **Notes** tabs. Collapse it from the header to give the conversation the full width. The actions below are the same ones that used to live in separate columns.
+On small screens (narrower than 1024 px) the workspace becomes three tabs, **Sources**, **Chat** and **Studio**, with Chat selected first, and the icon rail is hidden so the notebook gets the whole width. The **menu** button at the start of the notebook header opens the app navigation in a drawer; choosing a page closes it. Studio has the same **Journey** and **Notes** tabs as on a wide screen. Opening a branch, the main thread or a message from Journey switches back to Chat.
 
 ### Sources column
 
@@ -76,15 +72,16 @@ The left rail has **Sources** and **Notes** tabs. Collapse it from the header to
 - Each **source card** shows the title, the type (Add URL, Upload File or Enter Text), the processing status while it isn't finished, and the insight count (when there are any). The **context icon** cycles the source's [context level](../2-CORE-CONCEPTS/ai-context-rag.md#context-levels-in-notebook-chat) when you click it. The **⋮ menu** has **Remove from Notebook**, **Retry Processing** (failed sources), **Refresh content** (completed links) and **Delete Source**.
 - Click a card to open the source view.
 
-### Notes column
+### Studio
 
-- **Write Note** creates a note.
-- **Context** has **Include all in context** and **Exclude all from context**.
-- Each **note card** shows the title, an **AI Generated** or **Human** badge and a context icon (on or off). Click a card to edit the note. See [Working with Notes](working-with-notes.md).
+Studio has two tabs. It opens on **Journey** once the current chat has an aside, and on **Notes** before that; after you pick a tab it stays on your choice.
+
+- **Journey** starts with three counts for the current chat: **Learned** (resolved asides whose conclusion is used in the main chat), **Open questions** (questions on the latest conclusions that no dive has picked up yet) and **Saved for later** (parked asides). Below them, **Outline** lists the chat's sections with each aside nested under the turn it came from, and **Map** shows the main thread, each branch, its summary and the merged reply. Clicking an aside scrolls the chat to its dive and opens it there. See [Chat Effectively](chat-effectively.md#learning-asides).
+- **Notes**: **Write Note** creates a note. **Context** has **Include all in context** and **Exclude all from context**. Each **note card** shows the title, an **AI Generated** or **Human** badge and a context icon (on or off). Click a card to edit the note. See [Working with Notes](working-with-notes.md).
 
 ### Chat column
 
-Notebook chat with the sources and notes in context. The button labeled with the current session title opens **Chat Sessions**. The model button sits on the message row and picks a model for the session. Context counts appear under the messages only when sources or notes are included. Send with **Ctrl+Enter** (**⌘+Enter** on Mac). See [Chat Effectively](chat-effectively.md).
+Notebook chat with the sources and notes in context. **Go deeper** under an answer opens a deep dive right below it, as a thread you can fold to one row (**Deep dive · title**, or **✓ Learned: …** once resolved) and unfold again; **Open full height** shows a long dive over the chat instead ([Learning Asides](chat-effectively.md#learning-asides)). Selecting part of an answer shows **Go deeper** and **Save to note** for just that passage. The button labeled with the current session title opens **Chat Sessions**. The message box is one rounded field: under the text sit a chip with what's in context (for example **2 sources · 1 note**), the model button, which picks a model for the session, and the send button. Hover or focus the chip to see how many sources are at *Insights only* and *Full content* and the estimated size in tokens and characters. Send with **Ctrl+Enter** (**⌘+Enter** on Mac). See [Chat Effectively](chat-effectively.md).
 
 ---
 

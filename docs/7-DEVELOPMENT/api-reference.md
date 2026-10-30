@@ -48,7 +48,7 @@ Use `/docs` for request and response shapes. This map shows where things are:
 | Sources | `/api/sources` (multipart create with optional file upload), `/api/sources/json`, `/api/sources/{id}/status`, `/api/sources/{id}/retry`, `/api/sources/{id}/insights`, `/api/sources/{id}/download` |
 | Notes, insights | `/api/notes`, `/api/insights/{id}`, `/api/insights/{id}/save-as-note` |
 | Chat | `/api/chat/sessions`, `/api/chat/execute`, `/api/chat/context`; source chat under `/api/sources/{id}/chat/sessions` |
-| Learning asides | `/api/learning/journeys`, `/api/learning/journeys/resume`, `/api/learning/asides`, `/api/learning/asides/{id}/messages`, `/api/learning/asides/{id}/resolve` |
+| Learning asides | `/api/learning/journeys`, `/api/learning/journeys/resume`, `/api/learning/asides`, `/api/learning/asides/{id}/messages`, `/api/learning/asides/{id}/draft-resolution`, `/api/learning/asides/{id}/resolve`, `/api/learning/updates/{id}` (include a conclusion in main chat or leave it out), `/api/learning/sections/sync`, `/api/learning/sections/{id}` |
 | Search and Ask | `/api/search`, `/api/search/ask` (streaming), `/api/search/ask/simple` |
 | Transformations | `/api/transformations`, `/api/transformations/execute`, `/api/transformations/default-prompt` |
 | Models and providers | `/api/models`, `/api/models/defaults`, `/api/models/sync`, `/api/models/auto-assign`, `/api/providers` |
@@ -57,6 +57,14 @@ Use `/docs` for request and response shapes. This map shows where things are:
 | Background jobs | `/api/commands/jobs`, `/api/commands/jobs/{job_id}` |
 | Embeddings | `/api/embed`, `/api/embeddings/rebuild` |
 | Settings and config | `/api/settings`, `/api/config`, `/api/capabilities`, `/api/languages`, `/api/auth/status` |
+
+## Learning context in notebook chat
+
+`POST /api/chat/execute` adds the session's accepted learning conclusions (the latest included resolution of each aside, see [ADR-014](decisions/ADR-014-learning-aside-context.md)) to the model's context itself. Any `learning_updates` sent in its `context` are ignored. `POST /api/chat/context` with a `session_id` returns the same conclusions as `context.learning_updates`, for display and the token count.
+
+The conclusions share a budget of 4,000 tokens per turn (`LEARNING_UPDATES_TOKEN_BUDGET` in `api/routers/_chat_shared.py`). The newest are kept first; once one does not fit, it and all older ones are left out of that turn. `learning_updates_omitted` in the `POST /api/chat/context` response counts them.
+
+To leave one conclusion out of main chat without re-resolving its aside, send `PATCH /api/learning/updates/{id}` with `{"include_in_main": false}`; `true` puts it back. It changes that version in place (no new version) and returns it. Only the latest version of an aside can be changed: a superseded version returns 400, an unknown ID 404.
 
 ## Async operations
 

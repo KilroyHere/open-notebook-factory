@@ -31,6 +31,7 @@ from api.models import (
     SourceStatusResponse,
     SourceUpdate,
 )
+from api.routers._chat_shared import normalize_record_id
 from commands.source_commands import SourceProcessingInput
 from open_notebook.config import UPLOADS_FOLDER
 from open_notebook.database.repository import ensure_record_id, repo_query
@@ -292,6 +293,7 @@ async def get_sources(
         # filter; only the FROM clause and bound params differ.
         params: dict[str, Any] = {"limit": limit, "offset": offset}
         if notebook_id:
+            notebook_id = normalize_record_id("notebook", notebook_id)
             # Verify notebook exists first
             notebook = await Notebook.get(notebook_id)
             if not notebook:

@@ -87,14 +87,35 @@ function LogoPebbles({ className }: { className?: string }) {
 
 type CreateTarget = 'source' | 'notebook' | 'podcast'
 
-export function AppSidebar() {
+interface AppSidebarProps {
+  /**
+   * Show only the icon rail without touching the persisted preference, so a
+   * full-width workspace (the notebook page) can claim the space while every
+   * other page keeps the sidebar the user chose.
+   */
+  forceCollapsed?: boolean
+  /**
+   * The sidebar inside the mobile menu drawer (`MobileNavMenu`): always
+   * expanded at any width, without the collapse toggle.
+   */
+  inDrawer?: boolean
+  /** Called when a link or a create action is chosen, e.g. to close the drawer. */
+  onNavigate?: () => void
+}
+
+export function AppSidebar({
+  forceCollapsed = false,
+  inDrawer = false,
+  onNavigate,
+}: AppSidebarProps = {}) {
   const { t } = useTranslation()
   const navigation = getNavigation(t)
   const pathname = usePathname()
   const { logout } = useAuth()
   const { isCollapsed, toggleCollapse } = useSidebarStore()
   const isNarrow = useMediaQuery('(max-width: 767px)')
-  const effectiveCollapsed = isCollapsed || isNarrow
+  const effectiveCollapsed =
+    !inDrawer && (isCollapsed || isNarrow || forceCollapsed)
   const { openSourceDialog, openNotebookDialog, openPodcastDialog } = useCreateDialogs()
 
   // The active item is the longest href that prefixes the current path.
@@ -116,6 +137,7 @@ export function AppSidebar() {
 
   const handleCreateSelection = (target: CreateTarget) => {
     setCreateMenuOpen(false)
+    onNavigate?.()
 
     if (target === 'source') {
       openSourceDialog()
@@ -130,8 +152,10 @@ export function AppSidebar() {
     <TooltipProvider delayDuration={0}>
       <div
         className={cn(
-          'app-sidebar flex h-full max-md:w-16 flex-col overflow-hidden bg-sidebar border-sidebar-border border-r transition-all duration-300',
-          effectiveCollapsed ? 'w-16' : 'w-64'
+          'app-sidebar flex flex-col overflow-hidden bg-sidebar border-sidebar-border transition-all duration-300',
+          inDrawer
+            ? 'min-h-full w-full'
+            : cn('h-full max-md:w-16 border-r', effectiveCollapsed ? 'w-16' : 'w-64')
         )}
       >
         <div
@@ -142,15 +166,22 @@ export function AppSidebar() {
         >
           {effectiveCollapsed ? (
             <div className="relative flex items-center justify-center w-full">
-              <LogoPebbles className="flex-col gap-[3px] transition-opacity group-hover:opacity-0" />
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={toggleCollapse}
-                className="absolute text-sidebar-foreground hover:bg-sidebar-accent opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <Menu className="h-4 w-4" />
-              </Button>
+              <LogoPebbles
+                className={cn(
+                  'flex-col gap-[3px] transition-opacity',
+                  !forceCollapsed && 'group-hover:opacity-0'
+                )}
+              />
+              {!forceCollapsed && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={toggleCollapse}
+                  className="absolute text-sidebar-foreground hover:bg-sidebar-accent opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <Menu className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           ) : (
             <>
@@ -160,15 +191,17 @@ export function AppSidebar() {
                   {t('common.appName')}
                 </span>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={toggleCollapse}
-                className="text-sidebar-foreground hover:bg-sidebar-accent"
-                data-testid="sidebar-toggle"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
+              {!inDrawer && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={toggleCollapse}
+                  className="text-sidebar-foreground hover:bg-sidebar-accent"
+                  data-testid="sidebar-toggle"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              )}
             </>
           )}
         </div>
@@ -289,7 +322,7 @@ export function AppSidebar() {
                     return (
                       <Tooltip key={item.name}>
                         <TooltipTrigger asChild>
-                          <Link href={item.href}>
+                          <Link href={item.href} onClick={onNavigate}>
                             {button}
                           </Link>
                         </TooltipTrigger>
@@ -299,7 +332,7 @@ export function AppSidebar() {
                   }
 
                   return (
-                    <Link key={item.name} href={item.href}>
+                    <Link key={item.name} href={item.href} onClick={onNavigate}>
                       {button}
                     </Link>
                   )

@@ -61,4 +61,26 @@ describe('NotebookHeader', () => {
     expect(headerRow?.className).toContain('flex-col')
     expect(headerRow?.className).toContain('sm:flex-row')
   })
+
+  it('links back to the notebook list', () => {
+    render(<NotebookHeader notebook={notebook} />)
+
+    expect(
+      screen.getByRole('link', { name: 'notebooks.backToNotebooks' })
+    ).toHaveAttribute('href', '/notebooks')
+  })
+
+  it('offers the app menu where the icon rail is hidden', () => {
+    render(<NotebookHeader notebook={notebook} />)
+
+    const menu = screen.getByRole('button', { name: 'navigation.openMenu' })
+    // Only below lg: wider screens keep the icon rail.
+    expect(menu).toHaveClass('lg:hidden')
+    // It comes first in the row, before the way back to the list.
+    expect(
+      menu.compareDocumentPosition(
+        screen.getByRole('link', { name: 'notebooks.backToNotebooks' })
+      ) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
+  })
 })

@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Bot, User, Send, Loader2, FileText, Lightbulb, StickyNote, MessageSquare, GitBranch } from 'lucide-react'
-import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
+import { ReferencedMarkdown } from '@/components/common/ReferencedMarkdown'
 import {
   SourceChatMessage,
   SourceChatContextIndicator,
@@ -16,32 +16,28 @@ import {
   LearningAside
 } from '@/lib/types/api'
 import { ModelSelector } from './ModelSelector'
-import { ContextIndicator } from '@/components/common/ContextIndicator'
+import {
+  ContextChip,
+  type NotebookContextStats,
+} from '@/components/common/ContextChip'
 import { SessionManager } from '@/components/sources/SessionManager'
 import { MessageActions } from '@/components/sources/MessageActions'
-import { convertReferencesToCompactMarkdown, createCompactReferenceLinkComponent } from '@/lib/utils/source-references'
+import { SelectionActions } from '@/components/sources/SelectionActions'
 import { useModalManager } from '@/lib/hooks/use-modal-manager'
 import { toast } from 'sonner'
 import { useTranslation } from '@/lib/hooks/use-translation'
-import {
-  LearningMergeEvent,
-  LearningThreadLinks,
-  learningMergesForMessage,
-} from '@/components/notebooks/LearningThreadLinks'
+import { LearningThreadLinks } from '@/components/notebooks/LearningThreadLinks'
+import { learningMergesForMessage } from '@/components/notebooks/LearningUpdateParts'
+import { LearningMergeChip } from '@/components/notebooks/LearningMergeChip'
 import {
   chatMessageDomId,
   focusChatMessage,
   messageIdFromChatHash,
+  scrollChatToEnd,
 } from '@/lib/utils/chat-navigation'
 import { cn } from '@/lib/utils'
-
-interface NotebookContextStats {
-  sourcesInsights: number
-  sourcesFull: number
-  notesCount: number
-  tokenCount?: number
-  charCount?: number
-}
+import type { ReferenceTitles } from '@/lib/utils/learning-asides'
+import { isSendShortcut, sendShortcutHint } from '@/lib/utils/composer-shortcut'
 
 interface ChatPanelProps {
   messages: SourceChatMessage[]
@@ -67,6 +63,8 @@ interface ChatPanelProps {
   notebookId?: string
   // Learning-aside actions (notebook chat only)
   onOpenAside?: (message: SourceChatMessage) => void
+  /** "Go deeper" on a passage selected in an assistant answer. */
+  onGoDeeperOnSelection?: (message: SourceChatMessage, passage: string) => void
   onOpenAsides?: () => void
   asideCount?: number
   learningAsides?: LearningAside[]
@@ -74,6 +72,8 @@ interface ChatPanelProps {
   onNavigateToMessage?: (messageId: string) => void
   onDiveIntoQuestion?: (parent: LearningAside, question: string) => void
   onParkQuestion?: (parent: LearningAside, question: string) => void
+  /** Source and note titles for learning-update evidence buttons. */
+  referenceTitles?: ReferenceTitles
   workspaceMode?: boolean
 }
 
@@ -96,6 +96,7 @@ export function ChatPanel({
   notebookContextStats,
   notebookId,
   onOpenAside,
+  onGoDeeperOnSelection,
   onOpenAsides,
   asideCount = 0,
   learningAsides = [],
@@ -103,6 +104,7 @@ export function ChatPanel({
   onNavigateToMessage,
   onDiveIntoQuestion,
   onParkQuestion,
+  referenceTitles,
   workspaceMode = false
 }: ChatPanelProps) {
   const { t } = useTranslation()
@@ -152,7 +154,7 @@ export function ChatPanel({
       anchoredHashRef.current = hash
       return
     }
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (messagesEndRef.current) scrollChatToEnd(messagesEndRef.current)
   }, [messages])
 
   const asideControl = onOpenAsides ? (
@@ -218,7 +220,8 @@ export function ChatPanel({
           viewportClassName="[&>div]:!block [&>div]:!min-w-0 [&>div]:!w-full"
           ref={scrollAreaRef}
         >
-          <div className="space-y-4 py-4">
+          {/* Messages keep a readable line length and center in wide columns. */}
+          <div className="mx-auto w-full max-w-[45rem] space-y-4 py-4">
             {messages.length === 0 ? (
               <div className="text-center text-muted-foreground py-8">
                 <Bot className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -235,11 +238,13 @@ export function ChatPanel({
                   notebookId={notebookId}
                   onReferenceClick={handleReferenceClick}
                   onOpenAside={onOpenAside}
+                  onGoDeeperOnSelection={onGoDeeperOnSelection}
                   learningAsides={learningAsides}
                   onOpenLearningAside={onOpenLearningAside}
                   onNavigateToMessage={onNavigateToMessage}
                   onDiveIntoQuestion={onDiveIntoQuestion}
                   onParkQuestion={onParkQuestion}
+                  referenceTitles={referenceTitles}
                   wide={workspaceMode}
                 />
               ))
@@ -284,19 +289,8 @@ export function ChatPanel({
             </div>
           )}
 
-          {notebookContextStats && (
-            <ContextIndicator
-              sourcesInsights={notebookContextStats.sourcesInsights}
-              sourcesFull={notebookContextStats.sourcesFull}
-              notesCount={notebookContextStats.notesCount}
-              tokenCount={notebookContextStats.tokenCount}
-              charCount={notebookContextStats.charCount}
-              className="px-3 pt-1.5"
-            />
-          )}
-
           {workspaceMode && (onOpenAsides || showSessions) && (
-            <div className="flex min-w-0 items-center gap-1 px-2 pt-1.5">
+            <div className="mx-auto flex w-full min-w-0 max-w-[45rem] items-center gap-1 px-2 pt-1.5">
               {asideControl}
               {sessionControl}
             </div>
@@ -307,6 +301,7 @@ export function ChatPanel({
             isStreaming={isStreaming}
             modelOverride={modelOverride}
             onModelChange={onModelChange}
+            contextStats={notebookContextStats}
           />
         </div>
       </CardContent>
@@ -375,13 +370,15 @@ interface ChatComposerProps {
   isStreaming: boolean
   modelOverride?: string
   onModelChange?: (model?: string) => void
+  contextStats?: NotebookContextStats
 }
 
 function ChatComposer({
   onSendMessage,
   isStreaming,
   modelOverride,
-  onModelChange
+  onModelChange,
+  contextStats
 }: ChatComposerProps) {
   const { t } = useTranslation()
   const chatInputId = useId()
@@ -395,54 +392,57 @@ function ChatComposer({
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    // Detect platform for correct modifier key
-    const isMac = typeof navigator !== 'undefined' && navigator.userAgent.toUpperCase().indexOf('MAC') >= 0
-    const isModifierPressed = isMac ? e.metaKey : e.ctrlKey
-
-    if (e.key === 'Enter' && isModifierPressed) {
+    if (isSendShortcut(e)) {
       e.preventDefault()
       handleSend()
     }
   }
 
-  // Detect platform for placeholder text
-  const isMac = typeof navigator !== 'undefined' && navigator.userAgent.toUpperCase().indexOf('MAC') >= 0
-  const keyHint = isMac ? '⌘+Enter' : 'Ctrl+Enter'
+  const keyHint = sendShortcutHint()
 
   return (
-    <div className="flex flex-shrink-0 items-end gap-2 px-2 py-2">
-      <Textarea
-        id={chatInputId}
-        name="chat-message"
-        autoComplete="off"
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder={`${t('chat.sendPlaceholder')} (${t('chat.pressToSend', { key: keyHint })})`}
-        disabled={isStreaming}
-        className="min-h-9 max-h-[100px] min-w-0 flex-1 resize-none px-3 py-2"
-        rows={1}
-      />
-      {onModelChange && (
-        <ModelSelector
-          currentModel={modelOverride}
-          onModelChange={onModelChange}
+    <div className="mx-auto w-full max-w-[45rem] flex-shrink-0 px-2 py-2">
+      {/* One rounded input: the text on top, context, model and send inside. */}
+      <div className="rounded-2xl border bg-card shadow-xs transition-[box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
+        <Textarea
+          id={chatInputId}
+          name="chat-message"
+          autoComplete="off"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={`${t('chat.sendPlaceholder')} (${t('chat.pressToSend', { key: keyHint })})`}
           disabled={isStreaming}
+          className="min-h-11 max-h-[160px] w-full resize-none rounded-2xl border-0 bg-transparent px-3 pt-2.5 pb-1 shadow-none focus-visible:ring-0"
+          rows={1}
         />
-      )}
-      <Button
-        onClick={handleSend}
-        disabled={!input.trim() || isStreaming}
-        size="icon"
-        aria-label={t('chat.sendPlaceholder')}
-        className="h-9 w-9 flex-shrink-0"
-      >
-        {isStreaming ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <Send className="h-4 w-4" />
-        )}
-      </Button>
+        <div className="flex min-w-0 items-center gap-1.5 px-2 pb-2">
+          {contextStats && <ContextChip stats={contextStats} />}
+          <div className="ml-auto flex min-w-0 items-center gap-1.5">
+            {onModelChange && (
+              <ModelSelector
+                currentModel={modelOverride}
+                onModelChange={onModelChange}
+                disabled={isStreaming}
+                className="rounded-full"
+              />
+            )}
+            <Button
+              onClick={handleSend}
+              disabled={!input.trim() || isStreaming}
+              size="icon"
+              aria-label={t('chat.sendPlaceholder')}
+              className="h-8 w-8 flex-shrink-0 rounded-full"
+            >
+              {isStreaming ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
@@ -454,11 +454,13 @@ interface ChatMessageProps {
   notebookId?: string
   onReferenceClick: (type: string, id: string) => void
   onOpenAside?: (message: SourceChatMessage) => void
+  onGoDeeperOnSelection?: (message: SourceChatMessage, passage: string) => void
   learningAsides?: LearningAside[]
   onOpenLearningAside?: (asideId: string) => void
   onNavigateToMessage?: (messageId: string) => void
   onDiveIntoQuestion?: (parent: LearningAside, question: string) => void
   onParkQuestion?: (parent: LearningAside, question: string) => void
+  referenceTitles?: ReferenceTitles
   wide?: boolean
 }
 
@@ -467,11 +469,13 @@ const ChatMessage = memo(function ChatMessage({
   notebookId,
   onReferenceClick,
   onOpenAside,
+  onGoDeeperOnSelection,
   learningAsides = [],
   onOpenLearningAside,
   onNavigateToMessage,
   onDiveIntoQuestion,
   onParkQuestion,
+  referenceTitles,
   wide = false
 }: ChatMessageProps) {
   const appliedUpdates = learningMergesForMessage(learningAsides, message.id)
@@ -490,30 +494,18 @@ const ChatMessage = memo(function ChatMessage({
           </div>
         </div>
       )}
+      {/* min-w-0 lets the column shrink beside the avatar: a wide formula,
+          code block or table then scrolls inside the reply instead of
+          pushing the whole answer past the chat's right edge. */}
       <div
         className={cn(
-          'flex flex-col gap-2',
-          wide && message.type === 'ai' ? 'w-full max-w-full' : 'max-w-[80%]'
+          'flex min-w-0 flex-col gap-2',
+          wide && message.type === 'ai' ? 'flex-1' : 'max-w-[80%]'
         )}
       >
-        <div
-          className={`rounded-lg px-4 py-2 border ${
-            message.type === 'human'
-              ? 'bg-muted'
-              : 'bg-card'
-          }`}
-        >
-          {message.type === 'ai' ? (
-            <AIMessageContent
-              content={message.content}
-              onReferenceClick={onReferenceClick}
-            />
-          ) : (
-            <p className="text-sm break-all">{message.content}</p>
-          )}
-        </div>
+        {/* A reply that used an aside's conclusion says so, collapsed. */}
         {appliedUpdates.map(({ aside, update }) => (
-          <LearningMergeEvent
+          <LearningMergeChip
             key={`${aside.id}:${update.id}`}
             aside={aside}
             update={update}
@@ -522,8 +514,34 @@ const ChatMessage = memo(function ChatMessage({
             onReferenceClick={onReferenceClick}
             onDiveIntoQuestion={onDiveIntoQuestion}
             onParkQuestion={onParkQuestion}
+            referenceTitles={referenceTitles}
           />
         ))}
+        <div
+          className={cn(
+            'min-w-0 max-w-full rounded-lg border px-4 py-2',
+            message.type === 'human' ? 'bg-muted' : 'bg-card'
+          )}
+        >
+          {message.type === 'ai' ? (
+            <SelectionActions
+              notebookId={notebookId}
+              onGoDeeper={
+                onGoDeeperOnSelection
+                  ? (passage) => onGoDeeperOnSelection(message, passage)
+                  : undefined
+              }
+            >
+              <ReferencedMarkdown
+                content={message.content}
+                onReferenceClick={onReferenceClick}
+                referenceTitles={referenceTitles}
+              />
+            </SelectionActions>
+          ) : (
+            <p className="text-sm break-words">{message.content}</p>
+          )}
+        </div>
         {message.type === 'ai' && (
           <>
             <MessageActions
@@ -542,6 +560,7 @@ const ChatMessage = memo(function ChatMessage({
                 onReferenceClick={onReferenceClick}
                 onDiveIntoQuestion={onDiveIntoQuestion}
                 onParkQuestion={onParkQuestion}
+                referenceTitles={referenceTitles}
               />
             )}
           </>
@@ -557,27 +576,3 @@ const ChatMessage = memo(function ChatMessage({
     </div>
   )
 })
-
-// Helper component to render AI messages with clickable references
-function AIMessageContent({
-  content,
-  onReferenceClick
-}: {
-  content: string
-  onReferenceClick: (type: string, id: string) => void
-}) {
-  const { t } = useTranslation()
-  // Convert references to compact markdown with numbered citations
-  const markdownWithCompactRefs = convertReferencesToCompactMarkdown(content, t('common.references'))
-
-  // Create custom link component for compact references
-  const LinkComponent = createCompactReferenceLinkComponent(onReferenceClick)
-
-  return (
-    <MarkdownRenderer components={{
-      a: LinkComponent
-    }}>
-      {markdownWithCompactRefs}
-    </MarkdownRenderer>
-  )
-}

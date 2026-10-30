@@ -1,34 +1,30 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import {
-  ArrowLeft,
-  CheckCircle2,
-  GitBranch,
-  Loader2,
-  Pause,
-  RotateCcw,
-  Send,
-  Trash2,
-  X,
-} from 'lucide-react'
+import { useEffect, useId, useRef, useState } from 'react'
+import { ArrowLeft, CheckCircle2, GitBranch, Loader2, X } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Textarea } from '@/components/ui/textarea'
-import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
 import {
   LearningAside,
   LearningAsideStatus,
+  LearningResolutionDraft,
   ResolveLearningAsideRequest,
 } from '@/lib/types/api'
 import { useTranslation } from '@/lib/hooks/use-translation'
-import { createLearningUpdateDraft } from '@/lib/utils/learning-asides'
+import { useAsideResolution } from '@/lib/hooks/use-aside-resolution'
 import {
-  LearningEvidenceButtons,
-  LearningQuestionList,
-} from '@/components/notebooks/LearningThreadLinks'
+  isPassageDive,
+  ReferenceTitles,
+  toPlainTextPreview,
+} from '@/lib/utils/learning-asides'
+import { ASIDE_STATUS_KEYS, asideStatusVariant, isOpenDive } from './aside-status'
+import { AsideComposer } from './AsideComposer'
+import { AsidePassage } from './AsidePassage'
+import { AsideResolveForm } from './AsideResolveForm'
+import { AsideStatusActions } from './AsideStatusActions'
+import { AsideSummary } from './AsideSummary'
+import { AsideTranscript } from './AsideTranscript'
 
 interface LearningAsidePanelProps {
   open: boolean
@@ -37,10 +33,14 @@ interface LearningAsidePanelProps {
   activeAside?: LearningAside
   isLoading: boolean
   isSending: boolean
+  /** The question being sent to the open dive, shown until it is answered. */
+  pendingMessage?: string | null
   isResolving: boolean
   isAsideLoading: boolean
   onSelectAside: (asideId: string) => void
   onSendMessage: (asideId: string, message: string) => Promise<unknown>
+  /** Model-drafted resolution; on failure the panel uses a local draft. */
+  onDraftResolution?: (asideId: string) => Promise<LearningResolutionDraft>
   onResolve: (
     asideId: string,
     data: ResolveLearningAsideRequest
@@ -53,23 +53,15 @@ interface LearningAsidePanelProps {
   onReferenceClick?: (type: string, id: string) => void
   onDiveIntoQuestion?: (parent: LearningAside, question: string) => void
   onParkQuestion?: (parent: LearningAside, question: string) => void
+  /** Source and note titles for the evidence buttons. */
+  referenceTitles?: ReferenceTitles
 }
 
-const statusTranslationKeys: Record<LearningAsideStatus, string> = {
-  active: 'learningAsides.status.active',
-  parked: 'learningAsides.status.parked',
-  resolved: 'learningAsides.status.resolved',
-  discarded: 'learningAsides.status.discarded',
-}
-
-function statusVariant(
-  status: LearningAsideStatus
-): 'default' | 'secondary' | 'outline' | 'destructive' {
-  if (status === 'active') return 'default'
-  if (status === 'discarded') return 'destructive'
-  return 'outline'
-}
-
+/**
+ * The full-height dive view: the list of asides, or one dive with its
+ * breadcrumb, summary, transcript and composer. The transcript, composer
+ * and wrap-up form are the same parts the inline dive thread uses.
+ */
 export function LearningAsidePanel({
   open,
   onOpenChange,
@@ -77,33 +69,40 @@ export function LearningAsidePanel({
   activeAside,
   isLoading,
   isSending,
+  pendingMessage,
   isResolving,
   isAsideLoading,
   onSelectAside,
   onSendMessage,
+  onDraftResolution,
   onResolve,
   onUpdateStatus,
   onNavigateToMessage,
   onReferenceClick,
   onDiveIntoQuestion,
   onParkQuestion,
+  referenceTitles,
 }: LearningAsidePanelProps) {
   const { t } = useTranslation()
+  const sectionRef = useRef<HTMLElement>(null)
+  const headingId = useId()
   const [showList, setShowList] = useState(!activeAside)
-  const [input, setInput] = useState('')
-  const [showResolution, setShowResolution] = useState(false)
-  const [conclusion, setConclusion] = useState('')
-  const [relevance, setRelevance] = useState('')
-  const [includeInMain, setIncludeInMain] = useState(true)
-  const [saveAsNote, setSaveAsNote] = useState(false)
   const [showTranscript, setShowTranscript] = useState(true)
+  const resolution = useAsideResolution({
+    aside: activeAside,
+    onDraftResolution,
+    onResolve,
+    isResolving,
+  })
   const activeAsideId = activeAside?.id
-  const latestAnswerContent =
-    [...(activeAside?.messages ?? [])]
-      .reverse()
-      .find((message) => message.type === 'ai')?.content ?? ''
-  const latestAnswerDraft = createLearningUpdateDraft(latestAnswerContent)
   const latestUpdate = activeAside?.updates.at(-1)
+  // After resolving, the way back lands on the reply that received the
+  // conclusion, or on the message the aside branched from.
+  const returnTarget =
+    [...(activeAside?.updates ?? [])]
+      .reverse()
+      .find((update) => update.applied_message_id)?.applied_message_id ??
+    activeAside?.anchor.message_id
   const parentAside = activeAside?.parent_aside_id
     ? asides.find((aside) => aside.id === activeAside.parent_aside_id)
     : undefined
@@ -111,50 +110,20 @@ export function LearningAsidePanel({
   useEffect(() => {
     if (activeAsideId) {
       setShowList(false)
-      setConclusion(latestAnswerDraft)
-      setRelevance('')
-      setShowResolution(false)
       setShowTranscript(activeAside?.status !== 'resolved')
     } else {
       setShowList(true)
     }
-  }, [activeAside?.status, activeAsideId, latestAnswerDraft])
+  }, [activeAside?.status, activeAsideId])
+
+  // The view covers the chat it opened from: take the cursor along.
+  useEffect(() => {
+    if (open) sectionRef.current?.focus({ preventScroll: true })
+  }, [open])
 
   const visibleAsides = asides.filter(
     (aside) => aside.status !== 'discarded'
   )
-
-  const send = async () => {
-    if (!activeAside || !input.trim() || isSending) return
-    try {
-      await onSendMessage(activeAside.id, input.trim())
-      setInput('')
-    } catch {
-      // The mutation owns the translated error toast.
-    }
-  }
-
-  const resolve = async () => {
-    if (!activeAside || !conclusion.trim() || isResolving) return
-    const citationMatches = `${conclusion}\n${relevance}`.match(
-      /\[(?:source|note|source_insight):[^\]]+\]/g
-    )
-    const citations = Array.from(
-      new Set((citationMatches ?? []).map((value) => value.slice(1, -1)))
-    )
-    try {
-      await onResolve(activeAside.id, {
-        conclusion: conclusion.trim(),
-        relevance: relevance.trim() || undefined,
-        citations,
-        include_in_main: includeInMain,
-        save_as_note: saveAsNote,
-      })
-      setShowResolution(false)
-    } catch {
-      // The mutation owns the translated error toast.
-    }
-  }
 
   const returnToMainMessage = (messageId: string) => {
     onOpenChange(false)
@@ -164,7 +133,12 @@ export function LearningAsidePanel({
   if (!open) return null
 
   return (
-    <section className="grid h-full min-h-0 min-w-0 flex-1 grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-background">
+    <section
+      ref={sectionRef}
+      tabIndex={-1}
+      aria-labelledby={headingId}
+      className="grid h-full min-h-0 min-w-0 flex-1 grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-background outline-none"
+    >
         <header className="flex min-w-0 items-center justify-between gap-3 border-b px-5 py-3">
           <div className="flex min-w-0 items-center gap-2">
             {!showList && (
@@ -189,7 +163,7 @@ export function LearningAsidePanel({
               </Button>
             )}
             <GitBranch className="h-4 w-4 text-teal" />
-            <h2 className="min-w-0 break-words text-sm font-semibold">
+            <h2 id={headingId} className="min-w-0 break-words text-sm font-semibold">
               {showList
                 ? t('learningAsides.journey')
                 : activeAside?.title ?? t('learningAsides.untitled')}
@@ -237,13 +211,15 @@ export function LearningAsidePanel({
                           {aside.title}
                         </p>
                         <p className="mt-1 line-clamp-2 break-words text-xs text-muted-foreground">
-                          {aside.status === 'resolved' && aside.updates.at(-1)
-                            ? aside.updates.at(-1)!.conclusion
-                            : aside.anchor.content}
+                          {toPlainTextPreview(
+                            aside.status === 'resolved' && aside.updates.at(-1)
+                              ? aside.updates.at(-1)!.conclusion
+                              : aside.anchor.content
+                          )}
                         </p>
                       </div>
-                      <Badge className="shrink-0" variant={statusVariant(aside.status)}>
-                        {t(statusTranslationKeys[aside.status])}
+                      <Badge className="shrink-0" variant={asideStatusVariant(aside.status)}>
+                        {t(ASIDE_STATUS_KEYS[aside.status])}
                       </Badge>
                     </div>
                   </button>
@@ -303,8 +279,11 @@ export function LearningAsidePanel({
               </div>
               {!activeAside.anchor.message_id && (
                 <p className="mt-1 line-clamp-2 break-words text-xs text-muted-foreground">
-                  {activeAside.anchor.content}
+                  {toPlainTextPreview(activeAside.anchor.content)}
                 </p>
+              )}
+              {isPassageDive(activeAside) && (
+                <AsidePassage content={activeAside.anchor.content} className="mt-1.5" />
               )}
             </div>
 
@@ -314,286 +293,89 @@ export function LearningAsidePanel({
             >
               <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden p-5">
                 {activeAside.status === 'resolved' && latestUpdate && (
-                  <div className="rounded-md border bg-card p-4">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-fern" />
-                        <h3 className="text-sm font-semibold">
-                          {t('learningAsides.summary')}
-                        </h3>
-                      </div>
-                      <Badge variant="outline">
-                        {t('learningAsides.status.resolved')}
-                      </Badge>
-                    </div>
-                    <div className="mt-3">
-                      <MarkdownRenderer>
-                        {latestUpdate.conclusion}
-                      </MarkdownRenderer>
-                    </div>
-                    {latestUpdate.relevance && (
-                      <div className="mt-3 border-t pt-3">
-                        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                          {t('learningAsides.whyItMatters')}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {latestUpdate.relevance}
-                        </p>
-                      </div>
-                    )}
-                    {latestUpdate.open_questions.length > 0 && (
-                      <div className="mt-3 border-t pt-3">
-                        <LearningQuestionList
-                          questions={latestUpdate.open_questions}
-                          asides={asides}
-                          parentAside={activeAside}
-                          onOpenAside={onSelectAside}
-                          onDiveIntoQuestion={onDiveIntoQuestion}
-                          onParkQuestion={onParkQuestion}
-                        />
-                      </div>
-                    )}
-                    <LearningEvidenceButtons
-                      citations={latestUpdate.citations}
-                      onReferenceClick={onReferenceClick}
-                      className="mt-3 border-t pt-3"
-                    />
-                    <div className="mt-3 flex flex-wrap gap-2 border-t pt-3">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => setShowTranscript((value) => !value)}
-                      >
-                        {showTranscript
-                          ? t('learningAsides.hideTranscript')
-                          : t('learningAsides.viewTranscript')}
-                      </Button>
-                      {latestUpdate.applied_message_id && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            returnToMainMessage(
-                              latestUpdate.applied_message_id!
-                            )
-                          }
-                        >
-                          {t('learningAsides.viewMergedResponse')}
-                        </Button>
-                      )}
-                    </div>
-                  </div>
+                  <AsideSummary
+                    aside={activeAside}
+                    update={latestUpdate}
+                    asides={asides}
+                    onOpenAside={onSelectAside}
+                    onDiveIntoQuestion={onDiveIntoQuestion}
+                    onParkQuestion={onParkQuestion}
+                    onReferenceClick={onReferenceClick}
+                    referenceTitles={referenceTitles}
+                  >
+                    <Button
+                      size="sm"
+                      onClick={() =>
+                        returnTarget
+                          ? returnToMainMessage(returnTarget)
+                          : onOpenChange(false)
+                      }
+                    >
+                      <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
+                      {t('learningAsides.returnToMain')}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setShowTranscript((value) => !value)}
+                    >
+                      {showTranscript
+                        ? t('learningAsides.hideTranscript')
+                        : t('learningAsides.viewTranscript')}
+                    </Button>
+                  </AsideSummary>
                 )}
-                {(showTranscript || activeAside.status !== 'resolved') &&
-                  (activeAside.messages.length === 0 ? (
-                    <p className="py-8 text-center text-sm text-muted-foreground">
-                      {t('learningAsides.askHint')}
-                    </p>
-                  ) : (
-                    activeAside.messages.map((message) => (
-                      <div
-                        key={message.id}
-                        className={`flex ${
-                          message.type === 'human'
-                            ? 'justify-end'
-                            : 'justify-start'
-                        }`}
-                      >
-                        <div
-                          className={`min-w-0 max-w-[88%] overflow-hidden break-words rounded-md border px-3 py-2 text-sm [&_*]:max-w-full ${
-                            message.type === 'human' ? 'bg-muted' : 'bg-card'
-                          }`}
-                        >
-                          {message.type === 'ai' ? (
-                            <MarkdownRenderer>
-                              {message.content}
-                            </MarkdownRenderer>
-                          ) : (
-                            <p className="whitespace-pre-wrap">
-                              {message.content}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    ))
-                  ))}
-                {isSending && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    {t('common.processing')}
-                  </div>
+                {(showTranscript || activeAside.status !== 'resolved') && (
+                  <AsideTranscript
+                    aside={activeAside}
+                    isAsideLoading={isAsideLoading}
+                    isSending={isSending}
+                    pendingMessage={pendingMessage}
+                    onSendMessage={onSendMessage}
+                    onReferenceClick={onReferenceClick}
+                    referenceTitles={referenceTitles}
+                  />
                 )}
               </div>
             </ScrollArea>
 
-            {showResolution ? (
-              <div className="max-h-[55svh] space-y-4 overflow-y-auto border-t p-5">
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium">
-                    {t('learningAsides.conclusion')}
-                  </label>
-                  <Textarea
-                    value={conclusion}
-                    onChange={(event) => setConclusion(event.target.value)}
-                    placeholder={t('learningAsides.conclusionPlaceholder')}
-                    rows={5}
-                  />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium">
-                    {t('learningAsides.relevance')}
-                  </label>
-                  <Textarea
-                    value={relevance}
-                    onChange={(event) => setRelevance(event.target.value)}
-                    placeholder={t('learningAsides.relevancePlaceholder')}
-                    rows={2}
-                  />
-                </div>
-                <label className="flex items-center gap-2 text-sm">
-                  <Checkbox
-                    checked={includeInMain}
-                    onCheckedChange={(checked) =>
-                      setIncludeInMain(checked === true)
-                    }
-                  />
-                  {t('learningAsides.includeInMain')}
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <Checkbox
-                    checked={saveAsNote}
-                    onCheckedChange={(checked) =>
-                      setSaveAsNote(checked === true)
-                    }
-                  />
-                  {t('learningAsides.saveAsNote')}
-                </label>
-                {saveAsNote && (
-                  <p className="pl-6 text-xs text-muted-foreground">
-                    {t('learningAsides.saveAsNoteHint')}
-                  </p>
-                )}
-                <div className="flex justify-end gap-2">
-                  <Button
-                    variant="ghost"
-                    onClick={() => setShowResolution(false)}
-                  >
-                    {t('common.cancel')}
-                  </Button>
-                  <Button
-                    onClick={resolve}
-                    disabled={
-                      !conclusion.trim() || isResolving || isAsideLoading
-                    }
-                  >
-                    {isResolving && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
-                    {t('learningAsides.resolve')}
-                  </Button>
-                </div>
-              </div>
+            {resolution.isOpen ? (
+              <AsideResolveForm
+                resolution={resolution}
+                isResolving={isResolving}
+                isAsideLoading={isAsideLoading}
+                className="max-h-[55svh] overflow-y-auto border-t p-5"
+              />
             ) : (
               <div className="space-y-3 border-t p-4">
-                {activeAside.status !== 'resolved' &&
-                  activeAside.status !== 'discarded' && (
-                    <div className="flex gap-2">
-                      <Textarea
-                        value={input}
-                        onChange={(event) => setInput(event.target.value)}
-                        placeholder={t('learningAsides.askPlaceholder')}
-                        className="min-h-[42px] flex-1 resize-none"
-                        rows={1}
-                        disabled={isSending || isAsideLoading}
-                        onKeyDown={(event) => {
-                          if (
-                            event.key === 'Enter' &&
-                            (event.metaKey || event.ctrlKey)
-                          ) {
-                            event.preventDefault()
-                            void send()
-                          }
-                        }}
-                      />
-                      <Button
-                        size="icon"
-                        className="h-[42px] w-[42px]"
-                        onClick={() => void send()}
-                        disabled={!input.trim() || isSending || isAsideLoading}
-                        aria-label={t('learningAsides.send')}
-                      >
-                        {isSending ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Send className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  )}
+                {isOpenDive(activeAside.status) && (
+                  <AsideComposer
+                    key={activeAside.id}
+                    asideId={activeAside.id}
+                    isSending={isSending}
+                    disabled={isAsideLoading}
+                    onSendMessage={onSendMessage}
+                  />
+                )}
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex gap-1">
-                    {activeAside.status === 'active' && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        disabled={isAsideLoading}
-                        onClick={() =>
-                          void onUpdateStatus(
-                            activeAside.id,
-                            'parked'
-                          ).catch(() => undefined)
-                        }
-                      >
-                        <Pause className="mr-1.5 h-3.5 w-3.5" />
-                        {t('learningAsides.park')}
-                      </Button>
-                    )}
-                    {activeAside.status === 'parked' && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        disabled={isAsideLoading}
-                        onClick={() =>
-                          void onUpdateStatus(
-                            activeAside.id,
-                            'active'
-                          ).catch(() => undefined)
-                        }
-                      >
-                        <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
-                        {t('learningAsides.reopen')}
-                      </Button>
-                    )}
-                    {activeAside.status !== 'discarded' &&
-                      activeAside.status !== 'resolved' && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        disabled={isAsideLoading}
-                        className="text-destructive hover:text-destructive"
-                        onClick={() =>
-                          void onUpdateStatus(
-                            activeAside.id,
-                            'discarded'
-                          ).catch(() => undefined)
-                        }
-                      >
-                        <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-                        {t('learningAsides.discard')}
-                      </Button>
-                    )}
+                    <AsideStatusActions
+                      aside={activeAside}
+                      disabled={isAsideLoading}
+                      onUpdateStatus={onUpdateStatus}
+                    />
                   </div>
                   {activeAside.status !== 'discarded' && (
                     <Button
                       variant="secondary"
                       size="sm"
                       disabled={isAsideLoading}
-                      onClick={() => setShowResolution(true)}
+                      onClick={() => void resolution.start()}
                     >
                       <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
                       {activeAside.status === 'resolved'
                         ? t('learningAsides.resolveAgain')
-                        : t('learningAsides.resolve')}
+                        : t('learningAsides.wrapUp')}
                     </Button>
                   )}
                 </div>

@@ -62,7 +62,7 @@ Defined by the migrations in `open_notebook/database/migrations/` (read them for
 | `source_embedding` | One chunk of a source: `source`, `order`, `content`, `embedding` |
 | `source_insight` | Transformation output for a source: `source`, `insight_type`, `content`, `embedding` |
 | `note` | Title, content, `note_type`, `embedding` |
-| `chat_session` | Session metadata only; messages live in the SQLite checkpoint, keyed by session id |
+| `chat_session` | Session metadata only (`title`, `model_override`, and `kind`: `chat`, or `learning_aside` for the hidden child session of an aside); messages live in the SQLite checkpoint, keyed by session id |
 | `learning_journey`, `learning_aside`, `learning_update` | Main learning path, anchored child conversations and the compact conclusions explicitly approved to return to the main context |
 | `transformation` | Prompt-based transformations: `name`, `title`, `prompt`, `apply_default`, optional `model_id` |
 | `model` | A configured model: `provider`, `name`, `type`, optional `credential` link |

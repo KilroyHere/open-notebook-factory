@@ -98,4 +98,39 @@ describe('AppSidebar', () => {
     expect(screen.queryByText('common.appName')).toBeNull()
     expect(container.querySelector('.app-sidebar')?.className).toContain('w-16')
   })
+
+  it('shows only the icon rail when a page forces it, without changing the preference', () => {
+    const toggleCollapse = vi.fn()
+    vi.mocked(useSidebarStore).mockReturnValue({
+      isCollapsed: false,
+      toggleCollapse,
+    } as any)
+
+    const { container } = render(<AppSidebar forceCollapsed />)
+
+    expect(screen.queryByText('common.appName')).toBeNull()
+    expect(container.querySelector('.app-sidebar')?.className).toContain('w-16')
+    // No expand handle: the page owns this layout, the stored choice stays.
+    expect(screen.queryByTestId('sidebar-toggle')).toBeNull()
+    expect(toggleCollapse).not.toHaveBeenCalled()
+  })
+
+  it('stays expanded in the mobile menu drawer and reports navigation', () => {
+    vi.mocked(useSidebarStore).mockReturnValue({
+      isCollapsed: true,
+      toggleCollapse: vi.fn(),
+    } as any)
+    vi.mocked(useMediaQuery).mockReturnValue(true)
+    const onNavigate = vi.fn()
+
+    const { container } = render(<AppSidebar inDrawer onNavigate={onNavigate} />)
+
+    // Narrow and collapsed, yet the drawer shows labels and no toggle.
+    expect(screen.getByText('common.appName')).toBeInTheDocument()
+    expect(screen.queryByTestId('sidebar-toggle')).toBeNull()
+    expect(container.querySelector('.app-sidebar')?.className).not.toContain('w-16')
+
+    fireEvent.click(screen.getByText('navigation.podcasts'))
+    expect(onNavigate).toHaveBeenCalledTimes(1)
+  })
 })

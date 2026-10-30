@@ -1,6 +1,6 @@
 import asyncio
 import traceback
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence
 from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException, Query
@@ -13,9 +13,12 @@ from api.routers._chat_shared import (
     SuccessResponse,
     extract_chat_messages,
     get_session_or_404,
+    load_main_learning_context,
+    main_chat_model_context,
+    normalize_record_id,
 )
 from open_notebook.database.repository import ensure_record_id, repo_query
-from open_notebook.domain.learning import LearningJourney
+from open_notebook.domain.learning import LearningJourney, LearningUpdate
 from open_notebook.domain.notebook import ChatSession, Notebook
 from open_notebook.exceptions import (
     NotFoundError,
@@ -72,7 +75,11 @@ class ExecuteChatRequest(BaseModel):
     session_id: str = Field(..., description="Chat session ID")
     message: str = Field(..., description="User message content")
     context: Dict[str, Any] = Field(
-        ..., description="Chat context with sources and notes"
+        ...,
+        description=(
+            "Chat context with sources and notes. Any learning_updates in it are "
+            "ignored: the server adds the session's accepted learning updates"
+        ),
     )
     model_override: Optional[str] = Field(
         None, description="Optional model override for this message"
@@ -97,24 +104,35 @@ class BuildContextResponse(BaseModel):
     context: Dict[str, Any] = Field(..., description="Built context data")
     token_count: int = Field(..., description="Estimated token count")
     char_count: int = Field(..., description="Character count")
+    learning_updates_omitted: int = Field(
+        0,
+        description=(
+            "Accepted learning updates left out of context.learning_updates (and "
+            "of the model's context) because their token budget was full; the "
+            "oldest are left out first"
+        ),
+    )
 
 
 async def _mark_learning_updates_applied(
-    session_id: str,
-    context: Dict[str, Any],
+    updates: Sequence[LearningUpdate],
     result: Dict[str, Any],
 ) -> None:
     """Link accepted updates to the first main-chat response that used them.
 
+    ``updates`` are the ones the server loaded and sent to the model for this
+    turn, never IDs taken from the request. An update that already names an
+    earlier response keeps it.
+
     This is best-effort metadata: a successful model response must not become
     a failed chat turn because a backlink could not be saved.
     """
-    context_update_ids = {
-        str(item.get("id"))
-        for item in context.get("learning_updates", [])
-        if isinstance(item, dict) and item.get("id")
-    }
-    if not context_update_ids:
+    pending_ids = [
+        update.id
+        for update in updates
+        if update.id and update.applied_message_id is None
+    ]
+    if not pending_ids:
         return
 
     response_message_id = next(
@@ -129,13 +147,7 @@ async def _mark_learning_updates_applied(
         return
 
     try:
-        journey = await LearningJourney.get_for_main_session(session_id)
-        if not journey:
-            return
-        for update in await journey.get_updates(include_unmerged=False):
-            if update.id in context_update_ids and update.applied_message_id is None:
-                update.applied_message_id = response_message_id
-                await update.save()
+        await LearningUpdate.mark_applied(pending_ids, response_message_id)
     except Exception as exc:
         logger.warning(
             f"Could not link learning updates to response {response_message_id}: {exc}"
@@ -387,10 +399,17 @@ async def execute_chat(request: ExecuteChatRequest):
             config=RunnableConfig(configurable={"thread_id": full_session_id}),
         )
 
+        # Accepted learning updates come from the database, not the request:
+        # the client's copy may be stale. The model sees them without record
+        # IDs; the loaded updates themselves drive the applied-message backlink.
+        learning = await load_main_learning_context(
+            full_session_id, notebook_id=str(notebook.id) if notebook else None
+        )
+
         # Prepare state for execution
         state_values = current_state.values if current_state else {}
         state_values["messages"] = state_values.get("messages", [])
-        state_values["context"] = request.context
+        state_values["context"] = main_chat_model_context(request.context, learning)
         state_values["notebook"] = notebook
         state_values["model_override"] = model_override
 
@@ -422,11 +441,7 @@ async def execute_chat(request: ExecuteChatRequest):
 
         # Update session timestamp
         await session.save()
-        await _mark_learning_updates_applied(
-            full_session_id,
-            request.context,
-            result,
-        )
+        await _mark_learning_updates_applied(learning.updates, result)
 
         # Convert messages to response format
         messages = extract_chat_messages(result.get("messages", []))
@@ -462,50 +477,28 @@ async def build_context(request: BuildContextRequest):
             notebook, request.context_config
         )
 
+        learning_updates_omitted = 0
         if request.session_id:
-            full_session_id = (
-                request.session_id
-                if request.session_id.startswith("chat_session:")
-                else f"chat_session:{request.session_id}"
+            # The same loader feeds POST /chat/execute, so what is listed and
+            # counted here is what the model receives: the newest accepted
+            # updates within their token budget.
+            learning = await load_main_learning_context(
+                normalize_record_id("chat_session", request.session_id),
+                notebook_id=str(notebook.id),
             )
-            journey = await LearningJourney.get_for_main_session(full_session_id)
-            if journey and journey.notebook == str(notebook.id):
-                updates = await journey.get_updates(include_unmerged=False)
-                if updates:
-                    context_data["learning_updates"] = [
-                        update.as_context_entry() for update in updates
-                    ]
-                    update_text = "\n\n".join(
-                        "\n".join(
-                            part
-                            for part in [
-                                f"Conclusion: {update.conclusion}",
-                                (
-                                    f"Relevance: {update.relevance}"
-                                    if update.relevance
-                                    else ""
-                                ),
-                                (
-                                    "Citations: " + ", ".join(update.citations)
-                                    if update.citations
-                                    else ""
-                                ),
-                            ]
-                            if part
-                        )
-                        for update in updates
-                    )
-                    total_content = (
-                        f"{total_content}\n\n"
-                        "# Accepted learning updates\n\n"
-                        f"{update_text}"
-                    ).strip()
+            if learning.updates:
+                context_data["learning_updates"] = learning.context_entries()
+                total_content += learning.model_text()
+            learning_updates_omitted = learning.omitted
 
         char_count = len(total_content)
         estimated_tokens = token_count(total_content) if total_content else 0
 
         return BuildContextResponse(
-            context=context_data, token_count=estimated_tokens, char_count=char_count
+            context=context_data,
+            token_count=estimated_tokens,
+            char_count=char_count,
+            learning_updates_omitted=learning_updates_omitted,
         )
     except HTTPException:
         raise

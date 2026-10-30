@@ -1,0 +1,7 @@
+-- Migration 29 rollback: remove the chat_session.kind marker.
+-- The field definition goes before the data: while kind is defined as
+-- TYPE string, unsetting it is rejected.
+
+REMOVE INDEX IF EXISTS idx_chat_session_kind ON TABLE chat_session;
+REMOVE FIELD IF EXISTS kind ON TABLE chat_session;
+UPDATE chat_session UNSET kind;

@@ -1,13 +1,15 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { NotebookResponse } from '@/lib/types/api'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Archive, ArchiveRestore, Trash2 } from 'lucide-react'
+import { Archive, ArchiveRestore, ArrowLeft, Trash2 } from 'lucide-react'
 import { useUpdateNotebook } from '@/lib/hooks/use-notebooks'
 import { NotebookDeleteDialog } from './NotebookDeleteDialog'
 import { InlineEdit } from '@/components/common/InlineEdit'
+import { MobileNavMenu } from '@/components/layout/MobileNavMenu'
 import { useTranslation } from '@/lib/hooks/use-translation'
 
 interface NotebookHeaderProps {
@@ -51,6 +53,22 @@ export function NotebookHeader({ notebook }: NotebookHeaderProps) {
         <div className="space-y-1">
           <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 flex-1 items-center gap-2">
+              {/* The icon rail is hidden below lg; the app menu lives here. */}
+              <MobileNavMenu className="lg:hidden" />
+              <Button
+                asChild
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 shrink-0 p-0"
+              >
+                <Link
+                  href="/notebooks"
+                  aria-label={t('notebooks.backToNotebooks')}
+                  title={t('notebooks.backToNotebooks')}
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Link>
+              </Button>
               <InlineEdit
                 id="notebook-name"
                 name="notebook-name"

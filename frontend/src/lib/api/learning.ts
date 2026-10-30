@@ -1,10 +1,12 @@
 import apiClient from './client'
 import {
   CreateLearningAsideRequest,
+  DraftLearningResolutionRequest,
   LearningAside,
   LearningAsideStatus,
   LearningJourney,
   LearningJourneyResume,
+  LearningResolutionDraft,
   LearningSection,
   ResolveLearningAsideRequest,
   SendLearningAsideMessageRequest,
@@ -69,6 +71,17 @@ export const learningApi = {
   ) => {
     const response = await apiClient.post<LearningAside>(
       `/learning/asides/${asideId}/messages`,
+      data
+    )
+    return response.data
+  },
+
+  draftResolution: async (
+    asideId: string,
+    data: DraftLearningResolutionRequest = {}
+  ) => {
+    const response = await apiClient.post<LearningResolutionDraft>(
+      `/learning/asides/${asideId}/draft-resolution`,
       data
     )
     return response.data

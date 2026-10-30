@@ -1,4 +1,4 @@
-# ADR-0XX: Learning asides merge approved artifacts, not transcripts
+# ADR-014: Learning asides merge approved artifacts, not transcripts
 
 - **Status**: Accepted
 - **Date**: 2026-10
@@ -24,4 +24,10 @@ An aside is a child `chat_session` with a SurrealDB `learning_aside` record that
 - Branches remain auditable and can be reopened without rewriting earlier updates.
 - Stable message identifiers and source snapshots are part of the feature contract.
 - Deleting notebooks or main sessions must cascade through hidden child sessions and updates.
+- The child session carries its own marker, `chat_session.kind = "learning_aside"`, set when the aside is created (migration 29 marked existing ones). Session lists filter on that field; looking every session up in `learning_aside` grew with all asides in the database.
 - A future learner model can consume approved updates, but explanation alone must never imply mastery.
+- A nested dive receives its immediate parent's transcript up to the anchor (its `context_snapshot`) plus a bounded learning path built when each message is sent: a main-thread excerpt from the outermost aside's snapshot and each ancestor's title, anchor and latest conclusion. Ancestor transcripts are never copied, which keeps deep nesting from growing the prompt.
+- Re-resolving an aside stores a new `learning_update` version. Only the latest version per aside can enter main context; older versions stay stored for audit and are reported as `superseded`.
+- Whether the latest version enters main context (`include_in_main`) can be changed afterwards, in place, with `PATCH /api/learning/updates/{id}`; that switch is not versioned. A superseded version cannot be changed, since it can never enter main context.
+- The server decides which conclusions enter a main-chat turn. `POST /api/chat/execute` loads them for the session itself and ignores any `learning_updates` a client sends; `POST /api/chat/context` returns the same selection for display, so the context counter and the prompt agree.
+- Accepted conclusions share a fixed budget per turn, `LEARNING_UPDATES_TOKEN_BUDGET` (4,000 tokens, in `api/routers/_chat_shared.py`), measured as the model sees them. The newest are kept first and the first one that does not fit ends the selection, so a long journey cannot grow the prompt without bound; the context endpoint reports the rest as `learning_updates_omitted`.

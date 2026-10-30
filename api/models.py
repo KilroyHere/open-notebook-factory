@@ -176,6 +176,29 @@ class ResolveLearningAsideRequest(BaseModel):
         return stripped
 
 
+class UpdateLearningUpdateRequest(BaseModel):
+    include_in_main: bool = Field(
+        ...,
+        description=(
+            "Send this conclusion with main-chat messages (true) or leave it "
+            "out (false). Only the latest version of an aside can be changed"
+        ),
+    )
+
+
+class DraftLearningResolutionRequest(BaseModel):
+    model_override: Optional[str] = None
+
+
+class LearningResolutionDraftResponse(BaseModel):
+    conclusion: str
+    relevance: str = ""
+    open_questions: List[str] = Field(default_factory=list)
+    # Documents the draft relied on (e.g. "source:abc"); the text fields carry
+    # no citation markers, so send these back as the resolve request's citations.
+    citations: List[str] = Field(default_factory=list)
+
+
 class LearningAsideMessageResponse(BaseModel):
     id: str
     type: str
@@ -194,6 +217,13 @@ class LearningUpdateResponse(BaseModel):
     saved_note_id: Optional[str] = None
     applied_message_id: Optional[str] = None
     version: int
+    superseded: bool = Field(
+        default=False,
+        description=(
+            "True when a newer resolution of the same aside exists; superseded "
+            "versions are kept for audit but never enter main chat context"
+        ),
+    )
     created: str
     updated: str
 

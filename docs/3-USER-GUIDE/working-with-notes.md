@@ -38,7 +38,7 @@ Insights can be copied into a notebook as notes through the API (`POST /api/insi
 
 ## Using Notes
 
-- **In notebook chat**: each note has a context icon that switches it between included (full content) and **Not included in chat**. The Notes column's **Context** menu includes or excludes all of them. See [Chat Effectively](chat-effectively.md#choosing-what-the-ai-sees).
+- **In notebook chat**: each note has a context icon that switches it between included (full content) and **Not included in chat**. The **Context** menu in Studio's Notes tab includes or excludes all of them. See [Chat Effectively](chat-effectively.md#choosing-what-the-ai-sees).
 - **In search and Ask**: notes are covered by text search (titles and content) and, once embedded, by vector search and Ask. Notes are embedded automatically when saved, if an Embedding Model is set.
 - **In podcasts**: notes can be selected as episode content. See [Creating Podcasts](creating-podcasts.md).
 

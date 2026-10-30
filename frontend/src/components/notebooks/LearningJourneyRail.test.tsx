@@ -97,10 +97,9 @@ describe('LearningJourneyRail', () => {
     ).toBeInTheDocument()
   })
 
-  it('keeps a sheet visible without the desktop rail width', () => {
+  it('fills the Studio panel at every width, leaving the frame to Studio', () => {
     const { container } = render(
       <LearningJourneyRail
-        presentation="sheet"
         messages={messages}
         asides={[aside]}
         activeAsideId={null}
@@ -111,7 +110,7 @@ describe('LearningJourneyRail', () => {
     )
 
     const root = container.firstElementChild as HTMLElement
-    expect(root).toHaveAttribute('data-presentation', 'sheet')
+    expect(root).toHaveAttribute('data-journey')
     expect(root.classList.contains('flex')).toBe(true)
     expect(root.classList.contains('h-full')).toBe(true)
     expect(root.classList.contains('flex-col')).toBe(true)
@@ -119,9 +118,9 @@ describe('LearningJourneyRail', () => {
     expect(root.classList.contains('lg:block')).toBe(false)
     expect(root.classList.contains('lg:hidden')).toBe(false)
     expect(root.classList.contains('w-72')).toBe(false)
-    expect(
-      screen.queryByRole('button', { name: 'Collapse learningAsides.journey' })
-    ).not.toBeInTheDocument()
+    // Studio owns the collapse control and the panel title.
+    expect(screen.queryByRole('button', { name: /^Collapse / })).toBeNull()
+    expect(screen.queryByRole('heading')).toBeNull()
   })
 
   it('nests parked asides and lists open questions under the resolved aside', () => {
@@ -439,5 +438,38 @@ describe('LearningJourneyRail', () => {
       screen.getByRole('tab', { name: 'learningAsides.outline' })
     ).toHaveAttribute('data-state', 'active')
     expect(screen.getByText('Explain the ELBO.')).toBeInTheDocument()
+  })
+
+  it('shows plain-text previews without citations or markdown', () => {
+    const raw =
+      '**Scaled dot-product attention** computes $QK^T/\\sqrt{d_k}$ [source:6tsit42].'
+    render(
+      <LearningJourneyRail
+        messages={[
+          { id: 'human:raw', type: 'human', content: `## Explain _attention_ [note:n1]` },
+          { id: 'ai:raw', type: 'ai', content: raw },
+        ]}
+        asides={[
+          {
+            ...aside,
+            status: 'active',
+            updates: [],
+            anchor: { type: 'message', message_id: 'ai:raw', content: raw },
+          },
+        ]}
+        activeAsideId={null}
+        onShowMain={vi.fn()}
+        onOpenAside={vi.fn()}
+        onNavigateToMessage={vi.fn()}
+      />
+    )
+
+    expect(screen.getByText('Explain attention')).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'Scaled dot-product attention computes QK^T/ sqrt d_k.'
+      )
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/source:6tsit42|\*\*|\$/)).not.toBeInTheDocument()
   })
 })

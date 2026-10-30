@@ -16,7 +16,7 @@ Citations don't carry page numbers, sections or highlighted passages. To find th
 
 ## Where You See Them
 
-- **Notebook chat and source chat**: inline numbers like **[1]**, with a **References** list at the end of the answer. Click a number or a reference to open the item in a dialog.
+- **Notebook chat and source chat**: inline numbers like **[1]**, with a **References** list at the end of the answer. In notebook chat the list names each source or note by its title (an insight, or an item no longer in the notebook, reads **Insight 1**, **Source 2** and so on); source chat lists the record ID. Click a number or a reference to open the item in a dialog.
 - **Ask**: inline links in the answer; click one to open the item.
 
 If a cited item was deleted after the answer was written, the dialog says *This content no longer exists*.

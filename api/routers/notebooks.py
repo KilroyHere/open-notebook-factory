@@ -11,6 +11,7 @@ from api.models import (
     NotebookUpdate,
     RecentlyViewedResponse,
 )
+from api.routers._chat_shared import normalize_record_id
 from open_notebook.database.repository import ensure_record_id, repo_query
 from open_notebook.domain.notebook import Notebook, Source
 from open_notebook.exceptions import (
@@ -20,6 +21,25 @@ from open_notebook.exceptions import (
 )
 
 router = APIRouter()
+
+
+def _full_record_id(table: str, record_id: str, label: str) -> str:
+    """Normalize a path ID to `table:id`; an unparseable ID is a 404.
+
+    Clients may pass a bare ID (`abc`) or a full one (`notebook:abc`). An ID
+    that can't form a record ID (e.g. `notebook:a:b`) cannot name an existing
+    record, so it's reported as not found rather than surfacing as a 500.
+    """
+    full_id = normalize_record_id(table, record_id)
+    try:
+        ensure_record_id(full_id)
+    except ValueError:
+        raise NotFoundError(f"{label} not found") from None
+    return full_id
+
+
+def _notebook_id(notebook_id: str) -> str:
+    return _full_record_id("notebook", notebook_id, "Notebook")
 
 
 async def _stamp_notebook_view(notebook_id: str) -> None:
@@ -181,6 +201,7 @@ async def get_recently_viewed(
 async def get_notebook_delete_preview(notebook_id: str):
     """Get a preview of what will be deleted when this notebook is deleted."""
     try:
+        notebook_id = _notebook_id(notebook_id)
         notebook = await Notebook.get(notebook_id)
 
         preview = await notebook.get_delete_preview()
@@ -210,6 +231,7 @@ async def get_notebook_delete_preview(notebook_id: str):
 async def get_notebook(notebook_id: str):
     """Get a specific notebook by ID."""
     try:
+        notebook_id = _notebook_id(notebook_id)
         # Query with counts for single notebook
         query = """
             SELECT *,
@@ -250,6 +272,7 @@ async def get_notebook(notebook_id: str):
 async def update_notebook(notebook_id: str, notebook_update: NotebookUpdate):
     """Update a notebook."""
     try:
+        notebook_id = _notebook_id(notebook_id)
         notebook = await Notebook.get(notebook_id)
 
         # Update only provided fields
@@ -316,13 +339,15 @@ async def update_notebook(notebook_id: str, notebook_update: NotebookUpdate):
 async def add_source_to_notebook(notebook_id: str, source_id: str):
     """Add an existing source to a notebook (create the reference)."""
     try:
+        notebook_id = _notebook_id(notebook_id)
+        source_id = _full_record_id("source", source_id, "Source")
         # Verify the notebook and source exist (raises NotFoundError -> 404)
         await Notebook.get(notebook_id)
         await Source.get(source_id)
 
         # Check if reference already exists (idempotency)
         existing_ref = await repo_query(
-            "SELECT * FROM reference WHERE out = $source_id AND in = $notebook_id",
+            "SELECT * FROM reference WHERE in = $source_id AND out = $notebook_id",
             {
                 "notebook_id": ensure_record_id(notebook_id),
                 "source_id": ensure_record_id(source_id),
@@ -359,6 +384,8 @@ async def add_source_to_notebook(notebook_id: str, source_id: str):
 async def remove_source_from_notebook(notebook_id: str, source_id: str):
     """Remove a source from a notebook (delete the reference)."""
     try:
+        notebook_id = _notebook_id(notebook_id)
+        source_id = _full_record_id("source", source_id, "Source")
         # Verify the notebook exists (raises NotFoundError -> 404)
         await Notebook.get(notebook_id)
 
@@ -403,6 +430,7 @@ async def delete_notebook(
     to this notebook (not linked to any other notebooks).
     """
     try:
+        notebook_id = _notebook_id(notebook_id)
         notebook = await Notebook.get(notebook_id)
 
         result = await notebook.delete(

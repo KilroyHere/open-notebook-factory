@@ -1,0 +1,16 @@
+-- Migration 29: mark learning-aside chat sessions on chat_session itself.
+-- The notebook session list hid aside sessions by checking every row against
+-- the whole learning_aside table. A `kind` field on the session ("chat", or
+-- "learning_aside" for an aside's child session) lets the list check each
+-- session directly.
+
+DEFINE FIELD IF NOT EXISTS kind ON TABLE chat_session TYPE string DEFAULT "chat";
+
+-- Backfill. Every existing session gets an explicit kind, because TYPE string
+-- rejects a later MERGE on a row that has none; then each aside's child
+-- session is marked. UPDATE does not create sessions that no longer exist.
+UPDATE chat_session SET kind = "chat" WHERE kind = NONE;
+UPDATE (SELECT VALUE chat_session FROM learning_aside) SET kind = "learning_aside";
+
+-- Finds aside sessions (kind = "learning_aside") without a table scan.
+DEFINE INDEX IF NOT EXISTS idx_chat_session_kind ON TABLE chat_session COLUMNS kind CONCURRENTLY;

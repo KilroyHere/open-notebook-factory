@@ -16,6 +16,9 @@ from open_notebook.exceptions import (
     NotFoundError,
 )
 
+ChatSessionKind = Literal["chat", "learning_aside"]
+LEARNING_ASIDE_SESSION_KIND: ChatSessionKind = "learning_aside"
+
 
 class Notebook(ObjectModel):
     table_name: ClassVar[str] = "notebook"
@@ -140,33 +143,28 @@ class Notebook(ObjectModel):
     async def get_chat_sessions(
         self, include_learning_asides: bool = False
     ) -> List["ChatSession"]:
+        """The notebook's chat sessions, most recently updated first.
+
+        Learning-aside child sessions are hidden unless
+        ``include_learning_asides`` is set. Sessions are reached through this
+        notebook's own ``refers_to`` edges (no scan of the edge table) and an
+        aside is recognized by its ``kind`` field, set when the aside is created
+        (migration 29), not by looking it up in ``learning_aside``.
+        """
         try:
-            aside_filter = (
-                ""
-                if include_learning_asides
-                else """
-                    and in not in (
-                        select value chat_session from learning_aside
-                    )
-                """
-            )
             srcs = await repo_query(
-                f"""
-                select * from (
-                    select
-                    <- chat_session as chat_session
-                    from refers_to
-                    where out=$id
-                    {aside_filter}
-                    fetch chat_session
-                )
-                order by chat_session.updated desc
-            """,
-                {"id": ensure_record_id(self.id)},
+                """
+                SELECT * FROM $id<-refers_to<-chat_session
+                WHERE $include_learning_asides OR kind != $aside_kind
+                ORDER BY updated DESC
+                """,
+                {
+                    "id": ensure_record_id(self.id),
+                    "include_learning_asides": include_learning_asides,
+                    "aside_kind": LEARNING_ASIDE_SESSION_KIND,
+                },
             )
-            return (
-                [ChatSession(**src["chat_session"][0]) for src in srcs] if srcs else []
-            )
+            return [ChatSession(**src) for src in srcs] if srcs else []
         except Exception as e:
             logger.error(
                 f"Error fetching chat sessions for notebook {self.id}: {str(e)}"
@@ -313,8 +311,10 @@ class Notebook(ObjectModel):
                 f"exclusive sources for notebook {self.id}"
             )
 
-            # 3. Delete chat sessions linked to this notebook
-            chat_sessions = await self.get_chat_sessions()
+            # 3. Delete chat sessions linked to this notebook. Aside sessions
+            # are included: their journeys are gone by now, so any left are
+            # orphans that the normal list would no longer show.
+            chat_sessions = await self.get_chat_sessions(include_learning_asides=True)
             for chat_session in chat_sessions:
                 await chat_session.delete()
                 deleted_chat_sessions += 1
@@ -780,6 +780,10 @@ class ChatSession(ObjectModel):
     nullable_fields: ClassVar[set[str]] = {"model_override"}
     title: Optional[str] = None
     model_override: Optional[str] = None
+    # "learning_aside" marks the hidden child session of a learning aside; it is
+    # set when the aside is created and never changes. Notebook and source
+    # chats are "chat".
+    kind: ChatSessionKind = "chat"
 
     async def relate_to_notebook(self, notebook_id: str) -> Any:
         if not notebook_id:

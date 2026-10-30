@@ -143,16 +143,23 @@ class LearningJourney(ObjectModel):
         aside_ids = [ensure_record_id(aside.id) for aside in asides if aside.id]
         if not aside_ids:
             return []
-        query = "SELECT * FROM learning_update WHERE $asides CONTAINS aside"
-        if not include_unmerged:
-            query += " AND include_in_main = true"
-        query += " ORDER BY created ASC"
+        query = (
+            "SELECT * FROM learning_update WHERE $asides CONTAINS aside "
+            "ORDER BY created ASC"
+        )
         try:
             rows = await repo_query(query, {"asides": aside_ids})
-            return [LearningUpdate(**row) for row in rows]
+            updates = [LearningUpdate(**row) for row in rows]
         except Exception as exc:
             logger.exception(f"Failed to list learning updates for journey {self.id}")
             raise DatabaseOperationError("Failed to list learning updates") from exc
+        if include_unmerged:
+            return updates
+        return [
+            update
+            for update in latest_update_versions(updates)
+            if update.include_in_main
+        ]
 
     async def delete_with_asides(self) -> bool:
         """Delete a journey, its updates, asides, and child chat sessions."""
@@ -215,15 +222,7 @@ class LearningAside(ObjectModel):
     async def get_updates(self) -> List["LearningUpdate"]:
         if not self.id:
             raise InvalidInputError("Aside must be saved before listing updates")
-        try:
-            rows = await repo_query(
-                "SELECT * FROM learning_update WHERE aside = $aside ORDER BY version ASC",
-                {"aside": ensure_record_id(self.id)},
-            )
-            return [LearningUpdate(**row) for row in rows]
-        except Exception as exc:
-            logger.exception(f"Failed to list updates for aside {self.id}")
-            raise DatabaseOperationError("Failed to list learning updates") from exc
+        return await LearningUpdate.get_versions(self.id)
 
 
 class LearningUpdate(ObjectModel):
@@ -268,6 +267,107 @@ class LearningUpdate(ObjectModel):
             "citations": self.citations,
             "applied_message_id": self.applied_message_id,
         }
+
+    @classmethod
+    async def get_versions(cls, aside_id: str) -> List["LearningUpdate"]:
+        """Every stored resolution of an aside, oldest version first."""
+        try:
+            rows = await repo_query(
+                "SELECT * FROM learning_update WHERE aside = $aside ORDER BY version ASC",
+                {"aside": ensure_record_id(aside_id)},
+            )
+            return [cls(**row) for row in rows]
+        except Exception as exc:
+            logger.exception(f"Failed to list updates for aside {aside_id}")
+            raise DatabaseOperationError("Failed to list learning updates") from exc
+
+    async def set_include_in_main(self, include_in_main: bool) -> None:
+        """Send this conclusion with main-chat turns, or leave it out.
+
+        The version is changed in place: no new version is stored and only
+        ``include_in_main`` is written, so a concurrent backlink is not lost.
+        Only the latest version of an aside can reach main context
+        (:func:`latest_update_versions`), so changing a superseded version is
+        rejected: it could never take effect. The instance is refreshed from the
+        stored record.
+        """
+        if not self.id:
+            raise InvalidInputError(
+                "Learning update must be saved before it can be changed"
+            )
+        versions = await LearningUpdate.get_versions(self.aside)
+        if not any(version.id == self.id for version in versions):
+            raise NotFoundError(f"learning_update with id {self.id} not found")
+        if not any(
+            version.id == self.id for version in latest_update_versions(versions)
+        ):
+            newest = max(versions, key=lambda version: version.version)
+            raise InvalidInputError(
+                f"Version {self.version} of this conclusion was replaced by "
+                f"version {newest.version}. Only the latest version of an aside's "
+                "conclusion can be included in or left out of the main chat."
+            )
+        try:
+            rows = await repo_query(
+                "UPDATE $update_id SET include_in_main = $include_in_main RETURN AFTER",
+                {
+                    "update_id": ensure_record_id(self.id),
+                    "include_in_main": include_in_main,
+                },
+            )
+        except Exception as exc:
+            logger.exception(f"Failed to change learning update {self.id}")
+            raise DatabaseOperationError("Failed to update learning update") from exc
+        if not rows:
+            raise NotFoundError(f"learning_update with id {self.id} not found")
+        stored = LearningUpdate(**rows[0])
+        for name in LearningUpdate.model_fields:
+            setattr(self, name, getattr(stored, name))
+
+    @classmethod
+    async def mark_applied(cls, update_ids: List[str], message_id: str) -> None:
+        """Record ``message_id`` as the first main reply that used these updates.
+
+        Only ``applied_message_id`` is written, and only on versions that have
+        no backlink yet, so an update that already names its first reply keeps
+        it and a concurrent edit of another field is never overwritten by a
+        stale copy of the record.
+        """
+        if not update_ids:
+            return
+        try:
+            await repo_query(
+                """
+                UPDATE $update_ids SET applied_message_id = $message_id
+                WHERE applied_message_id = NONE
+                """,
+                {
+                    "update_ids": [
+                        ensure_record_id(update_id) for update_id in update_ids
+                    ],
+                    "message_id": message_id,
+                },
+            )
+        except Exception as exc:
+            logger.exception(f"Failed to link learning updates to {message_id}")
+            raise DatabaseOperationError("Failed to link learning updates") from exc
+
+
+def latest_update_versions(updates: List["LearningUpdate"]) -> List["LearningUpdate"]:
+    """Keep only the newest version of each aside's resolution.
+
+    Re-resolving an aside stores a new version; earlier versions stay for audit
+    but are superseded and must not reach the main chat context. The latest
+    version decides alone, so a re-resolution that is not included in main
+    removes that aside's conclusion from main context. Input order is kept.
+    """
+    latest: Dict[str, "LearningUpdate"] = {}
+    for update in updates:
+        current = latest.get(update.aside)
+        if current is None or update.version >= current.version:
+            latest[update.aside] = update
+    keep = {id(update) for update in latest.values()}
+    return [update for update in updates if id(update) in keep]
 
 
 class LearningSection(ObjectModel):
