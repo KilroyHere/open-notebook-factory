@@ -83,6 +83,21 @@ test('the first question of a new chat stays on screen, and its answer shows num
   const [turn] = api.callsTo<SendNotebookChatMessageRequest>('POST', '/chat/execute')
   expect(turn.body).toMatchObject({ session_id: api.sessions[0].id, message: QUESTION })
   expect(turn.body.context.sources).toHaveLength(SOURCES.length)
+
+  // The outline names a section after the question once the API has stored
+  // it, never after the temporary ID it had on its way.
+  const storedQuestion = api.sessions[0].messages[0]
+  const namedSections = () =>
+    api
+      .callsTo<{ sections: Array<{ start_message_id: string }> }>(
+        'POST',
+        '/learning/sections/sync'
+      )
+      .flatMap((call) => call.body.sections.map((section) => section.start_message_id))
+  await expect.poll(namedSections).toEqual([storedQuestion.id])
+  expect(api.sections.map((section) => section.start_message_id)).toEqual([
+    storedQuestion.id,
+  ])
 })
 
 test('Go deeper opens a dive under the answer, and Wrap up resolves it into what was learned', async ({

@@ -403,3 +403,50 @@ describe('useNotebookWorkspace parkQuestion', () => {
     }
   )
 })
+
+describe('useNotebookWorkspace outline sections', () => {
+  function chatWith(messages: Array<{ id: string; type: 'human' | 'ai'; content: string }>) {
+    return {
+      messages,
+      currentSessionId: 'chat_session:main',
+      buildContext: vi.fn(),
+      tokenCount: 0,
+      charCount: 0,
+    } as unknown as ReturnType<typeof useNotebookChat>
+  }
+
+  it('names a section after a question once it is stored, not while it is on its way', async () => {
+    const syncSections = vi.fn().mockResolvedValue([])
+    vi.mocked(useLearningAsides).mockReturnValue(learningMock({ asides: [], syncSections }))
+    const question = { type: 'human' as const, content: 'Why a Gaussian prior?' }
+    vi.mocked(useNotebookChat).mockReturnValue(
+      chatWith([{ ...question, id: 'temp-1730000000000' }])
+    )
+    const { rerender } = renderHook(() =>
+      useNotebookWorkspace({
+        notebookId: 'notebook:1',
+        sources: [],
+        notes: [],
+        contextSelections: { sources: {}, notes: {} },
+      })
+    )
+
+    // The question shows before the API has stored it: no section yet.
+    expect(syncSections).not.toHaveBeenCalled()
+
+    vi.mocked(useNotebookChat).mockReturnValue(
+      chatWith([
+        { ...question, id: 'human:2' },
+        { id: 'ai:2', type: 'ai', content: 'Conjugacy keeps the posterior Gaussian.' },
+      ])
+    )
+    rerender()
+
+    await waitFor(() =>
+      expect(syncSections).toHaveBeenCalledWith([
+        { start_message_id: 'human:2', title: 'Why a Gaussian prior?' },
+      ])
+    )
+    expect(syncSections).toHaveBeenCalledTimes(1)
+  })
+})

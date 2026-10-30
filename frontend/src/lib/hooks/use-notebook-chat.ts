@@ -22,14 +22,7 @@ import {
   NoteResponse
 } from '@/lib/types/api'
 import type { ContextSelections } from '@/lib/types/notebook-context'
-
-/** The ID prefix of a question shown before the API has stored it. */
-export const PENDING_MESSAGE_PREFIX = 'temp-'
-
-/** A question on its way, shown before the API has stored it (and given it an ID). */
-export function isPendingMessage(message: Pick<NotebookChatMessage, 'id'>): boolean {
-  return message.id.startsWith(PENDING_MESSAGE_PREFIX)
-}
+import { isPendingMessage, PENDING_MESSAGE_PREFIX } from '@/lib/utils/chat-messages'
 
 interface UseNotebookChatParams {
   notebookId: string

@@ -13,6 +13,7 @@ import type {
   NoteResponse,
   SourceListResponse,
 } from '@/lib/types/api'
+import { isPendingMessage } from '@/lib/utils/chat-messages'
 import { focusChatMessage } from '@/lib/utils/chat-navigation'
 import {
   buildReferenceTitles,
@@ -285,7 +286,8 @@ export function useNotebookWorkspace({
     }).catch(() => undefined)
   }
 
-  // Every human turn becomes a named outline section on the journey.
+  // Every human turn becomes a named outline section on the journey, once
+  // the API has stored it: a question on its way only has a temporary ID.
   const sections = learning.sections
   const syncSections = learning.syncSections
   const syncedSectionIds = useRef(new Set<string>())
@@ -296,6 +298,7 @@ export function useNotebookWorkspace({
     )
     const missing = chat.messages.filter((message) => {
       if (message.type !== 'human' || !message.id) return false
+      if (isPendingMessage(message)) return false
       if (known.has(message.id) || syncedSectionIds.current.has(message.id)) {
         return false
       }
