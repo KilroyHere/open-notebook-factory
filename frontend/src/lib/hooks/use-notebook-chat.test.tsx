@@ -179,6 +179,69 @@ describe('useNotebookChat context', () => {
     )
   })
 
+  it("knows no kept conclusions while the last session's count stands in for a new one", async () => {
+    const A = {
+      id: 'chat_session:A',
+      title: 'A',
+      notebook_id: 'notebook:1',
+      created,
+      updated: created,
+      message_count: 0,
+      model_override: null,
+    }
+    const B = { ...A, id: 'chat_session:B', title: 'B' }
+    vi.mocked(chatApi.listSessions).mockResolvedValue([A, B])
+    vi.mocked(chatApi.getSession).mockImplementation(async (id: string) => ({
+      ...(id === A.id ? A : B),
+      messages: [],
+    }))
+    const countB = deferred<BuildContextResponse>()
+    vi.mocked(chatApi.buildContext).mockImplementation(async (request) =>
+      request.session_id === B.id
+        ? countB.promise
+        : contextResponse({
+            context: {
+              sources: [],
+              notes: [],
+              learning_updates: [{ id: 'learning_update:a1', conclusion: 'A1' }],
+            },
+            learning_updates_omitted: 2,
+          })
+    )
+    const { result } = renderChat()
+    await waitFor(() =>
+      expect(result.current.keptLearningUpdateIds).toEqual(new Set(['learning_update:a1']))
+    )
+
+    act(() => result.current.switchSession(B.id))
+    await waitFor(() =>
+      expect(chatApi.buildContext).toHaveBeenCalledWith(
+        expect.objectContaining({ session_id: B.id })
+      )
+    )
+
+    // A's counts still show while B is counted, but A's kept conclusions say
+    // nothing about B's: none can be marked as left out yet.
+    expect(result.current.currentSessionId).toBe(B.id)
+    expect(result.current.keptLearningUpdateIds).toBeUndefined()
+
+    await act(async () => {
+      countB.resolve(
+        contextResponse({
+          context: {
+            sources: [],
+            notes: [],
+            learning_updates: [{ id: 'learning_update:b1', conclusion: 'B1' }],
+          },
+        })
+      )
+      await countB.promise
+    })
+    await waitFor(() =>
+      expect(result.current.keptLearningUpdateIds).toEqual(new Set(['learning_update:b1']))
+    )
+  })
+
   it('keeps none when the context carries no conclusions', async () => {
     const { result } = renderChat()
 

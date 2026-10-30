@@ -190,22 +190,24 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
     }),
     [notebookId, contextRequest]
   )
-  const { data: context } = useQuery({
+  const { data: context, isPlaceholderData: countingAnew } = useQuery({
     ...contextQuery,
     enabled: !!notebookId,
     // Keep showing the last counts while a new selection is counted.
     placeholderData: keepPreviousData,
   })
   // The accepted conclusions that context keeps, so the ones it leaves out
-  // can be told apart (`undefined` until a context is counted).
+  // can be told apart (`undefined` until a context is counted). The last
+  // counts that stand in while another selection or session is counted
+  // describe other conclusions, so they mark none.
   const keptLearningUpdateIds = useMemo<ReadonlySet<string> | undefined>(() => {
-    if (!context) return undefined
+    if (!context || countingAnew) return undefined
     const ids = new Set<string>()
     for (const entry of context.context.learning_updates ?? []) {
       if (typeof entry.id === 'string') ids.add(entry.id)
     }
     return ids
-  }, [context])
+  }, [context, countingAnew])
 
   // A source or note can change without changing the selection (a source
   // finishes processing, gets an insight, a note is edited): count again.
