@@ -1,6 +1,5 @@
 """API coverage for learning-aside lifecycle and context integration."""
 
-import json
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from types import SimpleNamespace
@@ -10,7 +9,12 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from api.models import LearningAsideResponse, LearningJourneyResponse
+from api.models import (
+    LearningAsideResponse,
+    LearningJourneyResponse,
+    UpdateLearningAsideRequest,
+    UpdateLearningSectionRequest,
+)
 from api.routers.chat import _mark_learning_updates_applied
 from open_notebook.domain.learning import (
     AsideAnchor,
@@ -636,22 +640,47 @@ def test_patch_aside_rejects_null_fields(client, field):
 
 
 @pytest.mark.parametrize(
-    ("schema", "field"),
+    ("model", "field", "expected"),
     [
-        ("UpdateLearningAsideRequest", "title"),
-        ("UpdateLearningAsideRequest", "status"),
-        ("UpdateLearningSectionRequest", "title"),
-        ("UpdateLearningSectionRequest", "pinned"),
+        (
+            UpdateLearningAsideRequest,
+            "title",
+            {"type": "string", "minLength": 1, "maxLength": 200, "title": "Title"},
+        ),
+        (
+            UpdateLearningAsideRequest,
+            "status",
+            {
+                "type": "string",
+                "enum": ["active", "parked", "discarded"],
+                "title": "Status",
+            },
+        ),
+        (
+            UpdateLearningSectionRequest,
+            "title",
+            {"type": "string", "maxLength": 200, "title": "Title"},
+        ),
+        (
+            UpdateLearningSectionRequest,
+            "pinned",
+            {"type": "boolean", "title": "Pinned"},
+        ),
     ],
 )
-def test_patch_schemas_do_not_advertise_null(client, schema, field):
-    """These fields can be left out but reject null, and the API docs say so."""
-    components = client.get("/openapi.json").json()["components"]["schemas"]
-    definition = components[schema]["properties"][field]
+def test_patch_schemas_do_not_advertise_null(client, model, field, expected):
+    """These fields can be left out but reject null, and the API docs say so.
 
-    assert "null" not in json.dumps(definition)
-    assert "anyOf" not in definition
-    assert field not in components[schema].get("required", [])
+    The whole definition is compared, so dropping null must keep the field's
+    type and limits. The model's own schema is checked as well: FastAPI
+    leaves a null default out of the docs it serves, but pydantic keeps it.
+    """
+    schemas = client.get("/openapi.json").json()["components"]["schemas"]
+    served = schemas[model.__name__]
+
+    assert served["properties"][field] == expected
+    assert model.model_json_schema()["properties"][field] == expected
+    assert field not in served.get("required", [])
 
 
 @pytest.mark.parametrize(
