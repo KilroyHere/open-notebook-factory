@@ -240,6 +240,23 @@ describe('useNotebookWorkspace dives', () => {
     expect(learning.closeAside).toHaveBeenCalled()
   })
 
+  it('passes on how many conclusions the context limit left out', () => {
+    vi.mocked(useNotebookChat).mockReturnValue({
+      messages: [],
+      currentSessionId: 'chat_session:main',
+      buildContext: vi.fn(),
+      tokenCount: 3900,
+      charCount: 15000,
+      learningUpdatesOmitted: 3,
+    } as unknown as ReturnType<typeof useNotebookChat>)
+
+    const { result } = renderWorkspace()
+
+    expect(result.current.contextStats).toEqual(
+      expect.objectContaining({ tokenCount: 3900, learningUpdatesOmitted: 3 })
+    )
+  })
+
   it('leaves full height to go back to a message', () => {
     vi.useFakeTimers()
     try {

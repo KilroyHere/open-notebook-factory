@@ -337,8 +337,16 @@ export function useNotebookWorkspace({
       notesCount,
       tokenCount: chat.tokenCount,
       charCount: chat.charCount,
+      learningUpdatesOmitted: chat.learningUpdatesOmitted,
     }
-  }, [sources, notes, contextSelections, chat.tokenCount, chat.charCount])
+  }, [
+    sources,
+    notes,
+    contextSelections,
+    chat.tokenCount,
+    chat.charCount,
+    chat.learningUpdatesOmitted,
+  ])
 
   return {
     notebookId,

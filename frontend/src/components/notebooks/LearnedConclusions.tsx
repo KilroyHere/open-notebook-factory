@@ -1,6 +1,7 @@
 'use client'
 
 import { useId } from 'react'
+import { AlertTriangle } from 'lucide-react'
 import type { LearningAside } from '@/lib/types/api'
 import { useTranslation } from '@/lib/hooks/use-translation'
 import {
@@ -16,15 +17,20 @@ import {
 /**
  * "What you've learned": the current conclusion of every resolved dive, in
  * journey order, each with its "Use in main chat" switch. A conclusion
- * opens its dive. Nothing shows until a dive is resolved.
+ * opens its dive. When main chat's context limit leaves some out, a note
+ * says how many and suggests switching off the ones no longer needed.
+ * Nothing shows until a dive is resolved.
  */
 export function LearnedConclusions({
   asides,
+  omitted = 0,
   activeAsideId = null,
   onOpenAside,
   onSetIncludeInMain,
 }: {
   asides: LearningAside[]
+  /** Used conclusions the context limit keeps out of main chat. */
+  omitted?: number
   /** The dive on screen, marked like in the outline. */
   activeAsideId?: string | null
   onOpenAside: (asideId: string) => void
@@ -44,6 +50,16 @@ export function LearnedConclusions({
       >
         {t('learningAsides.whatYouLearned')}
       </h3>
+      {/* Always mounted, so a count that appears or changes after a switch
+          is announced. */}
+      <div role="status">
+        {omitted > 0 && (
+          <p className="mb-2 flex gap-1.5 rounded-md border border-warn/30 bg-warn-tint px-2.5 py-2 text-xs">
+            <AlertTriangle aria-hidden className="mt-px h-3.5 w-3.5 shrink-0 text-warn" />
+            <span>{t('learningAsides.conclusionsLeftOut', { count: omitted })}</span>
+          </p>
+        )}
+      </div>
       <ul className="space-y-2">
         {learned.map(({ aside, update }) => (
           <li

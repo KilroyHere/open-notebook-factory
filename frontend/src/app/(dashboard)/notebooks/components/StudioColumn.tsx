@@ -110,6 +110,7 @@ export function StudioColumn({
           onRenameSection={workspace.renameSection}
           onTogglePinSection={workspace.togglePinSection}
           onSetIncludeInMain={learning.setIncludeInMain}
+          omittedConclusions={chat.learningUpdatesOmitted}
         />
       </TabsContent>
       <TabsContent

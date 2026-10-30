@@ -44,6 +44,8 @@ interface LearningJourneyRailProps {
   onTogglePinSection?: (sectionId: string, pinned: boolean) => void
   /** "Use in main chat" for a resolved dive's conclusion. */
   onSetIncludeInMain?: SetIncludeInMain
+  /** Used conclusions main chat's context limit leaves out. */
+  omittedConclusions?: number
 }
 
 function rootAsides(asides: LearningAside[]): LearningAside[] {
@@ -514,6 +516,7 @@ export function LearningJourneyRail({
   onRenameSection,
   onTogglePinSection,
   onSetIncludeInMain,
+  omittedConclusions = 0,
 }: LearningJourneyRailProps) {
   const { t } = useTranslation()
   const [tab, setTab] = useState('outline')
@@ -600,6 +603,7 @@ export function LearningJourneyRail({
 
               <LearnedConclusions
                 asides={visibleAsides}
+                omitted={omittedConclusions}
                 activeAsideId={activeAsideId}
                 onOpenAside={onOpenAside}
                 onSetIncludeInMain={onSetIncludeInMain}

@@ -160,6 +160,22 @@ describe('LearnedConclusions', () => {
     expect(onOpenAside).toHaveBeenCalledWith(prior.id)
   })
 
+  it('says how many conclusions the context limit left out, only when some are', () => {
+    const { rerender } = render(
+      <LearnedConclusions asides={[jensen, prior]} omitted={2} onOpenAside={vi.fn()} />
+    )
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'learningAsides.conclusionsLeftOut:2'
+    )
+
+    rerender(
+      <LearnedConclusions asides={[jensen, prior]} omitted={0} onOpenAside={vi.fn()} />
+    )
+    // The live region stays, empty, so a later count is announced.
+    expect(screen.getByRole('status')).toBeEmptyDOMElement()
+    expect(screen.queryByText(/conclusionsLeftOut/)).toBeNull()
+  })
+
   it('is read-only without a way to change it, and absent with nothing learned', () => {
     const { unmount } = render(
       <LearnedConclusions asides={[jensen]} onOpenAside={vi.fn()} />

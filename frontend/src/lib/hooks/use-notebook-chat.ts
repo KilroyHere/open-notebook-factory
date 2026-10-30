@@ -329,6 +329,8 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
     loadingSessions,
     tokenCount: context?.token_count ?? 0,
     charCount: context?.char_count ?? 0,
+    /** Accepted conclusions the context limit keeps out of main chat. */
+    learningUpdatesOmitted: context?.learning_updates_omitted ?? 0,
     pendingModelOverride,
 
     // Actions

@@ -50,6 +50,7 @@ function contextResponse(
     context: { sources: [], notes: [] },
     token_count: 120,
     char_count: 480,
+    learning_updates_omitted: 0,
     ...overrides,
   }
 }
@@ -123,6 +124,25 @@ describe('useNotebookChat context', () => {
         notes: {},
       },
     })
+  })
+
+  it('says how many accepted conclusions the context limit left out', async () => {
+    vi.mocked(chatApi.buildContext).mockResolvedValue(
+      contextResponse({ learning_updates_omitted: 2 })
+    )
+    const { result } = renderChat()
+
+    await waitFor(() => expect(result.current.learningUpdatesOmitted).toBe(2))
+  })
+
+  it('counts none left out when the reply does not say', async () => {
+    const older: Partial<BuildContextResponse> = contextResponse()
+    delete older.learning_updates_omitted
+    vi.mocked(chatApi.buildContext).mockResolvedValue(older as BuildContextResponse)
+    const { result } = renderChat()
+
+    await waitFor(() => expect(result.current.tokenCount).toBe(120))
+    expect(result.current.learningUpdatesOmitted).toBe(0)
   })
 
   it('recounts when the chat context is invalidated', async () => {
