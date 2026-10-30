@@ -39,6 +39,23 @@ export const ERROR_MAP: Record<string, string> = {
   "There is no text content to transform": "apiErrors.sourceHasNoText",
 };
 
+// What the HTTP client (axios) says itself when a request fails without a
+// server `detail`, and formatApiError's placeholder for a detail that isn't
+// text. They are English and say less than a caller's translated fallback.
+const CLIENT_MESSAGES = [
+  /^Request failed with status code \d{3}$/,
+  /^Network Error$/,
+  /^timeout (?:of \d+ms )?exceeded$/,
+  /^Request aborted$/,
+  /^canceled$/,
+];
+const UNEXPECTED_ERROR = "An unexpected error occurred";
+
+/** Whether `message` came from the client rather than from the server. */
+function isClientMessage(message: string): boolean {
+  return message === UNEXPECTED_ERROR || CLIENT_MESSAGES.some((pattern) => pattern.test(message));
+}
+
 /**
  * Translates a backend error message using the ERROR_MAP.
  * If no mapping exists, returns the fallback key or generic error key.
@@ -67,6 +84,10 @@ export function getApiErrorKey(errorOrMessage: unknown, fallbackKey?: string): s
  * Extracts the error message, looks up i18n mapping, and falls back to the
  * backend-provided message when no mapping exists. This ensures user-friendly
  * error messages from the backend are displayed directly in the UI.
+ *
+ * Without a server message (none at all, or only the HTTP client's own, such
+ * as "Request failed with status code 500"), it shows the translated
+ * `fallbackKey`, or the generic translated error.
  */
 export function getApiErrorMessage(
   errorOrMessage: unknown,
@@ -74,7 +95,9 @@ export function getApiErrorMessage(
   fallbackKey?: string
 ): string {
   const message = formatApiError(errorOrMessage);
-  if (!message) return fallbackKey ? t(fallbackKey) : t("apiErrors.genericError");
+  if (!message || isClientMessage(message)) {
+    return fallbackKey ? t(fallbackKey) : t("apiErrors.genericError");
+  }
 
   // Try exact match
   if (ERROR_MAP[message]) return t(ERROR_MAP[message]);
@@ -101,5 +124,5 @@ export function formatApiError(error: unknown): string {
     return detail; // We'll handle the actual translation using the key in the hook/component
   }
   
-  return "An unexpected error occurred";
+  return UNEXPECTED_ERROR;
 }

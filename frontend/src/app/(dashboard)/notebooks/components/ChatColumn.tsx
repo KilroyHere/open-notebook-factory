@@ -90,6 +90,8 @@ export function ChatColumn({ workspace, isLoading }: ChatColumnProps) {
     onUpdateStatus: (asideId, status) =>
       learning.updateStatus({ asideId, status }),
     onSetIncludeInMain: learning.setIncludeInMain,
+    onGoDeeperOnSelection: workspace.openAsideFromDiveSelection,
+    notebookId: workspace.notebookId,
   }
 
   const resumableAside = learning.asides.find(
@@ -140,9 +142,10 @@ export function ChatColumn({ workspace, isLoading }: ChatColumnProps) {
             contextType="notebook"
             messages={chat.messages}
             isStreaming={chat.isSending}
+            isLoadingMessages={chat.isLoadingMessages}
             contextIndicators={null}
             onSendMessage={(message, modelOverride) =>
-              void workspace.sendMainMessage(message, modelOverride)
+              workspace.sendMainMessage(message, modelOverride)
             }
             modelOverride={
               chat.currentSession?.model_override ??
@@ -215,6 +218,10 @@ export function ChatColumn({ workspace, isLoading }: ChatColumnProps) {
             onParkQuestion={workspace.parkQuestion}
             onSetIncludeInMain={learning.setIncludeInMain}
             referenceTitles={workspace.referenceTitles}
+            onGoDeeperOnSelection={workspace.openAsideFromDiveSelection}
+            notebookId={workspace.notebookId}
+            attention={workspace.attention}
+            onAttended={workspace.onAttended}
           />
         </div>
       )}

@@ -27,6 +27,21 @@ vi.mock('@/lib/hooks/use-translation', () => ({
   }),
 }))
 
+const { createNote } = vi.hoisted(() => ({ createNote: vi.fn() }))
+vi.mock('@/lib/hooks/use-notes', () => ({
+  useCreateNote: () => ({ mutate: createNote, isPending: false }),
+}))
+
+/** Select `text`'s characters `start` to `end` the way a learner would. */
+function selectText(text: Node, start: number, end: number) {
+  const range = document.createRange()
+  range.setStart(text, start)
+  range.setEnd(text, end)
+  window.getSelection()!.removeAllRanges()
+  window.getSelection()!.addRange(range)
+  fireEvent.mouseUp(text)
+}
+
 const created = '2026-10-29T00:00:00Z'
 
 const dive: LearningAside = {
@@ -153,8 +168,12 @@ describe('InlineDiveThread', () => {
     spies.onSendMessage.mockResolvedValue(undefined)
     spies.onResolve.mockResolvedValue(undefined)
     spies.onUpdateStatus.mockResolvedValue(undefined)
+    createNote.mockReset()
   })
-  afterEach(() => clearAsideDrafts())
+  afterEach(() => {
+    clearAsideDrafts()
+    window.getSelection()?.removeAllRanges()
+  })
 
   it('starts collapsed as one row with its title and status', () => {
     render(<Harness asides={[dive]} details={{ [dive.id]: { ...dive, messages: transcript } }} />)
@@ -474,11 +493,79 @@ describe('InlineDiveThread', () => {
     expect(screen.queryByText('learningAsides.selectedPassage')).toBeNull()
   })
 
+  it('goes deeper on a passage selected in one of its answers', () => {
+    const onGoDeeperOnSelection = vi.fn()
+    render(
+      <Harness
+        asides={[dive]}
+        details={{ [dive.id]: { ...dive, messages: transcript } }}
+        initialExpanded={dive.id}
+        overrides={{ onGoDeeperOnSelection, notebookId: 'notebook:1' }}
+      />
+    )
+
+    selectText(screen.getByText(/The logarithm is concave/).firstChild!, 4, 13)
+    const toolbar = screen.getByRole('toolbar', {
+      name: 'learningAsides.selectionActions',
+    })
+    // Like in main chat, the actions follow the answer for Tab and say so.
+    expect(screen.getByText('learningAsides.selectionActionsHint')).toBeInTheDocument()
+    fireEvent.click(
+      within(toolbar).getByRole('button', { name: 'learningAsides.goDeeper' })
+    )
+
+    expect(onGoDeeperOnSelection).toHaveBeenCalledWith(
+      expect.objectContaining({ id: dive.id }),
+      transcript[1],
+      'logarithm'
+    )
+    expect(screen.queryByRole('toolbar')).toBeNull()
+
+    // The learner's own questions offer nothing.
+    selectText(screen.getByText('Why does that inequality apply?').firstChild!, 0, 3)
+    expect(screen.queryByRole('toolbar')).toBeNull()
+  })
+
+  it('saves a passage of a resolved dive\'s answer as a note', () => {
+    render(
+      <Harness
+        asides={[resolved]}
+        details={{ [resolved.id]: { ...resolved, messages: transcript } }}
+        initialExpanded={resolved.id}
+        overrides={{ onGoDeeperOnSelection: vi.fn(), notebookId: 'notebook:1' }}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'learningAsides.viewTranscript' }))
+
+    selectText(screen.getByText(/The logarithm is concave/).firstChild!, 4, 13)
+    fireEvent.click(screen.getByRole('button', { name: 'common.saveToNote' }))
+
+    expect(createNote).toHaveBeenCalledWith({
+      content: 'logarithm',
+      note_type: 'ai',
+      notebook_id: 'notebook:1',
+    })
+  })
+
   it('says a new dive is opening under its answer', () => {
     render(
       <Harness asides={[]} overrides={{ creating: { messageId: 'ai:origin' } }} />
     )
     expect(screen.getByRole('status')).toHaveTextContent('learningAsides.opening')
+  })
+
+  it('says a dive about a passage of a dive is opening under that dive', () => {
+    render(
+      <Harness
+        asides={[dive]}
+        overrides={{ creating: { messageId: 'ai:1', parentAsideId: dive.id } }}
+      />
+    )
+    const thread = row(/Why Jensen applies/).closest<HTMLElement>('[data-inline-dive]')!
+    expect(within(thread).getByRole('status')).toHaveTextContent(
+      'learningAsides.opening'
+    )
+    expect(screen.getAllByRole('status')).toHaveLength(1)
   })
 
   it('shows a dive just created before the journey lists it', () => {
@@ -516,6 +603,21 @@ describe('InlineDiveThread', () => {
     expect(document.activeElement).toBe(
       screen.getByLabelText('learningAsides.askPlaceholder')
     )
+  })
+
+  it('leaves a request for a dive it does not show expanded to the view that does', async () => {
+    // The full-height view shows the dive; its row here stays folded.
+    const attention: DiveAttention = { asideId: dive.id, scroll: 'nearest', focus: true }
+    const { container } = render(<Harness asides={[dive]} overrides={{ attention }} />)
+    const scroller = container.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]'
+    )!
+    scroller.scrollTo = vi.fn()
+    // Wait as long as an expanded thread would before reporting back.
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)))
+
+    expect(spies.onAttended).not.toHaveBeenCalled()
+    expect(scroller.scrollTo).not.toHaveBeenCalled()
   })
 
   it('does not grab the cursor again when a focused dive is unfolded later', async () => {

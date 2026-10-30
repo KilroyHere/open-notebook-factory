@@ -1,13 +1,16 @@
 'use client'
 
 import { useRouter, useParams } from 'next/navigation'
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 import { useSourceChat } from '@/lib/hooks/use-source-chat'
+import { useSource } from '@/lib/hooks/use-sources'
+import { useSourceInsights } from '@/lib/hooks/use-insights'
 import { ChatPanel } from '@/components/sources/ChatPanel'
 import { useNavigation } from '@/lib/hooks/use-navigation'
 import { SourceDetailContent } from '@/components/sources/SourceDetailContent'
+import { buildReferenceTitles } from '@/lib/utils/learning-asides'
 
 export default function SourceDetailPage() {
   const router = useRouter()
@@ -17,6 +20,16 @@ export default function SourceDetailPage() {
 
   // Initialize source chat
   const chat = useSourceChat(sourceId)
+
+  // The References list names the source and its insights, the way notebook
+  // chat names its sources and notes. Both come from the queries the source
+  // panel runs, so naming them costs no request of its own.
+  const { data: source } = useSource(sourceId)
+  const { data: insights } = useSourceInsights(sourceId)
+  const referenceTitles = useMemo(
+    () => buildReferenceTitles(source ? [source] : [], [], insights),
+    [source, insights]
+  )
 
   const handleBack = useCallback(() => {
     const returnPath = navigation.getReturnPath()
@@ -70,6 +83,7 @@ export default function SourceDetailPage() {
             onUpdateSession={(sessionId, title) => chat.updateSession(sessionId, { title })}
             onDeleteSession={chat.deleteSession}
             loadingSessions={chat.loadingSessions}
+            referenceTitles={referenceTitles}
           />
         </div>
       </div>

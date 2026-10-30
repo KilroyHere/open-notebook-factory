@@ -134,7 +134,10 @@ async def repo_create(table: str, data: Dict[str, Any]) -> Dict[str, Any]:
                 raise RuntimeError(result)
             return result
     except RuntimeError as e:
-        logger.error(str(e))
+        # The database rejected the record: a unique index or a retriable
+        # transaction conflict, which callers often handle (as repo_query's
+        # are). Log at debug to avoid noise; an unhandled one still surfaces.
+        logger.debug(str(e))
         raise
     except Exception as e:
         logger.exception(e)

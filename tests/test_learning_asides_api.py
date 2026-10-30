@@ -9,7 +9,12 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from api.models import LearningAsideResponse, LearningJourneyResponse
+from api.models import (
+    LearningAsideResponse,
+    LearningJourneyResponse,
+    UpdateLearningAsideRequest,
+    UpdateLearningSectionRequest,
+)
 from api.routers.chat import _mark_learning_updates_applied
 from open_notebook.domain.learning import (
     AsideAnchor,
@@ -632,6 +637,73 @@ def test_patch_aside_rejects_null_fields(client, field):
     assert response.json()["detail"][0]["loc"] == ["body", field]
     save_aside.assert_not_called()
     save_journey.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("model", "field", "expected"),
+    [
+        (
+            UpdateLearningAsideRequest,
+            "title",
+            {"type": "string", "minLength": 1, "maxLength": 200, "title": "Title"},
+        ),
+        (
+            UpdateLearningAsideRequest,
+            "status",
+            {
+                "type": "string",
+                "enum": ["active", "parked", "discarded"],
+                "title": "Status",
+            },
+        ),
+        (
+            UpdateLearningSectionRequest,
+            "title",
+            {"type": "string", "maxLength": 200, "title": "Title"},
+        ),
+        (
+            UpdateLearningSectionRequest,
+            "pinned",
+            {"type": "boolean", "title": "Pinned"},
+        ),
+    ],
+)
+def test_patch_schemas_do_not_advertise_null(client, model, field, expected):
+    """These fields can be left out but reject null, and the API docs say so.
+
+    The whole definition is compared, so dropping null must keep the field's
+    type and limits. The model's own schema is checked as well: FastAPI
+    leaves a null default out of the docs it serves, but pydantic keeps it.
+    """
+    schemas = client.get("/openapi.json").json()["components"]["schemas"]
+    served = schemas[model.__name__]
+
+    assert served["properties"][field] == expected
+    assert model.model_json_schema()["properties"][field] == expected
+    assert field not in served.get("required", [])
+
+
+@pytest.mark.parametrize(
+    ("path", "body", "field"),
+    [
+        ("/api/learning/asides/learning_aside:one", {"status": "bogus"}, "status"),
+        ("/api/learning/asides/learning_aside:one", {"title": ""}, "title"),
+        ("/api/learning/asides/learning_aside:one", {"title": 5}, "title"),
+        ("/api/learning/asides/learning_aside:one", {"title": "x" * 201}, "title"),
+        ("/api/learning/sections/learning_section:one", {"pinned": "maybe"}, "pinned"),
+        ("/api/learning/sections/learning_section:one", {"title": 5}, "title"),
+    ],
+)
+def test_patch_rejects_a_bad_value_with_one_error_at_the_field(
+    client, path, body, field
+):
+    """A wrong value gets one error that names the field, not one per union arm."""
+    response = client.patch(path, json=body)
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert len(detail) == 1, detail
+    assert detail[0]["loc"] == ["body", field]
 
 
 @pytest.mark.parametrize("field", ["title", "pinned"])

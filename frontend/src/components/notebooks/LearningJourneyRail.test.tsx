@@ -119,7 +119,9 @@ describe('LearningJourneyRail', () => {
     expect(root.classList.contains('lg:hidden')).toBe(false)
     expect(root.classList.contains('w-72')).toBe(false)
     // Studio owns the collapse control and the panel title.
-    expect(screen.queryByRole('button', { name: /^Collapse / })).toBeNull()
+    expect(
+      screen.queryByRole('button', { name: /notebooks\.collapseColumn/ })
+    ).toBeNull()
     expect(
       screen.queryAllByRole('heading').map((heading) => heading.textContent)
     ).toEqual(['learningAsides.whatYouLearned'])

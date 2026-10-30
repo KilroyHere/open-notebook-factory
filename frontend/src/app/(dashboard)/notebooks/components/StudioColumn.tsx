@@ -5,7 +5,7 @@ import { GitBranch, PanelRight, StickyNote } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   CollapsibleColumn,
-  createCollapseButton,
+  CollapseColumnButton,
 } from '@/components/notebooks/CollapsibleColumn'
 import { JourneyStats } from '@/components/notebooks/JourneyStats'
 import { LearningJourneyRail } from '@/components/notebooks/LearningJourneyRail'
@@ -79,15 +79,17 @@ export function StudioColumn({
         >
           <TabsTrigger value="journey" className="gap-1.5">
             <GitBranch className="h-3.5 w-3.5" />
-            {t('learningAsides.journey')}
+            {/* The short name fits beside Notes in a narrow column. */}
+            {t('learningAsides.journeyTab')}
           </TabsTrigger>
           <TabsTrigger value="notes" className="gap-1.5">
             <StickyNote className="h-3.5 w-3.5" />
             {t('common.notes')}
           </TabsTrigger>
         </TabsList>
-        {presentation === 'rail' &&
-          createCollapseButton(toggleStudio, label, 'right')}
+        {presentation === 'rail' && (
+          <CollapseColumnButton onToggle={toggleStudio} label={label} side="right" />
+        )}
       </div>
       <TabsContent
         value="journey"
@@ -111,6 +113,7 @@ export function StudioColumn({
           onTogglePinSection={workspace.togglePinSection}
           onSetIncludeInMain={learning.setIncludeInMain}
           omittedConclusions={chat.learningUpdatesOmitted}
+          keptConclusionIds={chat.keptLearningUpdateIds}
         />
       </TabsContent>
       <TabsContent

@@ -13,6 +13,7 @@ import type {
   NoteResponse,
   SourceListResponse,
 } from '@/lib/types/api'
+import { isPendingMessage } from '@/lib/utils/chat-messages'
 import { focusChatMessage } from '@/lib/utils/chat-navigation'
 import {
   buildReferenceTitles,
@@ -53,6 +54,11 @@ function prefersComposerFocus(): boolean {
     typeof window !== 'undefined' &&
     window.matchMedia?.('(pointer: fine)').matches === true
   )
+}
+
+/** A selected passage as a dive's anchor: trimmed, and no longer than the backend keeps. */
+function passageAnchorContent(passage: string): string {
+  return passage.trim().slice(0, MAX_ANCHOR_CHARS).trim()
 }
 
 /**
@@ -113,8 +119,10 @@ export function useNotebookWorkspace({
       ),
     [chat.messages]
   )
-  const isInline = (aside: LearningAside) =>
-    canOpenInline(aside, knownAsides, answerIds)
+  const isInline = useCallback(
+    (aside: LearningAside) => canOpenInline(aside, knownAsides, answerIds),
+    [knownAsides, answerIds]
+  )
 
   const [attention, setAttention] = useState<DiveAttention | null>(null)
   const onAttended = useCallback((request: DiveAttention) => {
@@ -138,15 +146,18 @@ export function useNotebookWorkspace({
    * Open a dive where it lives: expanded under its message and scrolled into
    * view, or full height when it cannot be shown inline.
    */
-  const openAside = (asideId: string) => {
-    const aside = knownAsides.find((item) => item.id === asideId)
-    if (aside && isInline(aside)) {
-      expandAside(asideId)
-      setAttention({ asideId, scroll: 'start', focus: prefersComposerFocus() })
-    } else {
-      openAsideFull(asideId)
-    }
-  }
+  const openAside = useCallback(
+    (asideId: string) => {
+      const aside = knownAsides.find((item) => item.id === asideId)
+      if (aside && isInline(aside)) {
+        expandAside(asideId)
+        setAttention({ asideId, scroll: 'start', focus: prefersComposerFocus() })
+      } else {
+        openAsideFull(asideId)
+      }
+    },
+    [knownAsides, isInline, expandAside, openAsideFull]
+  )
 
   /** Expand a dive from its own row, which is already on screen. */
   const expandDive = useCallback(
@@ -158,118 +169,181 @@ export function useNotebookWorkspace({
   )
 
   // A new dive the learner is about to question: show it and focus its box.
-  const createInline = (input: CreateAsideInput) => {
-    void createAside({
-      ...input,
-      presentation: 'inline',
-      onOpened: (aside) =>
-        setAttention({ asideId: aside.id, scroll: 'nearest', focus: true }),
-    }).catch(() => undefined)
-  }
+  const createInline = useCallback(
+    (input: CreateAsideInput) => {
+      void createAside({
+        ...input,
+        presentation: 'inline',
+        onOpened: (aside) =>
+          setAttention({ asideId: aside.id, scroll: 'nearest', focus: true }),
+      }).catch(() => undefined)
+    },
+    [createAside]
+  )
 
-  const openAsideFromMessage = (message: NotebookChatMessage) => {
-    createInline({
-      type: 'message',
-      message_id: message.id,
-      content: message.content,
-    })
-  }
+  // The actions below reach every answer in the chat, which is memoized on
+  // them: each keeps its identity until what it reads changes.
+
+  const openAsideFromMessage = useCallback(
+    (message: NotebookChatMessage) => {
+      createInline({
+        type: 'message',
+        message_id: message.id,
+        content: message.content,
+      })
+    },
+    [createInline]
+  )
 
   // "Go deeper" on a selected passage: a dive about that passage, under the
   // message it was selected in, titled from the passage.
-  const openAsideFromSelection = (
-    message: NotebookChatMessage,
-    passage: string
-  ) => {
-    const content = passage.trim().slice(0, MAX_ANCHOR_CHARS).trim()
-    if (!content) return
-    createInline({
-      type: 'message',
-      message_id: message.id,
-      content,
-      locator: PASSAGE_LOCATOR,
-    })
-  }
+  const openAsideFromSelection = useCallback(
+    (message: NotebookChatMessage, passage: string) => {
+      const content = passageAnchorContent(passage)
+      if (!content) return
+      createInline({
+        type: 'message',
+        message_id: message.id,
+        content,
+        locator: PASSAGE_LOCATOR,
+      })
+    },
+    [createInline]
+  )
+
+  // A dive started inside `parent` nests under its parent's thread, unless
+  // the learner is in the full-height view or the nesting would go too deep.
+  const panelOpen = learning.panelOpen
+  const childNestsInline = useCallback(
+    (parent: LearningAside) => {
+      if (panelOpen || !isInline(parent)) return false
+      const lineage = diveLineage(parent, knownAsides)
+      return lineage !== null && lineage.depth + 1 <= INLINE_DIVE_MAX_DEPTH
+    },
+    [panelOpen, isInline, knownAsides]
+  )
+
+  // "Go deeper" on a passage selected in a dive's answer: a dive about that
+  // passage, nested under the dive and anchored to that answer, a message of
+  // the dive's own conversation. It opens where Dive in would open a child,
+  // with the cursor in its question box, since the learner asks next.
+  const openAsideFromDiveSelection = useCallback(
+    (parent: LearningAside, message: NotebookChatMessage, passage: string) => {
+      const content = passageAnchorContent(passage)
+      if (!content) return
+      const inline = childNestsInline(parent)
+      void createAside({
+        type: 'message',
+        message_id: message.id,
+        content,
+        locator: PASSAGE_LOCATOR,
+        parentAside: parent,
+        presentation: inline ? 'inline' : 'full',
+        onOpened: (aside) =>
+          setAttention({
+            asideId: aside.id,
+            scroll: inline ? 'nearest' : null,
+            focus: true,
+          }),
+      }).catch(() => undefined)
+    },
+    [childNestsInline, createAside]
+  )
 
   // Dive in opens the child dive and asks its question right away, so the
   // learner lands on an answer instead of an empty conversation. The child
-  // nests under its parent's thread unless the learner is in the full-height
-  // view or the nesting would go too deep.
-  const diveIntoQuestion = (parent: LearningAside, question: string) => {
-    const content = question.trim()
-    const fullHeight = learning.panelOpen
-    const existing = childDiveForQuestion(knownAsides, parent.id, content)
-    if (existing) {
-      if (fullHeight) openAsideFull(existing.id)
-      else openAside(existing.id)
-      if (existing.messages.length === 0) {
-        void sendMessage({ asideId: existing.id, message: content }).catch(
-          () => undefined
-        )
+  // nests under its parent's thread when it can (childNestsInline).
+  const diveIntoQuestion = useCallback(
+    (parent: LearningAside, question: string) => {
+      const content = question.trim()
+      const existing = childDiveForQuestion(knownAsides, parent.id, content)
+      if (existing) {
+        if (panelOpen) openAsideFull(existing.id)
+        else openAside(existing.id)
+        if (existing.messages.length === 0) {
+          void sendMessage({ asideId: existing.id, message: content }).catch(
+            () => undefined
+          )
+        }
+        return
       }
-      return
-    }
-    const lineage = diveLineage(parent, knownAsides)
-    const inline =
-      !fullHeight &&
-      isInline(parent) &&
-      lineage !== null &&
-      lineage.depth + 1 <= INLINE_DIVE_MAX_DEPTH
-    void (async () => {
-      const aside = await createAside({
+      const inline = childNestsInline(parent)
+      void (async () => {
+        const aside = await createAside({
+          type: 'message',
+          content,
+          parentAside: parent,
+          presentation: inline ? 'inline' : 'full',
+          onOpened: inline
+            ? (child) =>
+                setAttention({ asideId: child.id, scroll: 'nearest', focus: false })
+            : undefined,
+        })
+        await sendMessage({ asideId: aside.id, message: content })
+      })().catch(() => undefined)
+    },
+    [
+      knownAsides,
+      panelOpen,
+      openAsideFull,
+      openAside,
+      sendMessage,
+      childNestsInline,
+      createAside,
+    ]
+  )
+
+  const parkQuestion = useCallback(
+    (parent: LearningAside, question: string) => {
+      const existing = childDiveForQuestion(knownAsides, parent.id, question)
+      if (existing) {
+        // Only an active dive can be parked: a parked one already is, and the
+        // API refuses to change a resolved one.
+        if (existing.status === 'active') {
+          void updateStatus({ asideId: existing.id, status: 'parked' }).catch(
+            () => undefined
+          )
+        }
+        return
+      }
+      void createAside({
         type: 'message',
-        content,
+        content: question.trim(),
         parentAside: parent,
-        presentation: inline ? 'inline' : 'full',
-        onOpened: inline
-          ? (child) =>
-              setAttention({ asideId: child.id, scroll: 'nearest', focus: false })
-          : undefined,
-      })
-      await sendMessage({ asideId: aside.id, message: content })
-    })().catch(() => undefined)
-  }
+        initialStatus: 'parked',
+      }).catch(() => undefined)
+    },
+    [knownAsides, updateStatus, createAside]
+  )
 
-  const parkQuestion = (parent: LearningAside, question: string) => {
-    const existing = childDiveForQuestion(knownAsides, parent.id, question)
-    if (existing) {
-      // Only an active dive can be parked: a parked one already is, and the
-      // API refuses to change a resolved one.
-      if (existing.status === 'active') {
-        void updateStatus({ asideId: existing.id, status: 'parked' }).catch(
-          () => undefined
-        )
-      }
-      return
-    }
-    void createAside({
-      type: 'message',
-      content: question.trim(),
-      parentAside: parent,
-      initialStatus: 'parked',
-    }).catch(() => undefined)
-  }
-
-  // Every human turn becomes a named outline section on the journey.
+  // Every human turn becomes a named outline section on the journey of the
+  // session it was asked in (chat.messages are always the selected
+  // session's), once the API has stored it: a question on its way only has
+  // a temporary ID. What was already named is kept per session.
   const sections = learning.sections
   const syncSections = learning.syncSections
-  const syncedSectionIds = useRef(new Set<string>())
+  const namedSections = useRef(new Map<string, Set<string>>())
   useEffect(() => {
-    if (!chat.currentSessionId || !syncSections) return
+    const sessionId = chat.currentSessionId
+    if (!sessionId || !syncSections) return
+    let named = namedSections.current.get(sessionId)
+    if (!named) {
+      named = new Set<string>()
+      namedSections.current.set(sessionId, named)
+    }
     const known = new Set(
       (sections ?? []).map((section) => section.start_message_id)
     )
     const missing = chat.messages.filter((message) => {
       if (message.type !== 'human' || !message.id) return false
-      if (known.has(message.id) || syncedSectionIds.current.has(message.id)) {
-        return false
-      }
+      if (isPendingMessage(message)) return false
+      if (known.has(message.id) || named.has(message.id)) return false
       return Boolean(
         createAsideTitle(message.content) || message.content.trim()
       )
     })
     if (missing.length === 0) return
-    for (const message of missing) syncedSectionIds.current.add(message.id)
+    for (const message of missing) named.add(message.id)
     void syncSections(
       missing.map((message) => ({
         start_message_id: message.id,
@@ -278,42 +352,59 @@ export function useNotebookWorkspace({
           message.content.trim().slice(0, 72),
       }))
     ).catch(() => {
-      for (const message of missing) syncedSectionIds.current.delete(message.id)
+      for (const message of missing) named.delete(message.id)
     })
   }, [chat.currentSessionId, chat.messages, sections, syncSections])
 
-  const renameSection = (sectionId: string, title: string) => {
-    void learning.updateSection({ sectionId, title }).catch(() => undefined)
-  }
+  const updateSection = learning.updateSection
+  const renameSection = useCallback(
+    (sectionId: string, title: string) => {
+      void updateSection({ sectionId, title }).catch(() => undefined)
+    },
+    [updateSection]
+  )
 
-  const togglePinSection = (sectionId: string, pinned: boolean) => {
-    void learning.updateSection({ sectionId, pinned }).catch(() => undefined)
-  }
+  const togglePinSection = useCallback(
+    (sectionId: string, pinned: boolean) => {
+      void updateSection({ sectionId, pinned }).catch(() => undefined)
+    },
+    [updateSection]
+  )
 
   /**
    * Leave the full-height view for the chat. The dive stays open under its
    * message when it can be shown there.
    */
-  const exitFullHeight = () => {
-    const active = learning.activeAside
-    if (active && isInline(active)) setPanelOpen(false)
+  const activeAside = learning.activeAside
+  const exitFullHeight = useCallback(() => {
+    if (activeAside && isInline(activeAside)) setPanelOpen(false)
     else closeAside()
-  }
+  }, [activeAside, isInline, setPanelOpen, closeAside])
 
   /** The main thread on its own: no dive open, inline or full height. */
-  const showMainThread = () => {
+  const showMainThread = useCallback(() => {
     closeAside()
-  }
+  }, [closeAside])
 
-  const navigateToMainMessage = (messageId: string) => {
-    if (learning.panelOpen) exitFullHeight()
-    window.setTimeout(() => focusChatMessage(messageId), 0)
-  }
+  const navigateToMainMessage = useCallback(
+    (messageId: string) => {
+      if (panelOpen) exitFullHeight()
+      window.setTimeout(() => focusChatMessage(messageId), 0)
+    },
+    [panelOpen, exitFullHeight]
+  )
 
-  const sendMainMessage = async (message: string, modelOverride?: string) => {
-    await chat.sendMessage(message, modelOverride)
-    await learning.refreshJourney()
-  }
+  const sendChatMessage = chat.sendMessage
+  const refreshJourney = learning.refreshJourney
+  /** Ask in main chat; resolves to whether the question got its answer. */
+  const sendMainMessage = useCallback(
+    async (message: string, modelOverride?: string) => {
+      const answered = await sendChatMessage(message, modelOverride)
+      await refreshJourney()
+      return answered
+    },
+    [sendChatMessage, refreshJourney]
+  )
 
   // Evidence buttons name the cited source or note instead of its record ID.
   const referenceTitles = useMemo(
@@ -368,6 +459,7 @@ export function useNotebookWorkspace({
     exitFullHeight,
     openAsideFromMessage,
     openAsideFromSelection,
+    openAsideFromDiveSelection,
     diveIntoQuestion,
     parkQuestion,
     renameSection,

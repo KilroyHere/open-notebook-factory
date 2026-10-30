@@ -23,6 +23,9 @@ vi.mock('@/components/sources/ChatPanel', () => ({
     return <div data-testid="chat-panel" />
   },
 }))
+vi.mock('@/lib/hooks/use-notes', () => ({
+  useCreateNote: () => ({ mutate: vi.fn(), isPending: false }),
+}))
 
 type ChatPanelProps = {
   onOpenAside: (message: { id: string; type: string; content: string }) => void
@@ -438,6 +441,58 @@ describe('ChatColumn', () => {
       // Still open, now inline: only the full-height view closes.
       expect(learning.setPanelOpen).toHaveBeenCalledWith(false)
       expect(learning.closeAside).not.toHaveBeenCalled()
+    })
+
+    it('goes deeper on a passage of a full-height dive in a dive nested under it', async () => {
+      const opened = {
+        ...inlineDive,
+        messages: [
+          { id: 'human:d1', type: 'human', content: 'Why a bound?' },
+          { id: 'ai:d1', type: 'ai', content: 'The logarithm is concave.' },
+        ],
+      }
+      const createAside = vi.fn().mockResolvedValue({
+        ...inlineDive,
+        id: 'learning_aside:passage',
+        parent_aside_id: inlineDive.id,
+      })
+      vi.mocked(useNotebookChat).mockReturnValue(
+        createChatMock({ messages: [answer], currentSessionId: 'chat_session:main' })
+      )
+      vi.mocked(useLearningAsides).mockReturnValue(
+        createLearningMock({
+          panelOpen: true,
+          asides: [inlineDive],
+          activeAside: opened,
+          activeAsideId: inlineDive.id,
+          createAside,
+        })
+      )
+
+      renderColumn()
+      const text = screen.getByText('The logarithm is concave.').firstChild!
+      const range = document.createRange()
+      range.setStart(text, 4)
+      range.setEnd(text, 13)
+      window.getSelection()!.removeAllRanges()
+      window.getSelection()!.addRange(range)
+      fireEvent.mouseUp(text)
+      fireEvent.click(screen.getByRole('button', { name: 'learningAsides.goDeeper' }))
+      window.getSelection()!.removeAllRanges()
+
+      await waitFor(() =>
+        expect(createAside).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'message',
+            content: 'logarithm',
+            message_id: 'ai:d1',
+            locator: 'selection',
+            parentAside: opened,
+            // Asked from the full-height view, the dive opens there too.
+            presentation: 'full',
+          })
+        )
+      )
     })
 
     it('closes a dive that cannot show inline when leaving full height', () => {

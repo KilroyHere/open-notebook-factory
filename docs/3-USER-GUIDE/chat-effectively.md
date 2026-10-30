@@ -75,7 +75,7 @@ On a narrow screen dives open in the **Chat** tab in the same way, and the **Stu
 
 The **Outline** in Studio's **Journey** tab starts with **What you've learned**: the conclusion of each resolved dive (the latest version when you updated it), in the order of the journey. Each has a **Use in main chat** checkbox. Uncheck a conclusion that no longer helps, and main-chat messages stop including it; check it again to bring it back. Nothing is resolved again and no new version is stored, and **Update resolution** starts from your choice. **Learned** counts only the checked conclusions, and the context size in the message box changes with them. The same checkbox sits in a resolved dive's summary. Click a conclusion to open its dive. If a change can't be saved, the checkbox goes back and a message says why.
 
-Checked conclusions share a limit of about 4,000 tokens per message. When some don't fit, a note at the top of **What you've learned** says how many are left out (the context chip in the message box says it too); uncheck the conclusions you no longer need to make room for the others.
+Checked conclusions share a limit of about 4,000 tokens per message. When some don't fit, a note at the top of **What you've learned** says how many are left out (the context chip in the message box says it too), and each conclusion that is left out says **Left out to fit the context limit** under it. Uncheck the conclusions you no longer need to make room for the others.
 
 ### Going deeper on a passage
 
@@ -85,6 +85,8 @@ Select part of an assistant answer, with the mouse or by touch, and a small tool
 - **Save to note** saves the passage as an **AI Generated** note in this notebook, with a generated title, like **Save to note** under an answer does for the whole answer.
 
 The toolbar comes right after the answer in the tab order: after selecting, press **Tab** to reach it (screen readers announce that actions for the selected text follow the answer). **Escape**, or pressing anywhere else, hides it. Selecting and copying text work as usual, and the **Go deeper** button under each answer still opens a dive about the whole answer.
+
+The same toolbar works on the answers inside a deep dive, under its answer in the chat or in the full-height view. There, **Go deeper** opens a dive about the passage nested under that dive, quoting the passage under **On this passage**, and puts the cursor in its question box. It opens where **Dive in** would open a child: under its parent dive in the chat, or full height when it would nest more than one level deep or when you started it in the full-height view. Its **Back to parent dive** returns to the dive you selected the passage in. **Save to note** saves the passage as a note, as in the main chat.
 
 ## Choosing the Model
 
@@ -118,6 +120,8 @@ Under each AI answer:
 Each source also has its own chat. Open the source and click **Chat with Sources**: the source page shows the content on the left and the chat on the right, with its own sessions and model choice.
 
 Source chat always uses that source's full text and insights; there are no context levels. Long sources are truncated to fit about 50,000 tokens, so questions about the later parts of a very long document may not be answerable there; use notebook chat with the source at *Full content* instead (large contexts switch to your Large Context Model). **Save to note** is not available in source chat (the source isn't tied to one notebook); use **Copy to clipboard**.
+
+Answers cite the source and its insights with numbered references. The **References** list under an answer names the source by its title and each insight by its type (for example **Dense Summary**); anything else it cites reads **Note 1**, **Insight 2** and so on. Click a number or a name to open the item.
 
 ---
 

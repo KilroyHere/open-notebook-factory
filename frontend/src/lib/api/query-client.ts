@@ -25,6 +25,11 @@ export const QUERY_KEYS = {
   sources: (notebookId?: string) => ['sources', notebookId] as const,
   sourcesInfinite: (notebookId: string) => ['sources', 'infinite', notebookId] as const,
   source: (id: string) => ['sources', id] as const,
+  /**
+   * A source's insights. Kept outside `['sources']`, so the broad source
+   * invalidations do not fetch them again on top of their own refresh.
+   */
+  sourceInsights: (sourceId: string) => ['insights', 'source', sourceId] as const,
   settings: ['settings'] as const,
   sourceChatSessions: (sourceId: string) => ['source-chat', sourceId, 'sessions'] as const,
   sourceChatSession: (sourceId: string, sessionId: string) => ['source-chat', sourceId, 'sessions', sessionId] as const,

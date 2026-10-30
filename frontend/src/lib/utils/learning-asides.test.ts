@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { LearningAside, LearningJourney, LearningUpdate } from '@/lib/types/api'
 import {
+  buildReferenceTitles,
   canOpenInline,
   childDiveForQuestion,
   childDives,
@@ -9,6 +10,7 @@ import {
   isPassageDive,
   journeyWithIncludeInMain,
   learnedConclusions,
+  leftOutConclusionIds,
   withAside,
   withIncludeInMain,
   createAsideTitle,
@@ -82,6 +84,24 @@ describe('learning aside text helpers', () => {
     ).toBe('learning_aside:child')
     expect(
       childDiveForQuestion([discarded], 'learning_aside:parent', 'Why a Gaussian prior?')
+    ).toBeUndefined()
+  })
+
+  it('does not take a dive about a selected passage for a question\'s dive', () => {
+    const passage = {
+      id: 'learning_aside:passage',
+      parent_aside_id: 'learning_aside:parent',
+      status: 'active',
+      anchor: {
+        type: 'message',
+        message_id: 'ai:dive-1',
+        content: 'Why a Gaussian prior?',
+        locator: 'selection',
+      },
+    } as LearningAside
+
+    expect(
+      childDiveForQuestion([passage], 'learning_aside:parent', 'Why a Gaussian prior?')
     ).toBeUndefined()
   })
 
@@ -284,6 +304,67 @@ describe('journeyStats', () => {
       expect(next.asides[1]).toBe(leftOut)
       expect(journeyStats(next.asides).learned).toBe(0)
       expect(withIncludeInMain([v1], 'learning_update:other', false)).toEqual([v1])
+    })
+
+    describe('left out by the context limit', () => {
+      const conclusion = (id: string, includeInMain = true) =>
+        make({
+          id: `learning_aside:${id}`,
+          status: 'resolved',
+          updates: [
+            update({
+              id: `learning_update:${id}`,
+              aside_id: `learning_aside:${id}`,
+              include_in_main: includeInMain,
+            }),
+          ],
+        })
+      const learned = learnedConclusions([
+        conclusion('kept'),
+        conclusion('dropped'),
+        conclusion('unchecked', false),
+      ])
+
+      it('are the used conclusions the counted context did not keep', () => {
+        expect(
+          leftOutConclusionIds(learned, new Set(['learning_update:kept']), 1)
+        ).toEqual(new Set(['learning_update:dropped']))
+      })
+
+      it('are none while nothing is left out or nothing is counted yet', () => {
+        expect(leftOutConclusionIds(learned, new Set(), 0).size).toBe(0)
+        expect(leftOutConclusionIds(learned, undefined, 1).size).toBe(0)
+      })
+
+      it('are none while the count describes other conclusions than the list', () => {
+        // Just after a conclusion is switched on, or a new one is resolved,
+        // the last count has not seen it yet.
+        expect(
+          leftOutConclusionIds(
+            learnedConclusions([conclusion('kept'), conclusion('dropped'), conclusion('new')]),
+            new Set(['learning_update:kept']),
+            1
+          ).size
+        ).toBe(0)
+      })
+    })
+  })
+})
+
+describe('buildReferenceTitles', () => {
+  it('names insights by the transformation that made them', () => {
+    expect(
+      buildReferenceTitles(
+        [{ id: 'source:paper', title: 'Attention Is All You Need' }],
+        [],
+        [
+          { id: 'source_insight:dense', insight_type: ' Dense Summary ' },
+          { id: 'source_insight:blank', insight_type: '  ' },
+        ]
+      )
+    ).toEqual({
+      'source:paper': 'Attention Is All You Need',
+      'source_insight:dense': 'Dense Summary',
     })
   })
 })

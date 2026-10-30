@@ -4,6 +4,7 @@ import { ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { ChevronLeft, ChevronRight, LucideIcon } from 'lucide-react'
+import { useTranslation } from '@/lib/hooks/use-translation'
 import { cn } from '@/lib/utils'
 
 interface CollapsibleColumnProps {
@@ -14,6 +15,11 @@ interface CollapsibleColumnProps {
   children: ReactNode
 }
 
+/**
+ * A notebook column that folds to a narrow rail. The rail is one button
+ * that shows the column's name and expands it again; its accessible name
+ * and tooltip say "Expand <name>".
+ */
 export function CollapsibleColumn({
   isCollapsed,
   onToggle,
@@ -21,9 +27,11 @@ export function CollapsibleColumn({
   collapsedLabel,
   children,
 }: CollapsibleColumnProps) {
-  const isCJK = /[\u4e00-\u9fa5\u3040-\u30ff\uac00-\ud7af]/.test(collapsedLabel);
+  const { t } = useTranslation()
+  const isCJK = /[一-龥぀-ヿ가-힯]/.test(collapsedLabel);
 
   if (isCollapsed) {
+    const expandLabel = t('notebooks.expandColumn', { name: collapsedLabel })
     return (
       <TooltipProvider>
         <Tooltip>
@@ -40,7 +48,7 @@ export function CollapsibleColumn({
                 'cursor-pointer group',
                 'py-6'
               )}
-              aria-label={`Expand ${collapsedLabel}`}
+              aria-label={expandLabel}
               aria-expanded={false}
             >
               <CollapsedIcon className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors flex-shrink-0" />
@@ -53,7 +61,7 @@ export function CollapsibleColumn({
             </button>
           </TooltipTrigger>
           <TooltipContent side="right">
-            <p>Expand {collapsedLabel}</p>
+            <p>{expandLabel}</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -67,13 +75,23 @@ export function CollapsibleColumn({
   )
 }
 
-// Factory function to create a collapse button for card headers
-export function createCollapseButton(
-  onToggle: () => void,
-  label: string,
-  side: 'left' | 'right' = 'left'
-) {
+/**
+ * The button in a column's header that folds it to its rail (wide screens
+ * only); its accessible name and tooltip say "Collapse <label>".
+ */
+export function CollapseColumnButton({
+  onToggle,
+  label,
+  side = 'left',
+}: {
+  onToggle: () => void
+  label: string
+  /** The side of the page the column sits on, which its chevron points to. */
+  side?: 'left' | 'right'
+}) {
+  const { t } = useTranslation()
   const Icon = side === 'right' ? ChevronRight : ChevronLeft
+  const collapseLabel = t('notebooks.collapseColumn', { name: label })
   return (
     <div className="hidden lg:block">
       <TooltipProvider>
@@ -87,14 +105,14 @@ export function createCollapseButton(
                 onToggle()
               }}
               className="h-7 w-7 hover:bg-accent"
-              aria-label={`Collapse ${label}`}
+              aria-label={collapseLabel}
               aria-expanded
             >
               <Icon className="h-4 w-4" />
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Collapse {label}</p>
+            <p>{collapseLabel}</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
