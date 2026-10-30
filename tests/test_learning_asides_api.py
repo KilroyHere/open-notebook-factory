@@ -2260,3 +2260,74 @@ def test_patch_update_requires_include_in_main(client):
     response = client.patch("/api/learning/updates/v2", json={})
 
     assert response.status_code == 422
+
+
+# --- Deleting chat sessions ------------------------------------------------------
+
+
+def _delete_session(client, session, aside=None, journey=None):
+    """DELETE /api/chat/sessions/{id} with the lookups mocked out."""
+    from open_notebook.domain.notebook import ChatSession
+
+    with (
+        patch(
+            "api.routers.chat.get_session_or_404",
+            new_callable=AsyncMock,
+            return_value=(session.id, session),
+        ),
+        patch.object(
+            LearningAside,
+            "get_for_chat_session",
+            new_callable=AsyncMock,
+            return_value=aside,
+        ),
+        patch.object(
+            LearningJourney,
+            "get_for_main_session",
+            new_callable=AsyncMock,
+            return_value=journey,
+        ),
+        patch.object(
+            LearningJourney, "delete_with_asides", new_callable=AsyncMock
+        ) as cascade,
+        patch.object(ChatSession, "delete", new_callable=AsyncMock) as delete,
+    ):
+        response = client.delete(f"/api/chat/sessions/{session.id}")
+    return response, cascade, delete
+
+
+@pytest.mark.parametrize(
+    ("kind", "has_aside"),
+    [
+        ("learning_aside", True),
+        # Marked as an aside's session, but its aside is gone.
+        ("learning_aside", False),
+        # An aside's session stored before sessions carried a kind.
+        ("chat", True),
+    ],
+)
+def test_deleting_an_aside_session_is_refused(client, kind, has_aside):
+    from open_notebook.domain.notebook import ChatSession
+
+    session = ChatSession(id="chat_session:child", title="Aside", kind=kind)
+
+    response, cascade, delete = _delete_session(
+        client, session, aside=_aside() if has_aside else None
+    )
+
+    assert response.status_code == 400
+    assert "Discard the aside instead" in response.json()["detail"]
+    cascade.assert_not_called()
+    delete.assert_not_called()
+
+
+def test_deleting_a_main_session_removes_its_journey(client):
+    from open_notebook.domain.notebook import ChatSession
+
+    session = ChatSession(id="chat_session:main", title="Main")
+
+    response, cascade, delete = _delete_session(client, session, journey=_journey())
+
+    assert response.status_code == 200
+    cascade.assert_awaited_once()
+    delete.assert_awaited_once()

@@ -76,6 +76,8 @@ To leave one conclusion out of main chat without re-resolving its aside, send `P
 
 In `PATCH /api/learning/asides/{id}` and `PATCH /api/learning/sections/{id}`, leave a field out to keep its value. An explicit `null` (for `title`, `status` or `pinned`) returns 422.
 
+`DELETE /api/chat/sessions/{id}` on a main session also deletes its learning journey: every aside, conclusion, outline section and aside session. Notes saved from asides stay in the notebook. On a learning aside's own session it returns 400; discard the aside instead.
+
 ## Async operations
 
 Source processing, embedding and podcast generation run on the background worker (see [architecture.md](architecture.md#background-jobs)). The endpoint that starts them returns right away with a record and/or a job id:

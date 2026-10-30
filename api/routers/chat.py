@@ -18,9 +18,18 @@ from api.routers._chat_shared import (
     normalize_record_id,
 )
 from open_notebook.database.repository import ensure_record_id, repo_query
-from open_notebook.domain.learning import LearningJourney, LearningUpdate
-from open_notebook.domain.notebook import ChatSession, Notebook
+from open_notebook.domain.learning import (
+    LearningAside,
+    LearningJourney,
+    LearningUpdate,
+)
+from open_notebook.domain.notebook import (
+    LEARNING_ASIDE_SESSION_KIND,
+    ChatSession,
+    Notebook,
+)
 from open_notebook.exceptions import (
+    InvalidInputError,
     NotFoundError,
     OpenNotebookError,
 )
@@ -346,10 +355,24 @@ async def update_session(session_id: str, request: UpdateSessionRequest):
 
 @router.delete("/chat/sessions/{session_id}", response_model=SuccessResponse)
 async def delete_session(session_id: str):
-    """Delete a chat session."""
+    """Delete a chat session.
+
+    A main session's learning journey goes with it. A learning aside's own
+    session is refused (400): it belongs to its aside, which is discarded,
+    not deleted, and is removed with its journey or notebook.
+    """
     try:
         # Get session (normalizes the ID and 404s if missing)
         full_session_id, session = await get_session_or_404(session_id)
+
+        if (
+            session.kind == LEARNING_ASIDE_SESSION_KIND
+            or await LearningAside.get_for_chat_session(full_session_id) is not None
+        ):
+            raise InvalidInputError(
+                "This session belongs to a learning aside and cannot be deleted "
+                "on its own. Discard the aside instead."
+            )
 
         journey = await LearningJourney.get_for_main_session(full_session_id)
         if journey:
