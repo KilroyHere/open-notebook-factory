@@ -3,7 +3,9 @@
 Both `api/routers/chat.py` and `api/routers/source_chat.py` operate on
 `chat_session` records linked to their parent (notebook or source) via the
 `refers_to` relation, and both convert LangGraph state messages into API
-response models. This module holds the single definition of those pieces.
+response models. This module holds the single definition of those pieces,
+plus the learning-context helpers that main chat (`chat.py`) and learning
+asides (`learning.py`) share.
 
 Behavior notes:
 - The helpers raise exactly what the previously inlined blocks raised
@@ -12,12 +14,15 @@ Behavior notes:
   them to the same status codes and messages as before.
 """
 
+from dataclasses import dataclass
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from fastapi import HTTPException
+from loguru import logger
 from pydantic import BaseModel, Field
 
 from open_notebook.database.repository import ensure_record_id, repo_query
+from open_notebook.domain.learning import LearningJourney, LearningUpdate
 from open_notebook.domain.notebook import ChatSession, Source
 
 
@@ -63,9 +68,9 @@ _MODEL_VISIBLE_UPDATE_FIELDS = (
 def model_facing_context(context: Dict[str, Any]) -> Dict[str, Any]:
     """Return a copy of chat context that is safe to render into a prompt.
 
-    ``context["learning_updates"]`` carries record IDs so the API can link the
-    updates to the reply that used them. The model only needs their content, so
-    the IDs are dropped and an instruction forbids citing internal records.
+    ``context["learning_updates"]`` entries carry record IDs (the chat-context
+    response hands them to the UI). The model only needs their content, so the
+    IDs are dropped and an instruction forbids citing internal records.
     The input is not mutated.
     """
     prepared = dict(context)
@@ -88,6 +93,69 @@ def model_facing_context(context: Dict[str, Any]) -> Dict[str, Any]:
     prepared["learning_updates"] = visible
     prepared["learning_updates_instruction"] = LEARNING_UPDATES_INSTRUCTION
     return prepared
+
+
+# Context keys that only the server may fill for a main-chat turn.
+_SERVER_LEARNING_KEYS = ("learning_updates", "learning_updates_instruction")
+
+
+@dataclass(frozen=True)
+class MainLearningContext:
+    """The accepted learning updates that go with a main-chat turn."""
+
+    updates: Tuple[LearningUpdate, ...] = ()
+
+    def context_entries(self) -> List[Dict[str, Any]]:
+        """The updates as ``learning_updates`` context entries, record IDs included."""
+        return [update.as_context_entry() for update in self.updates]
+
+
+async def load_main_learning_context(
+    session_id: str, notebook_id: Optional[str] = None
+) -> MainLearningContext:
+    """Load the accepted learning updates for a main chat session.
+
+    This is the one place that decides which updates go with a main-chat turn:
+    ``POST /chat/context`` returns its result for display and
+    ``POST /chat/execute`` sends the same result to the model, so the two cannot
+    disagree. The updates are the latest, included version of each aside on the
+    journey whose main session is ``session_id``; an aside's own session has no
+    journey and gets none. When ``notebook_id`` is given, a journey that belongs
+    to another notebook contributes nothing.
+    """
+    journey = await LearningJourney.get_for_main_session(session_id)
+    if journey is None:
+        return MainLearningContext()
+    if notebook_id is not None and journey.notebook != notebook_id:
+        return MainLearningContext()
+    return MainLearningContext(
+        updates=tuple(await journey.get_updates(include_unmerged=False))
+    )
+
+
+def main_chat_model_context(
+    context: Dict[str, Any], learning: MainLearningContext
+) -> Dict[str, Any]:
+    """Prompt-safe main-chat context carrying the server-loaded learning updates.
+
+    Clients echo the context they got from ``POST /chat/context``, learning
+    updates included. That copy is ignored: it can be stale (an aside resolved
+    or excluded since) or edited, and the model must only see conclusions the
+    learner accepted. The updates in ``learning`` take its place and then lose
+    their record IDs in :func:`model_facing_context`. The input is not mutated.
+    """
+    prepared = dict(context)
+    supplied = [key for key in _SERVER_LEARNING_KEYS if key in prepared]
+    if supplied:
+        logger.debug(
+            f"Ignoring client-supplied {', '.join(supplied)} in the chat context; "
+            "accepted learning updates are loaded on the server"
+        )
+        for key in supplied:
+            del prepared[key]
+    if learning.updates:
+        prepared["learning_updates"] = learning.context_entries()
+    return model_facing_context(prepared)
 
 
 def normalize_record_id(table: str, record_id: str) -> str:

@@ -1,11 +1,13 @@
 """Domain and migration coverage for durable learning asides."""
 
 from pathlib import Path
+from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from surrealdb import AsyncSurreal, RecordID
 
+from open_notebook.database.repository import parse_record_ids
 from open_notebook.domain.learning import (
     AsideAnchor,
     LearningAside,
@@ -17,6 +19,18 @@ from open_notebook.domain.notebook import Notebook
 from open_notebook.exceptions import InvalidInputError
 
 MIGRATIONS_DIR = Path("open_notebook/database/migrations")
+
+
+def _memory_repo_query(db: Any):
+    """A repo_query stand-in that runs against an in-memory SurrealDB."""
+
+    async def run(query: str, vars=None):
+        result = parse_record_ids(await db.query(query, vars))
+        if isinstance(result, str):
+            raise RuntimeError(result)
+        return result
+
+    return run
 
 
 class TestMigration26:
@@ -140,6 +154,47 @@ async def test_learning_queries_use_non_reserved_bind_parameters():
     assert isinstance(section, dict)
     assert section["title"] == "Evidence lower bound"
     assert section["pinned"] is True
+
+
+@pytest.mark.asyncio
+async def test_mark_applied_links_only_updates_without_a_backlink():
+    async with AsyncSurreal("mem://") as db:
+        await db.use("learning_asides", "mark_applied")
+        await db.query((MIGRATIONS_DIR / "26.surrealql").read_text())
+        await db.query((MIGRATIONS_DIR / "27.surrealql").read_text())
+        await db.query(
+            """
+            CREATE learning_update:fresh SET
+                aside = learning_aside:one, conclusion = 'Fresh', version = 1;
+            CREATE learning_update:linked SET
+                aside = learning_aside:two, conclusion = 'Linked', version = 1,
+                applied_message_id = 'ai:earlier';
+            """
+        )
+        with patch(
+            "open_notebook.domain.learning.repo_query", new=_memory_repo_query(db)
+        ):
+            await LearningUpdate.mark_applied(
+                [
+                    "learning_update:fresh",
+                    "learning_update:linked",
+                    "learning_update:missing",
+                ],
+                "ai:new",
+            )
+        rows = await db.query("SELECT id, applied_message_id FROM learning_update")
+
+    assert isinstance(rows, list)
+    backlinks = {
+        str(row["id"]): row.get("applied_message_id")
+        for row in rows
+        if isinstance(row, dict)
+    }
+    # The first reply stays linked; a missing ID is not created.
+    assert backlinks == {
+        "learning_update:fresh": "ai:new",
+        "learning_update:linked": "ai:earlier",
+    }
 
 
 class TestLearningModels:

@@ -58,6 +58,10 @@ Use `/docs` for request and response shapes. This map shows where things are:
 | Embeddings | `/api/embed`, `/api/embeddings/rebuild` |
 | Settings and config | `/api/settings`, `/api/config`, `/api/capabilities`, `/api/languages`, `/api/auth/status` |
 
+## Learning context in notebook chat
+
+`POST /api/chat/execute` adds the session's accepted learning conclusions (the latest included resolution of each aside, see [ADR-014](decisions/ADR-014-learning-aside-context.md)) to the model's context itself. Any `learning_updates` sent in its `context` are ignored. `POST /api/chat/context` with a `session_id` returns the same conclusions as `context.learning_updates`, for display and the token count.
+
 ## Async operations
 
 Source processing, embedding and podcast generation run on the background worker (see [architecture.md](architecture.md#background-jobs)). The endpoint that starts them returns right away with a record and/or a job id:

@@ -179,6 +179,11 @@ def test_notebook_chat_failed_turn_is_rolled_back_and_retry_is_clean():
             new=AsyncMock(return_value=("chat_session:n", session)),
         ),
         patch("api.routers.chat.repo_query", new=AsyncMock(return_value=[])),
+        # No learning journey for this session: no accepted updates to load.
+        patch(
+            "api.routers.chat.LearningJourney.get_for_main_session",
+            new=AsyncMock(return_value=None),
+        ),
     ):
         payload = {"session_id": "chat_session:n", "message": "question", "context": {}}
         failed = client.post("/api/chat/execute", json=payload)

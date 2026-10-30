@@ -276,6 +276,34 @@ class LearningUpdate(ObjectModel):
             "applied_message_id": self.applied_message_id,
         }
 
+    @classmethod
+    async def mark_applied(cls, update_ids: List[str], message_id: str) -> None:
+        """Record ``message_id`` as the first main reply that used these updates.
+
+        Only ``applied_message_id`` is written, and only on versions that have
+        no backlink yet, so an update that already names its first reply keeps
+        it and a concurrent edit of another field is never overwritten by a
+        stale copy of the record.
+        """
+        if not update_ids:
+            return
+        try:
+            await repo_query(
+                """
+                UPDATE $update_ids SET applied_message_id = $message_id
+                WHERE applied_message_id = NONE
+                """,
+                {
+                    "update_ids": [
+                        ensure_record_id(update_id) for update_id in update_ids
+                    ],
+                    "message_id": message_id,
+                },
+            )
+        except Exception as exc:
+            logger.exception(f"Failed to link learning updates to {message_id}")
+            raise DatabaseOperationError("Failed to link learning updates") from exc
+
 
 def latest_update_versions(updates: List["LearningUpdate"]) -> List["LearningUpdate"]:
     """Keep only the newest version of each aside's resolution.
