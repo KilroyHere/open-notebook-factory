@@ -73,7 +73,7 @@ On a narrow screen dives open in the **Chat** tab in the same way, and the **Stu
 
 ### What you've learned
 
-The **Outline** in Studio's **Journey** tab starts with **What you've learned**: the conclusion of each resolved dive (the latest version when you updated it), in the order of the journey. Each has a **Use in main chat** checkbox. Uncheck a conclusion that no longer helps, and main-chat messages stop including it; check it again to bring it back. Nothing is resolved again and no new version is stored. **Learned** counts only the checked conclusions, and the context size in the message box changes with them. The same checkbox sits in a resolved dive's summary. Click a conclusion to open its dive. If a change can't be saved, the checkbox goes back and a message says why.
+The **Outline** in Studio's **Journey** tab starts with **What you've learned**: the conclusion of each resolved dive (the latest version when you updated it), in the order of the journey. Each has a **Use in main chat** checkbox. Uncheck a conclusion that no longer helps, and main-chat messages stop including it; check it again to bring it back. Nothing is resolved again and no new version is stored, and **Update resolution** starts from your choice. **Learned** counts only the checked conclusions, and the context size in the message box changes with them. The same checkbox sits in a resolved dive's summary. Click a conclusion to open its dive. If a change can't be saved, the checkbox goes back and a message says why.
 
 ### Going deeper on a passage
 

@@ -95,10 +95,15 @@ export function useAsideResolution({
     setIsOpen(true)
     setDraftFailed(false)
     if (aside.status === 'resolved' && latestUpdate) {
-      // Updating a resolution starts from what the learner already approved.
+      // Updating a resolution starts from what the learner already approved,
+      // including whether main chat uses it: a conclusion they left out
+      // must not come back just because they reworded it.
       prefill(latestUpdate, latestUpdate.open_questions)
+      setIncludeInMain(latestUpdate.include_in_main)
       return
     }
+    // A first wrap-up is used in main chat unless the learner unticks it.
+    setIncludeInMain(true)
     if (!onDraftResolution || !latestAnswerContent.trim()) {
       prefill({ conclusion: latestAnswerDraft })
       return

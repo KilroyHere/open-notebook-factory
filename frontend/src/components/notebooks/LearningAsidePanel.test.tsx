@@ -363,6 +363,54 @@ describe('LearningAsidePanel', () => {
     expect(onDraftResolution).not.toHaveBeenCalled()
   })
 
+  it('updates a resolution main chat leaves out without putting it back', async () => {
+    const onResolve = vi.fn().mockResolvedValue(undefined)
+    const leftOut: LearningAside = {
+      ...aside,
+      status: 'resolved',
+      updates: [
+        {
+          id: 'learning_update:one',
+          aside_id: aside.id,
+          conclusion: 'Approved conclusion.',
+          open_questions: [],
+          citations: [],
+          include_in_main: false,
+          version: 1,
+          created: aside.created,
+          updated: aside.updated,
+        },
+      ],
+    }
+    const { rerender } = render(
+      <LearningAsidePanel {...baseProps} onResolve={onResolve} activeAside={leftOut} />
+    )
+    const useInMain = () =>
+      screen.getByRole('checkbox', { name: 'learningAsides.includeInMain' })
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'learningAsides.resolveAgain' })
+    )
+    expect(useInMain()).not.toBeChecked()
+    fireEvent.click(
+      screen.getAllByRole('button', { name: 'learningAsides.resolve' }).at(-1)!
+    )
+    await waitFor(() =>
+      expect(onResolve).toHaveBeenCalledWith(
+        aside.id,
+        expect.objectContaining({ include_in_main: false })
+      )
+    )
+
+    // A first wrap-up of another dive starts included again.
+    const other: LearningAside = { ...aside, id: 'learning_aside:other' }
+    rerender(
+      <LearningAsidePanel {...baseProps} onResolve={onResolve} activeAside={other} />
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'learningAsides.wrapUp' }))
+    expect(useInMain()).toBeChecked()
+  })
+
   it('keeps an approved resolution\'s evidence without showing its IDs', async () => {
     const onResolve = vi.fn().mockResolvedValue(undefined)
     render(
