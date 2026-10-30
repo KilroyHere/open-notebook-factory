@@ -125,6 +125,18 @@ describe('SelectionActions', () => {
     await waitFor(() => expect(screen.getByRole('toolbar')).toBeInTheDocument())
   })
 
+  it('goes away when the learner presses elsewhere, not on itself', () => {
+    const { text } = renderAnswer()
+    select(text, 4, 15)
+    fireEvent.mouseUp(text)
+
+    fireEvent.pointerDown(screen.getByRole('toolbar'))
+    expect(screen.getByRole('toolbar')).toBeInTheDocument()
+
+    fireEvent.pointerDown(screen.getByText('Elsewhere on the page'))
+    expect(screen.queryByRole('toolbar')).toBeNull()
+  })
+
   it('stays out of the way while the chat is covered', () => {
     render(
       <div inert>

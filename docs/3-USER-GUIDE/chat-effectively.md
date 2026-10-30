@@ -72,7 +72,7 @@ Select part of an assistant answer, with the mouse or by touch, and a small tool
 - **Go deeper** opens a deep dive about that passage under the answer, titled from the passage. The dive quotes it under **On this passage**, and still knows the whole answer and the conversation before it. Math and citations in the passage are kept.
 - **Save to note** saves the passage as an **AI Generated** note in this notebook, with a generated title, like **Save to note** under an answer does for the whole answer.
 
-The toolbar comes right after the answer in the tab order: after selecting, press **Tab** to reach it (screen readers announce that actions for the selected text follow the answer). **Escape** hides it. Selecting and copying text work as usual, and the **Go deeper** button under each answer still opens a dive about the whole answer.
+The toolbar comes right after the answer in the tab order: after selecting, press **Tab** to reach it (screen readers announce that actions for the selected text follow the answer). **Escape**, or pressing anywhere else, hides it. Selecting and copying text work as usual, and the **Go deeper** button under each answer still opens a dive about the whole answer.
 
 If you also save the conclusion as a note, it behaves like any other notebook
 note: sessions that include notes in their context can use it. Leave that

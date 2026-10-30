@@ -104,6 +104,7 @@ export function SelectionActions({
 }) {
   const { t } = useTranslation()
   const rootRef = useRef<HTMLDivElement>(null)
+  const toolbarRef = useRef<HTMLDivElement>(null)
   const [selection, setSelection] = useState<PassageSelection | null>(null)
   // A passage the learner dismissed stays quiet until the selection changes.
   const dismissed = useRef<string | null>(null)
@@ -119,7 +120,8 @@ export function SelectionActions({
 
   useEffect(() => (enabled ? onSelectionSettled(refresh) : undefined), [enabled, refresh])
 
-  // The toolbar is fixed to the window: keep it on the passage.
+  // The toolbar is fixed to the window: keep it on the passage, and put it
+  // away on Escape or when the learner presses anywhere else.
   useEffect(() => {
     if (!selection) return
     let frame = 0
@@ -127,19 +129,26 @@ export function SelectionActions({
       cancelAnimationFrame(frame)
       frame = requestAnimationFrame(refresh)
     }
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return
+    const dismiss = () => {
       dismissed.current = selection.text
       setSelection(null)
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') dismiss()
+    }
+    const onPointerDown = (event: Event) => {
+      if (!toolbarRef.current?.contains(event.target as Node)) dismiss()
     }
     window.addEventListener('scroll', follow, true)
     window.addEventListener('resize', follow)
     document.addEventListener('keydown', onKeyDown)
+    document.addEventListener('pointerdown', onPointerDown, true)
     return () => {
       cancelAnimationFrame(frame)
       window.removeEventListener('scroll', follow, true)
       window.removeEventListener('resize', follow)
       document.removeEventListener('keydown', onKeyDown)
+      document.removeEventListener('pointerdown', onPointerDown, true)
     }
   }, [selection, refresh])
 
@@ -158,6 +167,7 @@ export function SelectionActions({
       </div>
       {selection && (
         <div
+          ref={toolbarRef}
           role="toolbar"
           aria-label={t('learningAsides.selectionActions')}
           // Pressing a button must not clear the selection it acts on.
