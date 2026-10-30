@@ -37,3 +37,51 @@ describe('convertReferencesToCompactMarkdown', () => {
     expect(result).toContain('References:\n[1] - [source:abc](#ref-source-abc)')
   })
 })
+
+describe('convertReferencesToCompactMarkdown with labels', () => {
+  const titles: Record<string, string> = {
+    'source:paper': 'Attention Is All You Need',
+    'note:n1': 'Margin notes',
+  }
+  const labels = {
+    title: (type: string, id: string) => titles[`${type}:${id}`],
+    typeLabel: (type: string) =>
+      type === 'note' ? 'Note' : type === 'source' ? 'Source' : 'Insight',
+  }
+
+  it('names each reference by its title and keeps the links', () => {
+    const result = convertReferencesToCompactMarkdown(
+      'Attention [source:paper] scales [note:n1].',
+      'References',
+      labels
+    )
+    expect(result).toContain('Attention [1](#ref-source-paper) scales [2](#ref-note-n1).')
+    expect(result).toContain(
+      'References:\n[1] - [Attention Is All You Need](#ref-source-paper)\n[2] - [Margin notes](#ref-note-n1)'
+    )
+    expect(result).not.toContain('source:paper]')
+  })
+
+  it('numbers untitled references per type instead of showing their IDs', () => {
+    const result = convertReferencesToCompactMarkdown(
+      'A [source:8cvgg8uul1f5xdm6cq5w] B [source:paper] C [source:other] D [source_insight:i1].',
+      'References',
+      labels
+    )
+    expect(result).toContain('[1] - [Source 1](#ref-source-8cvgg8uul1f5xdm6cq5w)')
+    expect(result).toContain('[2] - [Attention Is All You Need](#ref-source-paper)')
+    expect(result).toContain('[3] - [Source 3](#ref-source-other)')
+    expect(result).toContain('[4] - [Insight 1](#ref-source_insight-i1)')
+    expect(result).not.toMatch(/- \[source:/)
+  })
+
+  it('escapes Markdown in titles so they read literally', () => {
+    const result = convertReferencesToCompactMarkdown('See [source:x].', 'References', {
+      ...labels,
+      title: () => 'Costs in $ and [brackets] *starred*\nnext line',
+    })
+    expect(result).toContain(
+      '[1] - [Costs in \\$ and \\[brackets\\] \\*starred\\* next line](#ref-source-x)'
+    )
+  })
+})

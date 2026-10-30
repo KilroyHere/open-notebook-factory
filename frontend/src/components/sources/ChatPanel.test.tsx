@@ -5,8 +5,10 @@ import type { LearningAside } from '@/lib/types/api'
 
 // useTranslation is mocked globally in setup.ts (t returns the key string)
 
+const { openModal } = vi.hoisted(() => ({ openModal: vi.fn() }))
+
 vi.mock('@/lib/hooks/use-modal-manager', () => ({
-  useModalManager: () => ({ openModal: vi.fn() }),
+  useModalManager: () => ({ openModal }),
 }))
 
 // Keep the message-content deps light for this composer-focused test.
@@ -236,6 +238,35 @@ describe('ChatPanel composer', () => {
     )
 
     expect(screen.getByTestId('context-chip')).toHaveTextContent('chat.contextNone')
+  })
+
+  it('names cited sources by title in the References list', () => {
+    render(
+      <ChatPanel
+        workspaceMode
+        messages={[
+          {
+            id: 'ai:1',
+            type: 'ai',
+            content: 'The bound is tight [source:8cvgg8uul1f5xdm6cq5w].',
+          },
+        ]}
+        isStreaming={false}
+        contextIndicators={null}
+        onSendMessage={vi.fn()}
+        referenceTitles={{
+          'source:8cvgg8uul1f5xdm6cq5w': 'Variational Inference: A Review',
+        }}
+      />
+    )
+
+    expect(screen.queryByText(/8cvgg8uul1f5xdm6cq5w/)).toBeNull()
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Variational Inference: A Review' })
+    )
+    expect(openModal).toHaveBeenCalledWith('source', '8cvgg8uul1f5xdm6cq5w')
+    fireEvent.click(screen.getByRole('button', { name: '1' }))
+    expect(openModal).toHaveBeenCalledTimes(2)
   })
 
   describe('a reply that used what the learner resolved', () => {

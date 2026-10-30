@@ -338,6 +338,42 @@ export function stripInternalCitations(text: string): string {
 }
 
 /**
+ * How the References list names what it cites. Without it the list shows the
+ * raw `type:id`; with it, the item's title, or a numbered generic name
+ * ("Source 2") when the title is unknown, so record IDs never show.
+ */
+export interface CompactReferenceLabels {
+  /** The cited item's title, or undefined when it is not known. */
+  title: (type: ReferenceType, id: string) => string | undefined
+  /** Generic name for an item without a known title, e.g. "Source". */
+  typeLabel: (type: ReferenceType) => string
+}
+
+// Every ASCII punctuation character may be backslash-escaped in Markdown, so
+// a title reads literally: no link brackets, emphasis, math or entities.
+const MARKDOWN_PUNCTUATION = /[!-/:-@[-`{-~]/g
+
+function escapeMarkdownText(value: string): string {
+  return value.replace(/\s+/g, ' ').trim().replace(MARKDOWN_PUNCTUATION, '\\$&')
+}
+
+function referenceListLabel(
+  reference: ReferenceData,
+  labels: CompactReferenceLabels | undefined,
+  typePositions: Partial<Record<ReferenceType, number>>
+): string {
+  // Items are numbered per type in citation order, titled or not, the way
+  // the evidence buttons of a learning summary number them.
+  const position = (typePositions[reference.type] ?? 0) + 1
+  typePositions[reference.type] = position
+  if (!labels) return `${reference.type}:${reference.id}`
+  const title = labels.title(reference.type, reference.id)?.trim()
+  return escapeMarkdownText(
+    title || `${labels.typeLabel(reference.type)} ${position}`
+  )
+}
+
+/**
  * Convert references in text to compact numbered format with reference list
  *
  * This function transforms verbose inline references like [source:abc123] into
@@ -352,13 +388,18 @@ export function stripInternalCitations(text: string): string {
  *
  * @param text - Original text with references
  * @param referencesLabel - Locales label for "References" title (default: "References")
+ * @param labels - Names for the reference list; without it the list shows `type:id`
  * @returns Text with numbered citations and reference list appended
  *
  * @example
  * Input: "See [source:abc] and [note:xyz]. Also [source:abc] again."
  * Output: "See [1] and [2]. Also [1] again.\n\nReferences:\n[1] - [source:abc]\n[2] - [note:xyz]"
  */
-export function convertReferencesToCompactMarkdown(text: string, referencesLabel: string = 'References'): string {
+export function convertReferencesToCompactMarkdown(
+  text: string,
+  referencesLabel: string = 'References',
+  labels?: CompactReferenceLabels
+): string {
   text = stripInternalCitations(text)
 
   // Step 1: Parse all references using existing function
@@ -424,8 +465,10 @@ export function convertReferencesToCompactMarkdown(text: string, referencesLabel
   const refListLines: string[] = [`\n\n${referencesLabel}:`]
 
   // Iterate through reference map in insertion order (Map preserves order)
+  const typePositions: Partial<Record<ReferenceType, number>> = {}
   for (const [, refData] of referenceMap) {
-    const refListItem = `[${refData.number}] - [${refData.type}:${refData.id}](#ref-${refData.type}-${refData.id})`
+    const label = referenceListLabel(refData, labels, typePositions)
+    const refListItem = `[${refData.number}] - [${label}](#ref-${refData.type}-${refData.id})`
     refListLines.push(refListItem)
   }
 

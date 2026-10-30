@@ -519,6 +519,7 @@ const ChatMessage = memo(function ChatMessage({
             <ReferencedMarkdown
               content={message.content}
               onReferenceClick={onReferenceClick}
+              referenceTitles={referenceTitles}
             />
           ) : (
             <p className="text-sm break-words">{message.content}</p>

@@ -441,6 +441,7 @@ export function LearningAsidePanel({
                       <ReferencedMarkdown
                         content={latestUpdate.conclusion}
                         onReferenceClick={onReferenceClick}
+                        referenceTitles={referenceTitles}
                       />
                     </div>
                     {latestUpdate.relevance && (
@@ -452,6 +453,7 @@ export function LearningAsidePanel({
                           <ReferencedMarkdown
                             content={latestUpdate.relevance}
                             onReferenceClick={onReferenceClick}
+                            referenceTitles={referenceTitles}
                           />
                         </div>
                       </div>
@@ -552,6 +554,7 @@ export function LearningAsidePanel({
                             <ReferencedMarkdown
                               content={message.content}
                               onReferenceClick={onReferenceClick}
+                              referenceTitles={referenceTitles}
                             />
                           ) : (
                             <p className="whitespace-pre-wrap">

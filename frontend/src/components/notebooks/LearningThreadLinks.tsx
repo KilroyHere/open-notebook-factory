@@ -272,6 +272,7 @@ export function LearningMergeEvent({
         <ReferencedMarkdown
           content={update.conclusion}
           onReferenceClick={onReferenceClick}
+          referenceTitles={referenceTitles}
         />
       </div>
       {update.relevance && (
@@ -283,6 +284,7 @@ export function LearningMergeEvent({
             <ReferencedMarkdown
               content={update.relevance}
               onReferenceClick={onReferenceClick}
+              referenceTitles={referenceTitles}
             />
           </div>
         </div>
