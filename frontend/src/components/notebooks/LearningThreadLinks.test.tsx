@@ -2,7 +2,21 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { LearningThreadLinks } from './LearningThreadLinks'
 import { LearningMergeEvent } from './LearningUpdateParts'
+import {
+  InlineDivesProvider,
+  type InlineDivesController,
+} from './InlineDivesContext'
 import { LearningAside } from '@/lib/types/api'
+
+// Interpolate values so rows can be told apart by their titles.
+vi.mock('@/lib/hooks/use-translation', () => ({
+  useTranslation: () => ({
+    t: (key: string, values?: Record<string, unknown>) =>
+      values ? `${key}:${Object.values(values).join('|')}` : key,
+    language: 'en-US',
+    setLanguage: vi.fn(),
+  }),
+}))
 
 const resolvedAside: LearningAside = {
   id: 'learning_aside:one',
@@ -23,7 +37,7 @@ const resolvedAside: LearningAside = {
       aside_id: 'learning_aside:one',
       conclusion: 'The logarithm is concave.',
       relevance: 'This establishes the lower bound.',
-      open_questions: [],
+      open_questions: ['Why choose a Gaussian prior?'],
       citations: [],
       include_in_main: true,
       applied_message_id: 'ai:merged',
@@ -36,178 +50,112 @@ const resolvedAside: LearningAside = {
   updated: '2026-10-29T00:00:00Z',
 }
 
+const activeAside: LearningAside = {
+  ...resolvedAside,
+  id: 'learning_aside:two',
+  title: 'KL term',
+  status: 'active',
+  updates: [],
+}
+
 describe('LearningThreadLinks', () => {
-  it('shows a resolved capsule at its origin with transcript and merge links', () => {
+  it('lists the dives of this answer as compact rows, not summary cards', () => {
+    render(
+      <LearningThreadLinks
+        messageId="ai:origin"
+        asides={[
+          resolvedAside,
+          activeAside,
+          { ...activeAside, id: 'learning_aside:gone', title: 'Gone', status: 'discarded' },
+          {
+            ...activeAside,
+            id: 'learning_aside:elsewhere',
+            title: 'Elsewhere',
+            anchor: { ...activeAside.anchor, message_id: 'ai:other' },
+          },
+        ]}
+        onOpenAside={vi.fn()}
+        onNavigateToMessage={vi.fn()}
+      />
+    )
+
+    const rows = screen.getAllByRole('button')
+    expect(rows.map((row) => row.textContent)).toEqual([
+      'learningAsides.learnedRow:The logarithm is concave.',
+      'learningAsides.deepDiveRow:KL termlearningAsides.status.active',
+    ])
+    // The summary, why it matters and the old "N deep dives" header are gone
+    // until a row is expanded.
+    expect(screen.queryByText('This establishes the lower bound.')).toBeNull()
+    expect(screen.queryByText(/branchCount/)).toBeNull()
+  })
+
+  it('opens a dive from its row outside the notebook chat', () => {
     const onOpenAside = vi.fn()
-    const onNavigateToMessage = vi.fn()
     render(
       <LearningThreadLinks
         messageId="ai:origin"
         asides={[resolvedAside]}
         onOpenAside={onOpenAside}
-        onNavigateToMessage={onNavigateToMessage}
+        onNavigateToMessage={vi.fn()}
       />
     )
 
-    expect(screen.getByText('The logarithm is concave.')).toBeInTheDocument()
-    fireEvent.click(
-      screen.getByRole('button', { name: 'learningAsides.viewTranscript' })
-    )
+    fireEvent.click(screen.getByRole('button', { name: /learnedRow/ }))
     expect(onOpenAside).toHaveBeenCalledWith(resolvedAside.id)
+  })
 
-    fireEvent.click(
+  it('reads a resolved row as plain text, without math markup', () => {
+    render(
+      <LearningThreadLinks
+        messageId="ai:origin"
+        asides={[
+          {
+            ...resolvedAside,
+            updates: [
+              {
+                ...resolvedAside.updates[0],
+                conclusion: 'Scores are divided by $\\sqrt{d_k}$ [source:paper].',
+              },
+            ],
+          },
+        ]}
+        onOpenAside={vi.fn()}
+        onNavigateToMessage={vi.fn()}
+      />
+    )
+
+    expect(
       screen.getByRole('button', {
-        name: 'learningAsides.viewMergedResponse',
+        name: 'learningAsides.learnedRow:Scores are divided by sqrt d_k.',
       })
-    )
-    expect(onNavigateToMessage).toHaveBeenCalledWith('ai:merged')
-  })
-
-  it('shows open questions and cited evidence on the resolved capsule', () => {
-    const onReferenceClick = vi.fn()
-    const aside: LearningAside = {
-      ...resolvedAside,
-      updates: [
-        {
-          ...resolvedAside.updates[0],
-          open_questions: ['Why choose a Gaussian prior?'],
-          citations: ['source:paper', 'note:margin', 'chapter 2'],
-        },
-      ],
-    }
-    render(
-      <LearningThreadLinks
-        messageId="ai:origin"
-        asides={[aside]}
-        onOpenAside={vi.fn()}
-        onNavigateToMessage={vi.fn()}
-        onReferenceClick={onReferenceClick}
-        referenceTitles={{
-          'source:paper': 'Attention Is All You Need',
-          'note:margin': 'Margin notes',
-        }}
-      />
-    )
-
-    expect(screen.getByText('learningAsides.openQuestions')).toBeInTheDocument()
-    expect(screen.getByText('Why choose a Gaussian prior?')).toBeInTheDocument()
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Attention Is All You Need' })
-    )
-    expect(onReferenceClick).toHaveBeenCalledWith('source', 'paper')
-    fireEvent.click(screen.getByRole('button', { name: 'Margin notes' }))
-    expect(onReferenceClick).toHaveBeenCalledWith('note', 'margin')
-    expect(
-      screen.queryByRole('button', { name: /chapter 2/ })
-    ).not.toBeInTheDocument()
-  })
-
-  it('renders math in the merged summary and keeps the capsule preview plain', () => {
-    const update = {
-      ...resolvedAside.updates[0],
-      conclusion: 'Scores are divided by $\\sqrt{d_k}$.',
-      relevance: 'It explains the $\\sqrt{d_k}$ factor [source:paper].',
-    }
-    const { container, unmount } = render(
-      <LearningMergeEvent aside={resolvedAside} update={update} />
-    )
-    expect(screen.queryByText(/\$\\sqrt/)).not.toBeInTheDocument()
-    expect(container.querySelectorAll('.katex')).toHaveLength(2)
-    unmount()
-
-    render(
-      <LearningThreadLinks
-        messageId="ai:origin"
-        asides={[{ ...resolvedAside, updates: [update] }]}
-        onOpenAside={vi.fn()}
-        onNavigateToMessage={vi.fn()}
-      />
-    )
-    expect(
-      screen.getByText('Scores are divided by sqrt d_k.')
-    ).toBeInTheDocument()
-    expect(
-      screen.getByText('It explains the sqrt d_k factor.')
     ).toBeInTheDocument()
   })
 
-  it('starts or parks a nested dive from an open question', () => {
-    const onDiveIntoQuestion = vi.fn()
-    const onParkQuestion = vi.fn()
-    const aside: LearningAside = {
-      ...resolvedAside,
-      updates: [
-        {
-          ...resolvedAside.updates[0],
-          open_questions: ['Why choose a Gaussian prior?'],
-        },
-      ],
-    }
-    render(
-      <LearningThreadLinks
-        messageId="ai:origin"
-        asides={[aside]}
-        onOpenAside={vi.fn()}
-        onNavigateToMessage={vi.fn()}
-        onDiveIntoQuestion={onDiveIntoQuestion}
-        onParkQuestion={onParkQuestion}
-      />
-    )
-
-    fireEvent.click(
-      screen.getByRole('button', { name: 'learningAsides.diveIn' })
-    )
-    expect(onDiveIntoQuestion).toHaveBeenCalledWith(
-      aside,
-      'Why choose a Gaussian prior?'
-    )
-    fireEvent.click(
-      screen.getByRole('button', { name: 'learningAsides.parkQuestion' })
-    )
-    expect(onParkQuestion).toHaveBeenCalledWith(
-      aside,
-      'Why choose a Gaussian prior?'
-    )
-  })
-
-  it('opens the existing child dive for a question', () => {
-    const onOpenAside = vi.fn()
+  it('nests a dive started from an open question under its parent, once', () => {
     const child: LearningAside = {
-      ...resolvedAside,
+      ...activeAside,
       id: 'learning_aside:child',
       parent_aside_id: resolvedAside.id,
       title: 'Gaussian prior',
       status: 'parked',
       anchor: { type: 'message', content: 'Why choose a Gaussian prior?' },
-      updates: [],
-    }
-    const parent: LearningAside = {
-      ...resolvedAside,
-      updates: [
-        {
-          ...resolvedAside.updates[0],
-          open_questions: ['Why choose a Gaussian prior?'],
-        },
-      ],
     }
     render(
       <LearningThreadLinks
         messageId="ai:origin"
-        asides={[parent, child]}
-        onOpenAside={onOpenAside}
+        asides={[resolvedAside, child]}
+        onOpenAside={vi.fn()}
         onNavigateToMessage={vi.fn()}
-        onDiveIntoQuestion={vi.fn()}
-        onParkQuestion={vi.fn()}
       />
     )
 
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Why choose a Gaussian prior?' })
-    )
-    expect(onOpenAside).toHaveBeenCalledWith('learning_aside:child')
-    expect(
-      screen.queryByRole('button', { name: 'learningAsides.diveIn' })
-    ).not.toBeInTheDocument()
+    const parent = screen
+      .getByRole('button', { name: /learnedRow/ })
+      .closest('[data-inline-dive]')!
+    const nested = screen.getAllByRole('button', { name: /Gaussian prior/ })
+    expect(nested).toHaveLength(1)
+    expect(parent.contains(nested[0])).toBe(true)
   })
 
   it('omits branches anchored to another message', () => {
@@ -220,5 +168,59 @@ describe('LearningThreadLinks', () => {
       />
     )
     expect(container).toBeEmptyDOMElement()
+  })
+
+  it('opens the existing child dive from its question in the summary', () => {
+    const onOpenAside = vi.fn()
+    const child: LearningAside = {
+      ...activeAside,
+      id: 'learning_aside:child',
+      parent_aside_id: resolvedAside.id,
+      title: 'Gaussian prior',
+      anchor: { type: 'message', content: 'Why choose a Gaussian prior?' },
+    }
+    const controller = {
+      expandedAsideId: resolvedAside.id,
+      creating: null,
+      attention: null,
+      onAttended: vi.fn(),
+      sendingAsideId: null,
+      pendingMessage: null,
+      resolvingAsideId: null,
+      isAsideLoading: false,
+      onExpand: vi.fn(),
+      onCollapse: vi.fn(),
+      onOpenFullHeight: vi.fn(),
+      onSendMessage: vi.fn(),
+      onResolve: vi.fn(),
+      onUpdateStatus: vi.fn(),
+    } satisfies InlineDivesController
+    render(
+      <InlineDivesProvider value={controller}>
+        <LearningThreadLinks
+          messageId="ai:origin"
+          asides={[resolvedAside, child]}
+          onOpenAside={onOpenAside}
+          onNavigateToMessage={vi.fn()}
+          onDiveIntoQuestion={vi.fn()}
+          onParkQuestion={vi.fn()}
+        />
+      </InlineDivesProvider>
+    )
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Why choose a Gaussian prior?' })
+    )
+    expect(onOpenAside).toHaveBeenCalledWith('learning_aside:child')
+    expect(
+      screen.queryByRole('button', { name: 'learningAsides.diveIn' })
+    ).not.toBeInTheDocument()
+  })
+
+  it('keeps the merge summary for the reply that used the conclusion', () => {
+    render(<LearningMergeEvent aside={resolvedAside} update={resolvedAside.updates[0]} />)
+
+    expect(screen.getByText('The logarithm is concave.')).toBeInTheDocument()
+    expect(screen.getByText('This establishes the lower bound.')).toBeInTheDocument()
   })
 })

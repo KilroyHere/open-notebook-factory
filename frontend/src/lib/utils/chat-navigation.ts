@@ -31,3 +31,45 @@ export function focusChatMessage(messageId: string): boolean {
   }, 1800)
   return true
 }
+
+const INLINE_DIVE_PREFIX = 'inline-dive-'
+
+/** DOM id of a dive's thread inside the main chat. */
+export function inlineDiveDomId(asideId: string): string {
+  return `${INLINE_DIVE_PREFIX}${encodeURIComponent(asideId)}`
+}
+
+/** The chat's message list scroller (a Radix ScrollArea viewport). */
+export const CHAT_SCROLLER_SELECTOR = '[data-slot="scroll-area-viewport"]'
+const REVEAL_MARGIN_PX = 24
+
+/**
+ * Scroll the chat's own scroller so `element` shows: its top near the top
+ * of the list (`start`), or only as far as needed to bring it into view
+ * (`nearest`), never pushing its top out of view. Other scrollable
+ * ancestors stay where they are.
+ */
+export function revealInChat(
+  element: HTMLElement,
+  block: 'start' | 'nearest' = 'nearest'
+): void {
+  const scroller = element.closest<HTMLElement>(CHAT_SCROLLER_SELECTOR)
+  if (!scroller) {
+    element.scrollIntoView?.({ behavior: 'smooth', block })
+    return
+  }
+  const view = scroller.getBoundingClientRect()
+  const box = element.getBoundingClientRect()
+  const aboveBy = box.top - view.top - REVEAL_MARGIN_PX
+  const belowBy = box.bottom - view.bottom + REVEAL_MARGIN_PX
+  let delta = 0
+  if (block === 'start' || aboveBy < 0) delta = aboveBy
+  else if (belowBy > 0) delta = Math.min(belowBy, aboveBy)
+  if (Math.abs(delta) < 1) return
+  const top = scroller.scrollTop + delta
+  if (typeof scroller.scrollTo === 'function') {
+    scroller.scrollTo({ top, behavior: 'smooth' })
+  } else {
+    scroller.scrollTop = top
+  }
+}

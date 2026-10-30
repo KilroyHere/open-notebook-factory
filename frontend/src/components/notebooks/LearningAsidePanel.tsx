@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { ArrowLeft, CheckCircle2, GitBranch, Loader2, X } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -31,6 +31,8 @@ interface LearningAsidePanelProps {
   activeAside?: LearningAside
   isLoading: boolean
   isSending: boolean
+  /** The question being sent to the open dive, shown until it is answered. */
+  pendingMessage?: string | null
   isResolving: boolean
   isAsideLoading: boolean
   onSelectAside: (asideId: string) => void
@@ -65,6 +67,7 @@ export function LearningAsidePanel({
   activeAside,
   isLoading,
   isSending,
+  pendingMessage,
   isResolving,
   isAsideLoading,
   onSelectAside,
@@ -79,6 +82,8 @@ export function LearningAsidePanel({
   referenceTitles,
 }: LearningAsidePanelProps) {
   const { t } = useTranslation()
+  const sectionRef = useRef<HTMLElement>(null)
+  const headingId = useId()
   const [showList, setShowList] = useState(!activeAside)
   const [showTranscript, setShowTranscript] = useState(true)
   const resolution = useAsideResolution({
@@ -109,6 +114,11 @@ export function LearningAsidePanel({
     }
   }, [activeAside?.status, activeAsideId])
 
+  // The view covers the chat it opened from: take the cursor along.
+  useEffect(() => {
+    if (open) sectionRef.current?.focus({ preventScroll: true })
+  }, [open])
+
   const visibleAsides = asides.filter(
     (aside) => aside.status !== 'discarded'
   )
@@ -121,7 +131,12 @@ export function LearningAsidePanel({
   if (!open) return null
 
   return (
-    <section className="grid h-full min-h-0 min-w-0 flex-1 grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-background">
+    <section
+      ref={sectionRef}
+      tabIndex={-1}
+      aria-labelledby={headingId}
+      className="grid h-full min-h-0 min-w-0 flex-1 grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-background outline-none"
+    >
         <header className="flex min-w-0 items-center justify-between gap-3 border-b px-5 py-3">
           <div className="flex min-w-0 items-center gap-2">
             {!showList && (
@@ -146,7 +161,7 @@ export function LearningAsidePanel({
               </Button>
             )}
             <GitBranch className="h-4 w-4 text-teal" />
-            <h2 className="min-w-0 break-words text-sm font-semibold">
+            <h2 id={headingId} className="min-w-0 break-words text-sm font-semibold">
               {showList
                 ? t('learningAsides.journey')
                 : activeAside?.title ?? t('learningAsides.untitled')}
@@ -310,6 +325,7 @@ export function LearningAsidePanel({
                     aside={activeAside}
                     isAsideLoading={isAsideLoading}
                     isSending={isSending}
+                    pendingMessage={pendingMessage}
                     onSendMessage={onSendMessage}
                     onReferenceClick={onReferenceClick}
                     referenceTitles={referenceTitles}
@@ -354,7 +370,7 @@ export function LearningAsidePanel({
                       <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
                       {activeAside.status === 'resolved'
                         ? t('learningAsides.resolveAgain')
-                        : t('learningAsides.resolve')}
+                        : t('learningAsides.wrapUp')}
                     </Button>
                   )}
                 </div>

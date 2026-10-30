@@ -171,3 +171,82 @@ export function leadingWords(content: string, count = 8): string {
   if (words.length <= count) return words.join(' ')
   return `${words.slice(0, count).join(' ')}…`
 }
+
+/** The backend keeps at most this many characters of an aside's anchor. */
+export const MAX_ANCHOR_CHARS = 20_000
+
+/** `anchor.locator` of a dive started from a passage the learner selected. */
+export const PASSAGE_LOCATOR = 'selection'
+
+/** Whether a dive is about a selected passage rather than a whole answer. */
+export function isPassageDive(aside: Pick<LearningAside, 'anchor'>): boolean {
+  return aside.anchor.locator === PASSAGE_LOCATOR
+}
+
+/**
+ * How deep a dive may nest and still expand inside the main chat: a dive
+ * off a message (depth 0) and the dives started from its open questions
+ * (depth 1). Deeper dives open in the full-height view.
+ */
+export const INLINE_DIVE_MAX_DEPTH = 1
+
+/** The dives started from `parentId`'s open questions, discarded ones left out. */
+export function childDives(
+  asides: LearningAside[],
+  parentId: string
+): LearningAside[] {
+  return asides.filter(
+    (aside) => aside.parent_aside_id === parentId && aside.status !== 'discarded'
+  )
+}
+
+/**
+ * The dive at the top of `aside`'s nesting chain and how many parents lie
+ * between them. `null` when the chain is broken: a parent is missing,
+ * discarded, or the chain loops.
+ */
+export function diveLineage(
+  aside: LearningAside,
+  asides: LearningAside[]
+): { root: LearningAside; depth: number } | null {
+  const byId = new Map(asides.map((item) => [item.id, item]))
+  const seen = new Set([aside.id])
+  let root = aside
+  let depth = 0
+  while (root.parent_aside_id) {
+    const parent = byId.get(root.parent_aside_id)
+    if (!parent || parent.status === 'discarded' || seen.has(parent.id)) {
+      return null
+    }
+    seen.add(parent.id)
+    root = parent
+    depth += 1
+  }
+  return { root, depth }
+}
+
+/**
+ * Whether a dive can show as a thread inside the main chat: it is not
+ * discarded, its chain is intact and shallow enough, and the dive at the
+ * top of it branched from one of `messageIds`.
+ */
+export function canOpenInline(
+  aside: LearningAside,
+  asides: LearningAside[],
+  messageIds: ReadonlySet<string>
+): boolean {
+  if (aside.status === 'discarded') return false
+  const lineage = diveLineage(aside, asides)
+  if (!lineage || lineage.depth > INLINE_DIVE_MAX_DEPTH) return false
+  const messageId = lineage.root.anchor.message_id
+  return Boolean(messageId && messageIds.has(messageId))
+}
+
+/** `asides` plus `extra` when the list does not have it yet. */
+export function withAside(
+  asides: LearningAside[],
+  extra?: LearningAside
+): LearningAside[] {
+  if (!extra || asides.some((aside) => aside.id === extra.id)) return asides
+  return [...asides, extra]
+}

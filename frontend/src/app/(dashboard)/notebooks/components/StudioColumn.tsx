@@ -30,7 +30,8 @@ interface StudioColumnProps {
   /**
    * Called before a Journey action that shows something in the chat (a
    * branch, a message, the main thread), so the mobile layout can switch back
-   * to the Chat tab.
+   * to the Chat tab. A branch opens under its message there, scrolled into
+   * view, or full height when it is nested too deep.
    */
   onShowConversation?: () => void
 }
@@ -97,9 +98,9 @@ export function StudioColumn({
         <LearningJourneyRail
           messages={chat.messages}
           asides={learning.asides}
-          activeAsideId={learning.activeAsideId}
+          activeAsideId={workspace.shownAsideId}
           onShowMain={thenShowConversation(workspace.showMainThread)}
-          onOpenAside={thenShowConversation(learning.openAside)}
+          onOpenAside={thenShowConversation(workspace.openAside)}
           onNavigateToMessage={thenShowConversation(
             workspace.navigateToMainMessage
           )}

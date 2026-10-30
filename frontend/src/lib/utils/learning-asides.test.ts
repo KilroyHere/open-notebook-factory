@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { LearningAside, LearningUpdate } from '@/lib/types/api'
 import {
+  canOpenInline,
   childDiveForQuestion,
+  childDives,
+  diveLineage,
+  isPassageDive,
+  withAside,
   createAsideTitle,
   createLearningUpdateDraft,
   documentCitations,
@@ -200,3 +205,76 @@ describe('leadingWords', () => {
     expect(leadingWords('Short one.', 4)).toBe('Short one.')
   })
 })
+
+describe('inline dive placement', () => {
+  const at = '2026-10-29T00:00:00Z'
+  const make = (overrides: Partial<LearningAside>): LearningAside => ({
+    id: 'learning_aside:root',
+    journey_id: 'learning_journey:one',
+    parent_session_id: 'chat_session:main',
+    chat_session_id: 'chat_session:x',
+    title: 'Dive',
+    status: 'active',
+    anchor: { type: 'message', message_id: 'ai:1', content: 'Answer' },
+    messages: [],
+    updates: [],
+    created: at,
+    updated: at,
+    ...overrides,
+  })
+  const root = make({})
+  const child = make({
+    id: 'learning_aside:child',
+    parent_aside_id: root.id,
+    anchor: { type: 'message', content: 'Question?' },
+  })
+  const grandchild = make({
+    id: 'learning_aside:grandchild',
+    parent_aside_id: child.id,
+    anchor: { type: 'message', content: 'Deeper?' },
+  })
+  const asides = [root, child, grandchild]
+  const answers = new Set(['ai:1'])
+
+  it('finds the dive at the top of a chain and how deep it nests', () => {
+    expect(diveLineage(grandchild, asides)).toEqual({ root, depth: 2 })
+    expect(diveLineage(root, asides)).toEqual({ root, depth: 0 })
+  })
+
+  it('treats a missing, discarded or looping parent as a broken chain', () => {
+    expect(diveLineage(child, [child])).toBeNull()
+    expect(
+      diveLineage(child, [{ ...root, status: 'discarded' }, child])
+    ).toBeNull()
+    const loop = make({ id: 'a', parent_aside_id: 'b' })
+    expect(diveLineage(loop, [loop, make({ id: 'b', parent_aside_id: 'a' })])).toBeNull()
+  })
+
+  it('shows a dive inline one level deep under an answer in the chat', () => {
+    expect(canOpenInline(root, asides, answers)).toBe(true)
+    expect(canOpenInline(child, asides, answers)).toBe(true)
+    expect(canOpenInline(grandchild, asides, answers)).toBe(false)
+    expect(canOpenInline(root, asides, new Set(['ai:other']))).toBe(false)
+    expect(canOpenInline({ ...root, status: 'discarded' }, asides, answers)).toBe(false)
+    expect(
+      canOpenInline(make({ anchor: { type: 'message', content: 'No answer' } }), asides, answers)
+    ).toBe(false)
+  })
+
+  it('lists a dive\'s open children and adds a dive the journey lacks', () => {
+    expect(
+      childDives([...asides, { ...child, id: 'x', status: 'discarded' }], root.id)
+    ).toEqual([child])
+    expect(withAside([root], child)).toEqual([root, child])
+    expect(withAside(asides, child)).toBe(asides)
+    expect(withAside(asides)).toBe(asides)
+  })
+
+  it('tells a passage dive from a whole-answer dive', () => {
+    expect(isPassageDive(root)).toBe(false)
+    expect(
+      isPassageDive(make({ anchor: { ...root.anchor, locator: 'selection' } }))
+    ).toBe(true)
+  })
+})
+

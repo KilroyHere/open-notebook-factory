@@ -30,16 +30,21 @@ const aside: LearningAside = {
   updated: '2026-10-28T00:01:00Z',
 }
 
-function createWorkspace(asides: LearningAside[] = []) {
+function createWorkspace(
+  asides: LearningAside[] = [],
+  shownAsideId: string | null = null
+) {
   return {
     notebookId: 'notebook:1',
     chat: { messages: [] },
     learning: {
       asides,
       sections: [],
-      activeAsideId: null,
+      activeAsideId: shownAsideId,
       openAside: vi.fn(),
     },
+    shownAsideId,
+    openAside: vi.fn(),
     showMainThread: vi.fn(),
     navigateToMainMessage: vi.fn(),
     diveIntoQuestion: vi.fn(),
@@ -130,12 +135,28 @@ describe('StudioColumn', () => {
     expect(screen.queryByRole('button', { name: /^Collapse / })).toBeNull()
     fireEvent.click(screen.getByText('Current active aside'))
     expect(onShowConversation).toHaveBeenCalledTimes(1)
-    expect(workspace.learning.openAside).toHaveBeenCalledWith(aside.id)
+    // Opened where it lives (inline under its message when it can be),
+    // not straight into the full-height view.
+    expect(workspace.openAside).toHaveBeenCalledWith(aside.id)
+    expect(workspace.learning.openAside).not.toHaveBeenCalled()
 
     fireEvent.click(
       screen.getByRole('button', { name: 'learningAsides.mainThread' })
     )
     expect(onShowConversation).toHaveBeenCalledTimes(2)
     expect(workspace.showMainThread).toHaveBeenCalled()
+  })
+
+  it('marks the dive on screen in the outline', () => {
+    const { rerender } = render(
+      <StudioColumn workspace={createWorkspace([aside])} notes={notes} />
+    )
+    const item = () => screen.getByText('Current active aside').closest('button')!
+    expect(item()).not.toHaveClass('border-teal')
+
+    rerender(
+      <StudioColumn workspace={createWorkspace([aside], aside.id)} notes={notes} />
+    )
+    expect(item()).toHaveClass('border-teal')
   })
 })

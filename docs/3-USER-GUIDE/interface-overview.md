@@ -53,10 +53,10 @@ Opening a notebook shows its header, then three panels: **Sources** on the left,
 │ ▪ │ ← Notebook name (click to edit)              [Archive] [Delete]    │
 │ ▪ │   Description (one line, click to edit)                            │
 │ ▪ ├──────────────────┬────────────────────────────┬────────────────────┤
-│ ▪ │ SOURCES          │                            │ [Journey] [Notes]  │
-│   │ [Context] [Add]  │   messages, with numbered  │ Learned 2 · Open   │
-│   │ ┌──────────────┐ │   references               │ questions 1 · ...  │
-│   │ │ paper.pdf    │ │                            │ [Outline] [Map]    │
+│ ▪ │ SOURCES          │   messages, with numbered  │ [Journey] [Notes]  │
+│   │ [Context] [Add]  │   references               │ Learned 2 · Open   │
+│   │ ┌──────────────┐ │   └ Deep dive · title    ▾ │ questions 1 · ...  │
+│   │ │ paper.pdf    │ │   └ ✓ Learned: …         ▾ │ [Outline] [Map]    │
 │   │ │ File · 2  ◐ ⋮│ │ [Asides] [Current session] │ 1. question        │
 │   │ └──────────────┘ │ ╭ Ask anything...        ╮ │    └ deep dive     │
 │   │                  │ ╰ 2 sources  [Model] [➤] ╯ │                    │
@@ -76,12 +76,12 @@ On small screens (narrower than 1024 px) the workspace becomes three tabs, **Sou
 
 Studio has two tabs. It opens on **Journey** once the current chat has an aside, and on **Notes** before that; after you pick a tab it stays on your choice.
 
-- **Journey** starts with three counts for the current chat: **Learned** (resolved asides whose conclusion is used in the main chat), **Open questions** (questions on the latest conclusions that no dive has picked up yet) and **Saved for later** (parked asides). Below them, **Outline** lists the chat's sections with each aside nested under the turn it came from, and **Map** shows the main thread, each branch, its summary and the merged reply. See [Chat Effectively](chat-effectively.md#learning-asides).
+- **Journey** starts with three counts for the current chat: **Learned** (resolved asides whose conclusion is used in the main chat), **Open questions** (questions on the latest conclusions that no dive has picked up yet) and **Saved for later** (parked asides). Below them, **Outline** lists the chat's sections with each aside nested under the turn it came from, and **Map** shows the main thread, each branch, its summary and the merged reply. Clicking an aside scrolls the chat to its dive and opens it there. See [Chat Effectively](chat-effectively.md#learning-asides).
 - **Notes**: **Write Note** creates a note. **Context** has **Include all in context** and **Exclude all from context**. Each **note card** shows the title, an **AI Generated** or **Human** badge and a context icon (on or off). Click a card to edit the note. See [Working with Notes](working-with-notes.md).
 
 ### Chat column
 
-Notebook chat with the sources and notes in context. The button labeled with the current session title opens **Chat Sessions**. The message box is one rounded field: under the text sit a chip with what's in context (for example **2 sources · 1 note**), the model button, which picks a model for the session, and the send button. Hover or focus the chip to see how many sources are at *Insights only* and *Full content* and the estimated size in tokens and characters. Send with **Ctrl+Enter** (**⌘+Enter** on Mac). See [Chat Effectively](chat-effectively.md).
+Notebook chat with the sources and notes in context. **Go deeper** under an answer opens a deep dive right below it, as a thread you can fold to one row (**Deep dive · title**, or **✓ Learned: …** once resolved) and unfold again; **Open full height** shows a long dive over the chat instead ([Learning Asides](chat-effectively.md#learning-asides)). The button labeled with the current session title opens **Chat Sessions**. The message box is one rounded field: under the text sit a chip with what's in context (for example **2 sources · 1 note**), the model button, which picks a model for the session, and the send button. Hover or focus the chip to see how many sources are at *Insights only* and *Full content* and the estimated size in tokens and characters. Send with **Ctrl+Enter** (**⌘+Enter** on Mac). See [Chat Effectively](chat-effectively.md).
 
 ---
 

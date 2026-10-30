@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LearningAsidePanel } from './LearningAsidePanel'
+import { clearAsideDrafts } from './AsideComposer'
 import { LearningAside, LearningResolutionDraft } from '@/lib/types/api'
 
 const aside: LearningAside = {
@@ -48,6 +49,8 @@ const baseProps = {
 }
 
 describe('LearningAsidePanel', () => {
+  afterEach(() => clearAsideDrafts())
+
   it('lists durable asides and opens the selected one', () => {
     const onSelectAside = vi.fn()
     const { container } = render(
@@ -132,7 +135,7 @@ describe('LearningAsidePanel', () => {
     )
 
     fireEvent.click(
-      screen.getByRole('button', { name: 'learningAsides.resolve' })
+      screen.getByRole('button', { name: 'learningAsides.wrapUp' })
     )
 
     const conclusion = await screen.findByPlaceholderText(
@@ -203,7 +206,7 @@ describe('LearningAsidePanel', () => {
     )
 
     fireEvent.click(
-      screen.getByRole('button', { name: 'learningAsides.resolve' })
+      screen.getByRole('button', { name: 'learningAsides.wrapUp' })
     )
 
     expect(onDraftResolution).toHaveBeenCalledWith('learning_aside:one')
@@ -299,7 +302,7 @@ describe('LearningAsidePanel', () => {
     )
 
     fireEvent.click(
-      screen.getByRole('button', { name: 'learningAsides.resolve' })
+      screen.getByRole('button', { name: 'learningAsides.wrapUp' })
     )
 
     expect(
@@ -458,7 +461,7 @@ describe('LearningAsidePanel', () => {
   it('explains that saved notes become shared notebook context', async () => {
     render(<LearningAsidePanel {...baseProps} activeAside={aside} />)
     fireEvent.click(
-      screen.getByRole('button', { name: 'learningAsides.resolve' })
+      screen.getByRole('button', { name: 'learningAsides.wrapUp' })
     )
 
     const saveAsNote = await screen.findByText('learningAsides.saveAsNote')
@@ -751,5 +754,80 @@ describe('LearningAsidePanel', () => {
       screen.queryByText('learningAsides.returnToMain')
     ).not.toBeInTheDocument()
     expect(onNavigateToMessage).not.toHaveBeenCalled()
+  })
+
+  it('saves an active dive for later and reopens a parked one', async () => {
+    const onUpdateStatus = vi.fn().mockResolvedValue(undefined)
+    const { rerender } = render(
+      <LearningAsidePanel
+        {...baseProps}
+        activeAside={aside}
+        onUpdateStatus={onUpdateStatus}
+      />
+    )
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'learningAsides.saveForLater' })
+    )
+    expect(onUpdateStatus).toHaveBeenCalledWith('learning_aside:one', 'parked')
+
+    rerender(
+      <LearningAsidePanel
+        {...baseProps}
+        activeAside={{ ...aside, status: 'parked' }}
+        onUpdateStatus={onUpdateStatus}
+      />
+    )
+    expect(
+      screen.queryByRole('button', { name: 'learningAsides.saveForLater' })
+    ).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'learningAsides.reopen' }))
+    expect(onUpdateStatus).toHaveBeenLastCalledWith('learning_aside:one', 'active')
+  })
+
+  it('shows the question being answered and frees the box for the next', async () => {
+    let fail: (error: Error) => void = () => undefined
+    const onSendMessage = vi.fn(
+      () =>
+        new Promise((_, reject) => {
+          fail = reject
+        })
+    )
+    const { rerender } = render(
+      <LearningAsidePanel
+        {...baseProps}
+        activeAside={aside}
+        onSendMessage={onSendMessage}
+      />
+    )
+    const input = screen.getByLabelText('learningAsides.askPlaceholder')
+    fireEvent.change(input, { target: { value: 'Why concave?' } })
+    fireEvent.keyDown(input, { key: 'Enter', ctrlKey: true })
+
+    expect(onSendMessage).toHaveBeenCalledWith('learning_aside:one', 'Why concave?')
+    expect(input).toHaveValue('')
+    rerender(
+      <LearningAsidePanel
+        {...baseProps}
+        activeAside={aside}
+        onSendMessage={onSendMessage}
+        isSending
+        pendingMessage="Why concave?"
+      />
+    )
+    expect(screen.getByText('Why concave?')).toBeInTheDocument()
+    expect(screen.getByText('common.processing')).toBeInTheDocument()
+
+    // A failed send gives the question back to retry.
+    fail(new Error('502'))
+    await waitFor(() => expect(input).toHaveValue('Why concave?'))
+  })
+
+  it('takes the cursor along when it opens over the chat', () => {
+    render(<LearningAsidePanel {...baseProps} activeAside={aside} />)
+
+    expect(document.activeElement).toBe(
+      screen.getByRole('region', { name: aside.title })
+    )
   })
 })

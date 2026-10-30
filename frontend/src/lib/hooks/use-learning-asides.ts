@@ -28,6 +28,28 @@ interface UseLearningAsidesParams {
 export type CreateAsideInput = LearningAsideAnchor & {
   parentAside?: Pick<LearningAside, 'id' | 'chat_session_id'>
   initialStatus?: 'parked'
+  /**
+   * Where the new dive opens: `inline` expands it under its message in the
+   * main chat, `full` (the default) shows it in the full-height view.
+   */
+  presentation?: 'inline' | 'full'
+  /** Called once the dive exists and is open, before the journey refetch. */
+  onOpened?: (aside: LearningAside) => void
+}
+
+interface AsideView {
+  /** The open dive: expanded under its message, or shown full height. */
+  asideId: string | null
+  /** The full-height view (one dive, or the aside list) covers the chat. */
+  fullHeight: boolean
+}
+
+const CLOSED_VIEW: AsideView = { asideId: null, fullHeight: false }
+
+/** Where an inline dive is being created: under a message or a parent dive. */
+export interface CreatingDive {
+  messageId?: string
+  parentAsideId?: string
 }
 
 export function useLearningAsides({
@@ -38,8 +60,16 @@ export function useLearningAsides({
 }: UseLearningAsidesParams) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
-  const [activeAsideId, setActiveAsideId] = useState<string | null>(null)
-  const [panelOpen, setPanelOpen] = useState(false)
+  const [view, setView] = useState<AsideView>(CLOSED_VIEW)
+  const activeAsideId = view.asideId
+  const panelOpen = view.fullHeight
+  const [creating, setCreating] = useState<CreatingDive | null>(null)
+  // The question on its way to a dive, shown in its transcript until the
+  // reply arrives.
+  const [pendingSend, setPendingSend] = useState<{
+    asideId: string
+    message: string
+  } | null>(null)
 
   const journeyKey = useMemo(
     () =>
@@ -73,7 +103,8 @@ export function useLearningAsides({
       ? QUERY_KEYS.learningAside(activeAsideId)
       : ['learning', 'asides', 'none'],
     queryFn: () => learningApi.getAside(activeAsideId!),
-    enabled: !!activeAsideId && panelOpen,
+    // The open dive needs its transcript inline as much as full height.
+    enabled: !!activeAsideId,
   })
 
   const refresh = useCallback(
@@ -98,7 +129,15 @@ export function useLearningAsides({
       if (!mainSessionId) {
         throw new Error('A main chat session is required before opening an aside')
       }
-      const { parentAside, initialStatus, ...anchor } = input
+      const { parentAside, initialStatus } = input
+      // Only the anchor fields go to the API, not the presentation options.
+      const anchor: LearningAsideAnchor = {
+        type: input.type,
+        content: input.content,
+        message_id: input.message_id,
+        source_id: input.source_id,
+        locator: input.locator,
+      }
       const title =
         createAsideTitle(anchor.content) || t('learningAsides.untitled')
       const aside = await learningApi.createAside({
@@ -116,19 +155,30 @@ export function useLearningAsides({
     },
     onMutate: (input) => {
       if (input.initialStatus === 'parked') return
-      setActiveAsideId(null)
-      setPanelOpen(true)
+      if (input.presentation === 'inline') {
+        setCreating({
+          messageId: input.message_id,
+          parentAsideId: input.parentAside?.id,
+        })
+        return
+      }
+      setView({ asideId: null, fullHeight: true })
     },
     onSuccess: async (aside, input) => {
       queryClient.setQueryData(QUERY_KEYS.learningAside(aside.id), aside)
+      setCreating(null)
       if (input.initialStatus !== 'parked') {
-        setActiveAsideId(aside.id)
-        setPanelOpen(true)
+        setView({
+          asideId: aside.id,
+          fullHeight: input.presentation !== 'inline',
+        })
+        input.onOpened?.(aside)
       }
       await refresh(aside.id)
       toast.success(t('learningAsides.created'))
     },
     onError: (error: unknown) => {
+      setCreating(null)
       const apiError = error as {
         response?: { data?: { detail?: string } }
         message?: string
@@ -158,11 +208,17 @@ export function useLearningAsides({
         model_override: modelOverride,
       })
     },
+    onMutate: ({ asideId, message }) => {
+      setPendingSend({ asideId, message })
+    },
     onSuccess: async (aside) => {
       queryClient.setQueryData(QUERY_KEYS.learningAside(aside.id), aside)
+      // The transcript now holds the question and its answer.
+      setPendingSend((pending) => (pending?.asideId === aside.id ? null : pending))
       await refresh(aside.id)
     },
-    onError: (error: unknown) => {
+    onError: (error: unknown, { asideId }) => {
+      setPendingSend((pending) => (pending?.asideId === asideId ? null : pending))
       const apiError = error as {
         response?: { data?: { detail?: string } }
         message?: string
@@ -222,6 +278,12 @@ export function useLearningAsides({
     }) => learningApi.updateAside(asideId, { status }),
     onSuccess: async (aside) => {
       queryClient.setQueryData(QUERY_KEYS.learningAside(aside.id), aside)
+      // A discarded dive is hidden everywhere, so it cannot stay open.
+      if (aside.status === 'discarded') {
+        setView((current) =>
+          current.asideId === aside.id ? CLOSED_VIEW : current
+        )
+      }
       await refresh(aside.id)
     },
     onError: (error: unknown) => {
@@ -298,15 +360,34 @@ export function useLearningAsides({
     },
   })
 
+  /** Show a dive in the full-height view. */
   const openAside = useCallback((asideId: string) => {
-    setActiveAsideId(asideId)
-    setPanelOpen(true)
+    setView({ asideId, fullHeight: true })
+  }, [])
+
+  /** Show a dive as a thread under its message in the main chat. */
+  const expandAside = useCallback((asideId: string) => {
+    setView({ asideId, fullHeight: false })
+  }, [])
+
+  /** Fold an inline dive back to its row. */
+  const collapseAside = useCallback((asideId: string) => {
+    setView((current) =>
+      current.asideId === asideId && !current.fullHeight ? CLOSED_VIEW : current
+    )
   }, [])
 
   const openList = useCallback(() => {
-    setActiveAsideId(null)
-    setPanelOpen(true)
+    setView({ asideId: null, fullHeight: true })
   }, [])
+
+  /** Leave the full-height view; an open dive stays open inline. */
+  const setPanelOpen = useCallback((open: boolean) => {
+    setView((current) => ({ ...current, fullHeight: open }))
+  }, [])
+
+  /** No dive open, inline or full height. */
+  const closeAside = useCallback(() => setView(CLOSED_VIEW), [])
 
   const activeAside = useMemo(() => {
     if (asideQuery.data?.id === activeAsideId) return asideQuery.data
@@ -323,11 +404,26 @@ export function useLearningAsides({
     panelOpen,
     isLoading: journeyQuery.isLoading,
     isCreating: createMutation.isPending,
+    /** Where an inline dive is being created, until it exists. */
+    creating,
     isSending: sendMutation.isPending,
+    /** The dive a question is on its way to, and that question. */
+    sendingAsideId: pendingSend?.asideId ?? null,
+    pendingMessage: pendingSend?.message ?? null,
     isResolving: resolveMutation.isPending,
-    isAsideLoading: !!activeAsideId && asideQuery.isFetching,
+    resolvingAsideId: resolveMutation.isPending
+      ? resolveMutation.variables?.asideId ?? null
+      : null,
+    // Only the first load: a refetch keeps showing the transcript it has.
+    isAsideLoading:
+      !!activeAsideId &&
+      asideQuery.isFetching &&
+      asideQuery.data?.id !== activeAsideId,
     setPanelOpen,
     openAside,
+    expandAside,
+    collapseAside,
+    closeAside,
     openList,
     refreshJourney: () => refresh(),
     createAside: createMutation.mutateAsync,

@@ -7,8 +7,8 @@ import { useTranslation } from '@/lib/hooks/use-translation'
 import { isOpenDive } from './aside-status'
 
 /**
- * Park an active dive, reopen a parked one, or discard either. Resolved and
- * discarded dives get none of these.
+ * Save an active dive for later (park it), reopen a parked one, or discard
+ * either. Resolved and discarded dives get none of these.
  */
 export function AsideStatusActions({
   aside,
@@ -37,7 +37,7 @@ export function AsideStatusActions({
           onClick={() => update('parked')}
         >
           <Pause className="mr-1.5 h-3.5 w-3.5" />
-          {t('learningAsides.park')}
+          {t('learningAsides.saveForLater')}
         </Button>
       ) : (
         <Button

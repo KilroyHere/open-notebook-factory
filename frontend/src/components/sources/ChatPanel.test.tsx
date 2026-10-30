@@ -375,7 +375,12 @@ describe('ChatPanel composer', () => {
       expect(chip).toHaveAttribute('aria-expanded', 'true')
       expect(screen.getByText('learningAsides.summary')).toBeInTheDocument()
       expect(screen.getByText('learningAsides.origin')).toBeInTheDocument()
-      expect(screen.getAllByText('learningAsides.whyItMatters')).toHaveLength(2)
+      // Only the expanded chip shows why it matters: under the origin answer
+      // the dive is a collapsed "Learned" row.
+      expect(screen.getAllByText('learningAsides.whyItMatters')).toHaveLength(1)
+      expect(
+        screen.getByRole('button', { name: 'learningAsides.learnedRow' })
+      ).toBeInTheDocument()
 
       fireEvent.click(chip)
       expect(chip).toHaveAttribute('aria-expanded', 'false')
