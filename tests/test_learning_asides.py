@@ -809,3 +809,18 @@ class TestSaveAsNextVersion:
     async def test_a_stored_update_is_not_stored_again(self):
         with pytest.raises(InvalidInputError, match="already stored"):
             await self._stored(1).save_as_next_version()
+
+
+def test_an_aside_is_not_resolved_by_a_status_change():
+    aside = LearningAside(
+        journey="learning_journey:one",
+        parent_session="chat_session:main",
+        chat_session="chat_session:aside",
+        title="Aside",
+        anchor=AsideAnchor(content="anchor"),
+    )
+
+    with pytest.raises(InvalidInputError, match="Resolve an aside"):
+        aside.change_status("resolved")
+
+    assert aside.status == "active"

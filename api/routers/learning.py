@@ -409,12 +409,17 @@ async def get_aside(aside_id: str):
 
 @router.patch("/asides/{aside_id}", response_model=LearningAsideResponse)
 async def update_aside(aside_id: str, request: UpdateLearningAsideRequest):
+    """Rename an aside, or park, reopen or discard it.
+
+    Only active and parked asides change status here (400 otherwise): a
+    resolved aside keeps its status and a discarded one stays discarded.
+    """
     aside = await _get_aside(aside_id)
     update = request.model_dump(exclude_unset=True)
+    if "status" in update:
+        aside.change_status(update["status"])
     if "title" in update:
         aside.title = update["title"]
-    if "status" in update:
-        aside.status = update["status"]
     await aside.save()
 
     journey = await LearningJourney.get(aside.journey)

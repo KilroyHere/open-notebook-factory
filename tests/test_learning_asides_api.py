@@ -454,6 +454,96 @@ def test_sync_sections_rejects_a_blank_title(client):
     assert response.status_code == 422
 
 
+def _patch_aside(client, aside, body, journey=None):
+    """PATCH /api/learning/asides/{id} with the database mocked out."""
+    journey = journey or _journey(active_session=aside.chat_session)
+    with (
+        patch(
+            "api.routers.learning._get_aside",
+            new_callable=AsyncMock,
+            return_value=aside,
+        ),
+        patch(
+            "api.routers.learning.LearningAside.save", new_callable=AsyncMock
+        ) as save_aside,
+        patch(
+            "api.routers.learning.LearningJourney.get",
+            new_callable=AsyncMock,
+            return_value=journey,
+        ),
+        patch(
+            "api.routers.learning.LearningJourney.save", new_callable=AsyncMock
+        ) as save_journey,
+        patch(
+            "api.routers.learning._aside_response",
+            new_callable=AsyncMock,
+            side_effect=lambda aside: _aside_response(aside),
+        ),
+    ):
+        response = client.patch(f"/api/learning/asides/{aside.id}", json=body)
+    return response, save_aside, save_journey
+
+
+@pytest.mark.parametrize(
+    ("current", "requested"),
+    [
+        ("active", "parked"),
+        ("parked", "active"),
+        ("active", "discarded"),
+        ("parked", "discarded"),
+        # Asking for the status it already has changes nothing.
+        ("active", "active"),
+        ("parked", "parked"),
+        ("discarded", "discarded"),
+    ],
+)
+def test_patch_aside_allows_learner_status_changes(client, current, requested):
+    aside = _aside(status=current)
+
+    response, save_aside, _ = _patch_aside(client, aside, {"status": requested})
+
+    assert response.status_code == 200
+    assert response.json()["status"] == requested
+    save_aside.assert_awaited_once()
+
+
+@pytest.mark.parametrize(
+    ("current", "requested", "detail"),
+    [
+        ("resolved", "active", "Resolved asides cannot be reopened"),
+        ("resolved", "parked", "Resolved asides cannot be reopened"),
+        ("resolved", "discarded", "Resolved asides cannot be reopened"),
+        ("discarded", "active", "Discarded asides cannot be reopened"),
+        ("discarded", "parked", "Discarded asides cannot be reopened"),
+    ],
+)
+def test_patch_aside_rejects_illegal_status_changes(client, current, requested, detail):
+    aside = _aside(status=current)
+
+    response, save_aside, save_journey = _patch_aside(
+        client, aside, {"status": requested, "title": "Renamed"}
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"].startswith(detail)
+    assert aside.status == current
+    assert aside.title != "Renamed"
+    save_aside.assert_not_called()
+    save_journey.assert_not_called()
+
+
+@pytest.mark.parametrize("status", ["resolved", "discarded"])
+def test_patch_aside_can_rename_a_closed_aside(client, status):
+    aside = _aside(status=status)
+
+    response, save_aside, _ = _patch_aside(client, aside, {"title": "Renamed"})
+
+    assert response.status_code == 200
+    assert response.json()["title"] == "Renamed"
+    assert response.json()["status"] == status
+    save_aside.assert_awaited_once()
+
+
 @pytest.mark.asyncio
 async def test_discarded_aside_rejects_new_messages(client):
     with patch(

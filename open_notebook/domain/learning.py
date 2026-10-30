@@ -252,6 +252,28 @@ class LearningAside(ObjectModel):
                 data[field] = ensure_record_id(data[field])
         return data
 
+    def change_status(self, status: AsideStatus) -> None:
+        """Apply a status change the learner asked for.
+
+        Active and parked asides switch between those two or are discarded.
+        An aside becomes resolved only through resolution and then keeps that
+        status (resolving again replaces its conclusion), and a discarded
+        aside stays discarded. Asking for the current status changes nothing;
+        anything else raises InvalidInputError and leaves the aside as it was.
+        """
+        if status == self.status:
+            return
+        if self.status == "resolved":
+            raise InvalidInputError(
+                "Resolved asides cannot be reopened, parked or discarded. "
+                "Resolve the aside again to change its conclusion."
+            )
+        if self.status == "discarded":
+            raise InvalidInputError("Discarded asides cannot be reopened or parked")
+        if status == "resolved":
+            raise InvalidInputError("Resolve an aside to mark it resolved")
+        self.status = status
+
     @classmethod
     async def get_for_chat_session(cls, session_id: str) -> Optional["LearningAside"]:
         try:
