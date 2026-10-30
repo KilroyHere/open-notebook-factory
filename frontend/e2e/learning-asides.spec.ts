@@ -207,42 +207,53 @@ test('"Use in main chat" in the Journey leaves a learned conclusion out of main 
   ).not.toBeChecked()
 })
 
-test('a "Use in main chat" change that fails is undone with an error message', async ({
-  page,
-  api,
-}) => {
-  const { update } = seedResolvedDive(api)
-  const { promise: failure, resolve: failNow } = Promise.withResolvers<void>()
-  api.failNext('PATCH', /^\/learning\/updates\//, {
-    status: 500,
+for (const { reason, detail, message } of [
+  {
+    reason: "the server's reason",
     detail: 'The database is not reachable',
-    until: failure,
+    message: 'The database is not reachable',
+  },
+  // A plain-text 500: the toast says what failed, in the page's language,
+  // instead of the HTTP client's "Request failed with status code 500".
+  {
+    reason: 'a translated message when the server gives none',
+    detail: null,
+    message: 'Could not change whether main chat uses this conclusion',
+  },
+]) {
+  test(`a "Use in main chat" change that fails is undone, with ${reason}`, async ({
+    page,
+    api,
+  }) => {
+    const { update } = seedResolvedDive(api)
+    const { promise: failure, resolve: failNow } = Promise.withResolvers<void>()
+    api.failNext('PATCH', /^\/learning\/updates\//, { status: 500, detail, until: failure })
+    await openNotebook(page)
+
+    const toggle = (await whatYouLearned(page)).getByRole('checkbox', {
+      name: /Use in main chat\W+Dividing by the square root/i,
+    })
+    await expect(toggle).toBeChecked()
+    await toggle.click()
+
+    // The box unticks at once, while the request is on its way...
+    await expect(toggle).not.toBeChecked()
+    await expect
+      .poll(() => api.callsTo('PATCH', `/learning/updates/${update.id}`).length)
+      .toBe(1)
+    // (The journey reload that follows the failure waits, so only the app's
+    // own undo can tick the box again: when the API is down, that reload
+    // fails too.)
+    const releaseJourney = api.hold('GET', /^\/learning\/journeys$/)
+    failNow()
+
+    // ...and is ticked again, with a message, when the request fails.
+    await expect(toggle).toBeChecked()
+    await expect(errorToast(page)).toHaveText(message)
+    releaseJourney()
+    expect(api.findUpdate(update.id)?.include_in_main).toBe(true)
   })
-  await openNotebook(page)
-
-  const toggle = (await whatYouLearned(page)).getByRole('checkbox', {
-    name: /Use in main chat\W+Dividing by the square root/i,
-  })
-  await expect(toggle).toBeChecked()
-  await toggle.click()
-
-  // The box unticks at once, while the request is on its way...
-  await expect(toggle).not.toBeChecked()
-  await expect
-    .poll(() => api.callsTo('PATCH', `/learning/updates/${update.id}`).length)
-    .toBe(1)
-  // (The journey reload that follows the failure waits, so only the app's
-  // own undo can tick the box again: when the API is down, that reload
-  // fails too.)
-  const releaseJourney = api.hold('GET', /^\/learning\/journeys$/)
-  failNow()
-
-  // ...and is ticked again, with a message, when the request fails.
-  await expect(toggle).toBeChecked()
-  await expect(errorToast(page)).toContainText('The database is not reachable')
-  releaseJourney()
-  expect(api.findUpdate(update.id)?.include_in_main).toBe(true)
-})
+}
 
 test('selecting part of an answer offers Go deeper, which opens a dive about that passage', async ({
   page,

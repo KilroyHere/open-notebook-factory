@@ -42,8 +42,11 @@ interface Interception {
   path: RegExp
   /** The reply waits for this, so a test can look at the UI in between. */
   until: Promise<unknown>
-  /** Answer with this error instead of the usual reply. */
-  failure?: { status: number; detail: string }
+  /**
+   * Answer with this error instead of the usual reply: JSON with `detail`,
+   * or a plain-text body when `detail` is null (an unhandled server error).
+   */
+  failure?: { status: number; detail: string | null }
   /** Only the next matching request (otherwise every one until released). */
   once: boolean
 }
@@ -143,7 +146,9 @@ export class MockApi {
 
   /**
    * Answer the next `method` request to a matching path with an error, once
-   * `until` settles when it is given.
+   * `until` settles when it is given. The body is `{"detail": ...}` like the
+   * API's own errors, or, with `detail: null`, the plain text an unhandled
+   * server error (or a proxy in between) sends.
    */
   failNext(
     method: string,
@@ -152,7 +157,7 @@ export class MockApi {
       status = 500,
       detail = 'Mock failure',
       until = Promise.resolve(),
-    }: { status?: number; detail?: string; until?: Promise<unknown> } = {}
+    }: { status?: number; detail?: string | null; until?: Promise<unknown> } = {}
   ): void {
     this.interceptions.push({
       method,
@@ -309,11 +314,13 @@ export class MockApi {
         this.interceptions.splice(this.interceptions.indexOf(interception), 1)
       }
       await interception.until
-      if (interception.failure) {
-        await route.fulfill({
-          status: interception.failure.status,
-          json: { detail: interception.failure.detail },
-        })
+      const failure = interception.failure
+      if (failure) {
+        await route.fulfill(
+          failure.detail === null
+            ? { status: failure.status, contentType: 'text/plain', body: 'Internal Server Error' }
+            : { status: failure.status, json: { detail: failure.detail } }
+        )
         return
       }
     }
