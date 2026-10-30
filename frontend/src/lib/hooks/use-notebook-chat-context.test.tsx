@@ -175,7 +175,7 @@ describe('notebook chat context', () => {
       expect(vi.mocked(chatApi.buildContext).mock.calls.length).toBe(callsBefore + 1)
     )
     // A message is sent while that count is on its way...
-    let send: Promise<void> = Promise.resolve()
+    let send: Promise<unknown> = Promise.resolve()
     act(() => {
       send = result.current.chat.sendMessage('What follows from this?')
     })

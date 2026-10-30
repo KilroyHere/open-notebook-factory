@@ -396,10 +396,12 @@ export function useNotebookWorkspace({
 
   const sendChatMessage = chat.sendMessage
   const refreshJourney = learning.refreshJourney
+  /** Ask in main chat; resolves to whether the question got its answer. */
   const sendMainMessage = useCallback(
     async (message: string, modelOverride?: string) => {
-      await sendChatMessage(message, modelOverride)
+      const answered = await sendChatMessage(message, modelOverride)
       await refreshJourney()
+      return answered
     },
     [sendChatMessage, refreshJourney]
   )

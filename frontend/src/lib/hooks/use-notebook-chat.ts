@@ -14,7 +14,9 @@ import { chatApi } from '@/lib/api/chat'
 import { QUERY_KEYS } from '@/lib/api/query-client'
 import {
   BuildContextRequest,
+  BuildContextResponse,
   NotebookChatMessage,
+  NotebookChatSession,
   NotebookChatSessionWithMessages,
   CreateNotebookChatSessionRequest,
   UpdateNotebookChatSessionRequest,
@@ -22,17 +24,38 @@ import {
   NoteResponse
 } from '@/lib/types/api'
 import type { ContextSelections } from '@/lib/types/notebook-context'
-import { isPendingMessage, PENDING_MESSAGE_PREFIX } from '@/lib/utils/chat-messages'
+import { PENDING_MESSAGE_PREFIX } from '@/lib/utils/chat-messages'
 
-/** A turn's session as the turn shows it: its question last, then the reply. */
-interface TurnView {
-  sessionId: string
-  messages: NotebookChatMessage[]
-  /** The model has not answered yet. */
-  answering: boolean
-}
+/**
+ * A session's turn: while the model answers, its question, shown after the
+ * session's stored messages (as read now, or when its first read lands);
+ * once answered, the conversation the reply came with, until the session
+ * is read again.
+ */
+type TurnView =
+  | { answering: true; question: NotebookChatMessage }
+  | { answering: false; messages: NotebookChatMessage[] }
+
+/** One turn view per session, by session ID. */
+type TurnViews = Readonly<Record<string, TurnView>>
 
 const NO_MESSAGES: NotebookChatMessage[] = []
+
+/** A context count, and the session it was counted for (null: none yet). */
+type SessionCount = BuildContextResponse & { countedFor: string | null }
+
+/**
+ * `stored` with the question on its way after it, unless `stored` already
+ * ends with it (the API can store a question before the model answers).
+ */
+function withQuestion(
+  stored: NotebookChatMessage[],
+  question: NotebookChatMessage
+): NotebookChatMessage[] {
+  const last = stored.at(-1)
+  if (last?.type === 'human' && last.content === question.content) return stored
+  return [...stored, question]
+}
 
 interface UseNotebookChatParams {
   notebookId: string
@@ -64,8 +87,22 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
-  const [turnView, setTurnView] = useState<TurnView | null>(null)
-  const [isSending, setIsSending] = useState(false)
+  // Each session has its own turn: a reply on its way in one session neither
+  // shows in nor holds up another.
+  const [turnViews, setTurnViews] = useState<TurnViews>({})
+  const setTurnView = useCallback(
+    (sessionId: string, update: (view: TurnView | undefined) => TurnView | undefined) => {
+      setTurnViews((views) => {
+        const current = views[sessionId]
+        const next = update(current)
+        if (next === current) return views
+        const others = { ...views }
+        delete others[sessionId]
+        return next ? { ...others, [sessionId]: next } : others
+      })
+    },
+    []
+  )
   // Pending model override for when user changes model before a session exists
   const [pendingModelOverride, setPendingModelOverride] = useState<string | null>(null)
 
@@ -81,7 +118,7 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
   })
 
   // Fetch current session with messages
-  const { data: currentSession } = useQuery({
+  const { data: currentSession, isLoading: readingSession } = useQuery({
     queryKey: QUERY_KEYS.notebookChatSession(currentSessionId!),
     queryFn: () => chatApi.getSession(currentSessionId!),
     enabled: !!notebookId && !!currentSessionId
@@ -91,13 +128,17 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
   // last returned them, or as a turn of that session has them while the
   // model answers (a read landing meanwhile predates the turn; a new
   // session's first read is empty), and after it until the session is read.
+  const turnView = currentSessionId ? turnViews[currentSessionId] : undefined
   const messages = useMemo(() => {
-    const turnShown =
-      turnView?.sessionId === currentSessionId &&
-      (turnView.answering || !currentSession)
-    if (turnView && turnShown) return turnView.messages
-    return currentSession?.messages ?? NO_MESSAGES
-  }, [turnView, currentSessionId, currentSession])
+    const stored = currentSession?.messages ?? NO_MESSAGES
+    if (turnView?.answering) return withQuestion(stored, turnView.question)
+    if (turnView && !currentSession) return turnView.messages
+    return stored
+  }, [turnView, currentSession])
+  /** A reply is on its way in the selected session. */
+  const isSending = turnView?.answering ?? false
+  /** The selected session is read for the first time, with nothing to show yet. */
+  const isLoadingMessages = readingSession && !turnView
 
   // Auto-select most recent session when sessions are loaded
   useEffect(() => {
@@ -131,12 +172,14 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
       sessionId: string
       data: UpdateNotebookChatSessionRequest
     }) => chatApi.updateSession(sessionId, data),
-    onSuccess: () => {
+    // Refresh the session that was updated, which is no longer the selected
+    // one if the learner switched while the change was being saved.
+    onSuccess: (_, { sessionId }) => {
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.notebookChatSessions(notebookId)
       })
       queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.notebookChatSession(currentSessionId!)
+        queryKey: QUERY_KEYS.notebookChatSession(sessionId)
       })
       toast.success(t('chat.sessionUpdated'))
     },
@@ -151,13 +194,22 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
     mutationFn: (sessionId: string) =>
       chatApi.deleteSession(sessionId),
     onSuccess: (_, deletedId) => {
+      // Out of the list (and the cache) at once: picking the session to show
+      // next must not pick the deleted one from a list that is still the old
+      // one while it is read again.
+      queryClient.setQueryData<NotebookChatSession[]>(
+        QUERY_KEYS.notebookChatSessions(notebookId),
+        (list) => list?.filter((session) => session.id !== deletedId)
+      )
+      queryClient.removeQueries({
+        queryKey: QUERY_KEYS.notebookChatSession(deletedId),
+        exact: true,
+      })
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.notebookChatSessions(notebookId)
       })
-      if (currentSessionId === deletedId) {
-        setCurrentSessionId(null)
-      }
-      setTurnView((view) => (view?.sessionId === deletedId ? null : view))
+      setCurrentSessionId((current) => (current === deletedId ? null : current))
+      setTurnView(deletedId, () => undefined)
       toast.success(t('chat.sessionDeleted'))
     },
     onError: (err: unknown) => {
@@ -182,7 +234,10 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
   const contextQuery = useMemo(
     () => ({
       queryKey: [...QUERY_KEYS.notebookChatContext(notebookId), contextRequest] as const,
-      queryFn: () => chatApi.buildContext(contextRequest),
+      queryFn: async (): Promise<SessionCount> => ({
+        ...(await chatApi.buildContext(contextRequest)),
+        countedFor: contextRequest.session_id ?? null,
+      }),
       retry: false,
       // An entry carries the full text a turn would send; drop it as soon as
       // its selection is no longer the current one.
@@ -208,6 +263,13 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
     }
     return ids
   }, [context, countingAnew])
+  // How many conclusions the limit leaves out is the selected session's own
+  // count; another session's, standing in until this one is counted, says
+  // nothing about this session's conclusions.
+  const learningUpdatesOmitted =
+    context && context.countedFor === (currentSessionId ?? null)
+      ? context.learning_updates_omitted ?? 0
+      : 0
 
   // A source or note can change without changing the selection (a source
   // finishes processing, gets an insight, a note is edited): count again.
@@ -230,12 +292,16 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
   // also updates the counts.
   const buildContext = useCallback(async () => {
     const response = await chatApi.buildContext(contextRequest)
-    queryClient.setQueryData(contextQuery.queryKey, response)
+    queryClient.setQueryData<SessionCount>(contextQuery.queryKey, {
+      ...response,
+      countedFor: contextRequest.session_id ?? null,
+    })
     return response.context
   }, [contextQuery.queryKey, contextRequest, queryClient])
 
-  // Send message (synchronous, no streaming)
-  const sendMessage = useCallback(async (message: string, modelOverride?: string) => {
+  // Send message (synchronous, no streaming). Resolves to whether the
+  // question got its answer, so the message box can give it back if not.
+  const sendMessage = useCallback(async (message: string, modelOverride?: string): Promise<boolean> => {
     let sessionId = currentSessionId
 
     // Auto-create session if none exists
@@ -260,7 +326,7 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
       } catch (err: unknown) {
         const error = err as { response?: { data?: { detail?: string } }, message?: string };
         toast.error(getApiErrorMessage(error.response?.data?.detail || error.message, (key) => t(key), 'apiErrors.failedToCreateSession'))
-        return
+        return false
       }
     }
 
@@ -273,19 +339,12 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
     }
     const turnSessionId = sessionId
     const sessionKey = QUERY_KEYS.notebookChatSession(turnSessionId)
-    // The question shows at once, after what the session shows now. The turn
-    // only ever changes its own session's view, whichever session is
-    // selected when the reply comes.
-    const stored = queryClient.getQueryData<NotebookChatSessionWithMessages>(sessionKey)
-    setTurnView((view) => {
-      const shown =
-        view?.sessionId === turnSessionId && (view.answering || !stored)
-          ? view.messages
-          : stored?.messages ?? NO_MESSAGES
-      return { sessionId: turnSessionId, messages: [...shown, userMessage], answering: true }
-    })
-    setIsSending(true)
+    // The question shows at once, after the session's stored messages, even
+    // ones still being read. The turn only ever changes its own session's
+    // view, whichever session is selected when the reply comes.
+    setTurnView(turnSessionId, () => ({ answering: true, question: userMessage }))
 
+    let answered = false
     try {
       // Build context and send message
       const context = await buildContext()
@@ -304,23 +363,14 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
         sessionKey,
         (cached) => (cached ? { ...cached, messages: response.messages } : cached)
       )
-      setTurnView({ sessionId: turnSessionId, messages: response.messages, answering: false })
+      setTurnView(turnSessionId, () => ({ answering: false, messages: response.messages }))
+      answered = true
     } catch (err: unknown) {
       const error = err as { response?: { data?: { detail?: string } }, message?: string };
       console.error('Error sending message:', error)
       toast.error(getApiErrorMessage(error.response?.data?.detail || error.message, (key) => t(key), 'apiErrors.failedToSendMessage'))
-      // Remove optimistic message on error
-      setTurnView((view) =>
-        view?.sessionId === turnSessionId
-          ? {
-              sessionId: turnSessionId,
-              messages: view.messages.filter((msg) => !isPendingMessage(msg)),
-              answering: false,
-            }
-          : view
-      )
-    } finally {
-      setIsSending(false)
+      // Remove optimistic message on error: the session shows as stored.
+      setTurnView(turnSessionId, () => undefined)
     }
 
     // Read the session afresh. A refetch would join a first read still in
@@ -329,10 +379,9 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
     await queryClient.refetchQueries({ queryKey: sessionKey, exact: true })
     // Once read, the session shows as stored (unless another turn started).
     if (queryClient.getQueryData(sessionKey)) {
-      setTurnView((view) =>
-        view?.sessionId === turnSessionId && !view.answering ? null : view
-      )
+      setTurnView(turnSessionId, (view) => (view && !view.answering ? undefined : view))
     }
+    return answered
   }, [
     notebookId,
     currentSessionId,
@@ -340,6 +389,7 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
     pendingModelOverride,
     buildContext,
     queryClient,
+    setTurnView,
     t
   ])
 
@@ -390,11 +440,13 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
     currentSessionId,
     messages,
     isSending,
+    /** The selected session's messages are on their way (show loading, not "empty"). */
+    isLoadingMessages,
     loadingSessions,
     tokenCount: context?.token_count ?? 0,
     charCount: context?.char_count ?? 0,
     /** Accepted conclusions the context limit keeps out of main chat. */
-    learningUpdatesOmitted: context?.learning_updates_omitted ?? 0,
+    learningUpdatesOmitted,
     /** IDs of the accepted conclusions main chat's counted context keeps. */
     keptLearningUpdateIds,
     pendingModelOverride,
