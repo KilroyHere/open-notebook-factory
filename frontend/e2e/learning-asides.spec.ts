@@ -293,3 +293,42 @@ test('selecting part of an answer offers Go deeper, which opens a dive about tha
   // Studio's Journey now lists the dive.
   await expect(studio(page)).toContainText('Multi-head attention runs several')
 })
+
+test('Go deeper on a passage in a full-height dive opens the new dive with the cursor in its question box', async ({
+  page,
+  api,
+}) => {
+  const { session, answer: answerMessage } = seedAnsweredQuestion(api)
+  const dive = api.createAside({
+    notebook_id: NOTEBOOK.id,
+    parent_session_id: session.id,
+    title: 'Why the scaling?',
+    anchor: { type: 'message', message_id: answerMessage.id, content: ANSWER },
+  })
+  api.addMessage(dive.messages, 'human', DIVE_QUESTION)
+  const diveAnswer = api.addMessage(dive.messages, 'ai', DIVE_ANSWER)
+  await openNotebook(page)
+
+  // Open the dive, then its full-height view.
+  const answer = chatMessage(page, 'Self-attention lets every token')
+  await answer.getByRole('button', { name: /dive\W+Why the scaling/i }).click()
+  await answer.getByRole('button', { name: /Open full height/i }).click()
+  await expect(page.getByRole('region', { name: 'Why the scaling?' })).toBeVisible()
+
+  await page.getByText(/push the softmax into regions/).selectText()
+  await page
+    .getByRole('toolbar', { name: /Selected text/i })
+    .getByRole('button', { name: 'Go deeper' })
+    .click()
+
+  // The new dive nests under this one, anchored to its answer, and opens in
+  // the same full-height view, ready for a question.
+  await expect.poll(() => api.callsTo('POST', '/learning/asides').length).toBe(1)
+  const [created] = api.callsTo<CreateLearningAsideRequest>('POST', '/learning/asides')
+  expect(created.body).toMatchObject({
+    parent_aside_id: dive.id,
+    anchor: { message_id: diveAnswer.id, locator: 'selection' },
+  })
+  await expect(page.getByRole('region', { name: /Without the scaling/i })).toBeVisible()
+  await expect(diveComposer(page)).toBeFocused()
+})

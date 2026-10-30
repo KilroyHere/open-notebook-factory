@@ -149,12 +149,15 @@ export function LearningAsidePanel({
   }, [open])
 
   // A dive opened here to be asked about (Go deeper on a passage) gets the
-  // cursor in its question box.
+  // cursor in its question box. A dive created full height arrives while the
+  // aside list still shows: wait until the dive, with its box, replaces it,
+  // since the box only takes requests made while it is on screen.
   useEffect(() => {
+    if (showList) return
     if (!attention || !onAttended || attention.asideId !== activeAsideId) return
     if (attention.focus) setFocusRequest((count) => count + 1)
     onAttended(attention)
-  }, [attention, activeAsideId, onAttended])
+  }, [showList, attention, activeAsideId, onAttended])
 
   const goDeeperInDive =
     activeAside && onGoDeeperOnSelection
