@@ -98,4 +98,20 @@ describe('AppSidebar', () => {
     expect(screen.queryByText('common.appName')).toBeNull()
     expect(container.querySelector('.app-sidebar')?.className).toContain('w-16')
   })
+
+  it('shows only the icon rail when a page forces it, without changing the preference', () => {
+    const toggleCollapse = vi.fn()
+    vi.mocked(useSidebarStore).mockReturnValue({
+      isCollapsed: false,
+      toggleCollapse,
+    } as any)
+
+    const { container } = render(<AppSidebar forceCollapsed />)
+
+    expect(screen.queryByText('common.appName')).toBeNull()
+    expect(container.querySelector('.app-sidebar')?.className).toContain('w-16')
+    // No expand handle: the page owns this layout, the stored choice stays.
+    expect(screen.queryByTestId('sidebar-toggle')).toBeNull()
+    expect(toggleCollapse).not.toHaveBeenCalled()
+  })
 })
