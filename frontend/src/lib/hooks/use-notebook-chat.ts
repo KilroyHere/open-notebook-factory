@@ -16,6 +16,7 @@ import {
   BuildContextRequest,
   BuildContextResponse,
   NotebookChatMessage,
+  NotebookChatSession,
   NotebookChatSessionWithMessages,
   CreateNotebookChatSessionRequest,
   UpdateNotebookChatSessionRequest,
@@ -191,12 +192,21 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
     mutationFn: (sessionId: string) =>
       chatApi.deleteSession(sessionId),
     onSuccess: (_, deletedId) => {
+      // Out of the list (and the cache) at once: picking the session to show
+      // next must not pick the deleted one from a list that is still the old
+      // one while it is read again.
+      queryClient.setQueryData<NotebookChatSession[]>(
+        QUERY_KEYS.notebookChatSessions(notebookId),
+        (list) => list?.filter((session) => session.id !== deletedId)
+      )
+      queryClient.removeQueries({
+        queryKey: QUERY_KEYS.notebookChatSession(deletedId),
+        exact: true,
+      })
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.notebookChatSessions(notebookId)
       })
-      if (currentSessionId === deletedId) {
-        setCurrentSessionId(null)
-      }
+      setCurrentSessionId((current) => (current === deletedId ? null : current))
       setTurnView(deletedId, () => undefined)
       toast.success(t('chat.sessionDeleted'))
     },

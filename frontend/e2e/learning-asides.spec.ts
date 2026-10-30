@@ -450,3 +450,54 @@ test('a chat switched to shows loading until it is read, and a question asked me
     chatMessage(page, 'A mock answer to: Asked before the chat was read')
   ).toBeVisible()
 })
+
+test('deleting the open chat opens the next one, and the next question goes there', async ({
+  page,
+  api,
+}) => {
+  const older = api.addSession('Older chat')
+  api.addMessage(older.messages, 'human', 'Question in the older chat')
+  api.addMessage(older.messages, 'ai', 'Answer in the older chat')
+  const newer = api.addSession('Newer chat')
+  api.addMessage(newer.messages, 'human', 'Question in the newer chat')
+  api.addMessage(newer.messages, 'ai', 'Answer in the newer chat')
+  await openNotebook(page)
+  await expect(chatMessage(page, 'Answer in the newer chat')).toBeVisible()
+
+  // The session list is read again slowly after the delete.
+  const listNow = api.hold('GET', /^\/chat\/sessions$/)
+  await page.getByRole('button', { name: /^Sessions: Newer chat/ }).click()
+  const sessions = page.getByRole('dialog')
+  await sessions
+    .locator('div')
+    .filter({ has: page.getByRole('button', { name: /Newer chat/ }) })
+    .last()
+    .getByRole('button', { name: /Delete session/i })
+    .click()
+  await page.getByRole('alertdialog').getByRole('button', { name: /^Delete$/ }).click()
+  await expect(page.getByRole('alertdialog')).toBeHidden()
+  await expect.poll(() => api.callsTo('DELETE', `/chat/sessions/${newer.id}`).length).toBe(1)
+
+  // The list drops the deleted chat at once and marks the older one open.
+  await expect(sessions.getByRole('button', { name: /Newer chat/ })).toHaveCount(0)
+  await expect(sessions.getByRole('button', { name: /Older chat/ })).toHaveAttribute(
+    'aria-current',
+    'true'
+  )
+  await page.keyboard.press('Escape')
+  await expect(sessions).toBeHidden()
+
+  await expect(chatMessage(page, 'Answer in the older chat')).toBeVisible()
+  await expect(chatMessage(page, 'Answer in the newer chat')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /^Sessions: Older chat/ })).toBeVisible()
+  listNow()
+
+  await mainComposer(page).fill('Question after the delete')
+  await mainComposer(page).press('ControlOrMeta+Enter')
+  await expect(chatMessage(page, 'A mock answer to: Question after the delete')).toBeVisible()
+  expect(
+    api.callsTo<SendNotebookChatMessageRequest>('POST', '/chat/execute').map(
+      (call) => call.body.session_id
+    )
+  ).toEqual([older.id])
+})

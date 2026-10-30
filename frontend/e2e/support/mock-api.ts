@@ -396,6 +396,12 @@ export class MockApi {
       const session = this.session(id)
       return session ? ok(session) : fail(404, 'Session not found')
     }],
+    ['DELETE', /^\/chat\/sessions\/([^/]+)$/, (_call, id) => {
+      const session = this.session(id)
+      if (!session) return fail(404, 'Session not found')
+      this.sessions.splice(this.sessions.indexOf(session), 1)
+      return ok({ success: true, message: 'Session deleted successfully' })
+    }],
     ['POST', /^\/chat\/context$/, (call) =>
       ok(this.buildContext(call.body as BuildContextRequest))],
     ['POST', /^\/chat\/execute$/, (call) => {

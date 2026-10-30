@@ -597,6 +597,33 @@ describe('useNotebookChat messages', () => {
       })
     })
 
+    it('opens the next session after the selected one is deleted, not the deleted one again', async () => {
+      // A is the most recent session, and selected; after the delete the list
+      // is read again, slowly.
+      const rereadList = deferred<typeof A[]>()
+      let listReads = 0
+      vi.mocked(chatApi.listSessions).mockImplementation(async () => {
+        listReads += 1
+        return listReads === 1 ? [A, B] : rereadList.promise
+      })
+      vi.mocked(chatApi.deleteSession).mockResolvedValue(undefined)
+      const { result } = renderChat()
+      await waitFor(() => expect(result.current.messages).toEqual(stored[A.id]))
+
+      await act(async () => {
+        result.current.deleteSession(A.id)
+      })
+
+      await waitFor(() => expect(result.current.currentSessionId).toBe(B.id))
+      expect(result.current.sessions.map((item) => item.id)).toEqual([B.id])
+      await waitFor(() => expect(result.current.messages).toEqual(stored[B.id]))
+      await act(async () => {
+        rereadList.resolve([B])
+        await rereadList.promise
+      })
+      expect(result.current.currentSessionId).toBe(B.id)
+    })
+
     it('says a reply is on its way only in the session it was asked in', async () => {
       const answer = deferred<typeof turn>()
       vi.mocked(chatApi.sendMessage).mockReturnValue(answer.promise)
