@@ -183,7 +183,7 @@ describe('useNotebookWorkspace across chat sessions', () => {
     await waitFor(() => expect(result.current.chat.messages).toEqual(stored[A.id]))
     await waitFor(() => expect(result.current.learning.sections).toHaveLength(1))
 
-    let sending: Promise<void> = Promise.resolve()
+    let sending: Promise<unknown> = Promise.resolve()
     await act(async () => {
       sending = result.current.sendMainMessage('Is the bound tight?')
     })

@@ -413,7 +413,7 @@ describe('useNotebookChat messages', () => {
     vi.mocked(chatApi.sendMessage).mockReturnValue(answer.promise)
     const { result } = renderChat()
 
-    let sending: Promise<void> = Promise.resolve()
+    let sending: Promise<unknown> = Promise.resolve()
     await act(async () => {
       sending = result.current.sendMessage(question.content)
     })
@@ -462,7 +462,7 @@ describe('useNotebookChat messages', () => {
     const { result } = renderChat()
     await waitFor(() => expect(result.current.messages).toEqual(stored[A.id]))
 
-    let sending: Promise<void> = Promise.resolve()
+    let sending: Promise<unknown> = Promise.resolve()
     await act(async () => {
       sending = result.current.sendMessage('follow-up in A')
     })
@@ -696,6 +696,26 @@ describe('useNotebookChat messages', () => {
     })
   })
 
+  it('says whether a question got its answer', async () => {
+    vi.mocked(chatApi.listSessions).mockResolvedValue([session])
+    vi.mocked(chatApi.getSession).mockResolvedValue({ ...session, messages: [] })
+    const { result } = renderChat()
+    await waitFor(() => expect(result.current.currentSessionId).toBe(session.id))
+
+    vi.mocked(chatApi.sendMessage).mockResolvedValueOnce(turn)
+    let answered: boolean | undefined
+    await act(async () => {
+      answered = await result.current.sendMessage(question.content)
+    })
+    expect(answered).toBe(true)
+
+    vi.mocked(chatApi.sendMessage).mockRejectedValueOnce(new Error('Network Error'))
+    await act(async () => {
+      answered = await result.current.sendMessage('A question that fails')
+    })
+    expect(answered).toBe(false)
+  })
+
   it('keeps the reply when a read sent before it comes back after it, and reads the session again', async () => {
     const earlierRead = deferred<NotebookChatSessionWithMessages>()
     vi.mocked(chatApi.getSession)
@@ -704,7 +724,7 @@ describe('useNotebookChat messages', () => {
     vi.mocked(chatApi.sendMessage).mockResolvedValue(turn)
     const { result } = renderChat()
 
-    let sending: Promise<void> = Promise.resolve()
+    let sending: Promise<unknown> = Promise.resolve()
     await act(async () => {
       sending = result.current.sendMessage(question.content)
     })

@@ -49,7 +49,11 @@ interface ChatPanelProps {
   /** The messages are being read: say so instead of inviting a first question. */
   isLoadingMessages?: boolean
   contextIndicators: SourceChatContextIndicator | null
-  onSendMessage: (message: string, modelOverride?: string) => void
+  /**
+   * Send a question. Resolving to `false` says it could not be sent: the
+   * message box gives it back.
+   */
+  onSendMessage: (message: string, modelOverride?: string) => void | Promise<unknown>
   modelOverride?: string
   onModelChange?: (model?: string) => void
   // Session management props
@@ -317,6 +321,7 @@ export function ChatPanel({
             modelOverride={modelOverride}
             onModelChange={onModelChange}
             contextStats={notebookContextStats}
+            sessionId={currentSessionId}
           />
         </div>
       </CardContent>
@@ -381,11 +386,17 @@ function SessionPicker({
 // Composer owns the input state so keystrokes (including IME composition) only
 // re-render this small component instead of the whole message history.
 interface ChatComposerProps {
-  onSendMessage: (message: string, modelOverride?: string) => void
+  /**
+   * Send a question. Resolving to `false` says it could not be sent: the
+   * message box gives it back.
+   */
+  onSendMessage: (message: string, modelOverride?: string) => void | Promise<unknown>
   isStreaming: boolean
   modelOverride?: string
   onModelChange?: (model?: string) => void
   contextStats?: NotebookContextStats
+  /** The chat session shown, so a question comes back only to its own. */
+  sessionId?: string | null
 }
 
 function ChatComposer({
@@ -393,17 +404,40 @@ function ChatComposer({
   isStreaming,
   modelOverride,
   onModelChange,
-  contextStats
+  contextStats,
+  sessionId
 }: ChatComposerProps) {
   const { t } = useTranslation()
   const chatInputId = useId()
-  const [input, setInput] = useState('')
+  const [input, setInputState] = useState('')
+  const inputRef = useRef('')
+  const setInput = (value: string) => {
+    inputRef.current = value
+    setInputState(value)
+  }
+  const sessionRef = useRef(sessionId)
+  useEffect(() => {
+    sessionRef.current = sessionId
+  }, [sessionId])
 
   const handleSend = () => {
-    if (input.trim() && !isStreaming) {
-      onSendMessage(input.trim(), modelOverride)
-      setInput('')
+    const message = input.trim()
+    if (!message || isStreaming) return
+    setInput('')
+    // A question that could not be sent comes back, unless the learner has
+    // started another one meanwhile or moved to another session (the first
+    // question of a new chat comes back in the session it opened).
+    const askedIn = sessionId
+    const giveBack = () => {
+      const movedOn = askedIn != null && sessionRef.current !== askedIn
+      if (!movedOn && !inputRef.current.trim()) setInput(message)
     }
+    void Promise.resolve(onSendMessage(message, modelOverride)).then(
+      (sent) => {
+        if (sent === false) giveBack()
+      },
+      giveBack
+    )
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

@@ -501,3 +501,17 @@ test('deleting the open chat opens the next one, and the next question goes ther
     )
   ).toEqual([older.id])
 })
+
+test('a question that cannot be sent comes back to the message box', async ({ page, api }) => {
+  seedAnsweredQuestion(api)
+  api.failNext('POST', /^\/chat\/execute$/, { status: 500, detail: null })
+  await openNotebook(page)
+  await expect(chatMessage(page, 'Self-attention lets every token')).toBeVisible()
+
+  await mainComposer(page).fill('Does attention need positions?')
+  await mainComposer(page).press('ControlOrMeta+Enter')
+
+  await expect(errorToast(page)).toHaveText('Failed to send message')
+  await expect(chatMessage(page, 'Does attention need positions?')).toHaveCount(0)
+  await expect(mainComposer(page)).toHaveValue('Does attention need positions?')
+})

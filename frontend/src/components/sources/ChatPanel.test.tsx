@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { act, render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ChatPanel } from './ChatPanel'
 import type { LearningAside } from '@/lib/types/api'
@@ -95,6 +95,110 @@ describe('ChatPanel composer', () => {
     expect(onSendMessage).toHaveBeenCalledWith('via ctrl', undefined)
     expect(textarea.value).toBe('')
     uaSpy.mockRestore()
+  })
+
+  it('gives a question that could not be sent back to the message box', async () => {
+    let fail: (sent: boolean) => void = () => undefined
+    const onSendMessage = vi.fn(
+      () => new Promise<boolean>((resolve) => {
+        fail = resolve
+      })
+    )
+    render(
+      <ChatPanel
+        messages={[]}
+        isStreaming={false}
+        contextIndicators={null}
+        onSendMessage={onSendMessage}
+      />
+    )
+    const textarea = getTextarea()
+    fireEvent.change(textarea, { target: { value: 'Why a bound?' } })
+    fireEvent.keyDown(textarea, { key: 'Enter', ctrlKey: true })
+    expect(textarea.value).toBe('')
+
+    await act(async () => fail(false))
+
+    expect(textarea.value).toBe('Why a bound?')
+  })
+
+  it('keeps what was typed meanwhile when a question could not be sent', async () => {
+    let fail: (sent: boolean) => void = () => undefined
+    const onSendMessage = vi.fn(
+      () => new Promise<boolean>((resolve) => {
+        fail = resolve
+      })
+    )
+    render(
+      <ChatPanel
+        messages={[]}
+        isStreaming={false}
+        contextIndicators={null}
+        onSendMessage={onSendMessage}
+      />
+    )
+    const textarea = getTextarea()
+    fireEvent.change(textarea, { target: { value: 'Why a bound?' } })
+    fireEvent.keyDown(textarea, { key: 'Enter', ctrlKey: true })
+    fireEvent.change(textarea, { target: { value: 'Something else' } })
+
+    await act(async () => fail(false))
+
+    expect(textarea.value).toBe('Something else')
+  })
+
+  it('gives a question that could not be sent back only to the session it was asked in', async () => {
+    let fail: (sent: boolean) => void = () => undefined
+    const onSendMessage = vi.fn(
+      () => new Promise<boolean>((resolve) => {
+        fail = resolve
+      })
+    )
+    const panel = (currentSessionId: string | null) => (
+      <ChatPanel
+        messages={[]}
+        isStreaming={false}
+        contextIndicators={null}
+        onSendMessage={onSendMessage}
+        currentSessionId={currentSessionId}
+      />
+    )
+    const { rerender } = render(panel('chat_session:a'))
+    const textarea = getTextarea()
+    fireEvent.change(textarea, { target: { value: 'Why a bound?' } })
+    fireEvent.keyDown(textarea, { key: 'Enter', ctrlKey: true })
+    rerender(panel('chat_session:b'))
+
+    await act(async () => fail(false))
+
+    expect(textarea.value).toBe('')
+  })
+
+  it('gives the first question of a new chat back in the session it opened', async () => {
+    let fail: (sent: boolean) => void = () => undefined
+    const onSendMessage = vi.fn(
+      () => new Promise<boolean>((resolve) => {
+        fail = resolve
+      })
+    )
+    const panel = (currentSessionId: string | null) => (
+      <ChatPanel
+        messages={[]}
+        isStreaming={false}
+        contextIndicators={null}
+        onSendMessage={onSendMessage}
+        currentSessionId={currentSessionId}
+      />
+    )
+    const { rerender } = render(panel(null))
+    const textarea = getTextarea()
+    fireEvent.change(textarea, { target: { value: 'Why a bound?' } })
+    fireEvent.keyDown(textarea, { key: 'Enter', ctrlKey: true })
+    rerender(panel('chat_session:new'))
+
+    await act(async () => fail(false))
+
+    expect(textarea.value).toBe('Why a bound?')
   })
 
   it('does not send while streaming', () => {

@@ -297,8 +297,9 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
     return response.context
   }, [contextQuery.queryKey, contextRequest, queryClient])
 
-  // Send message (synchronous, no streaming)
-  const sendMessage = useCallback(async (message: string, modelOverride?: string) => {
+  // Send message (synchronous, no streaming). Resolves to whether the
+  // question got its answer, so the message box can give it back if not.
+  const sendMessage = useCallback(async (message: string, modelOverride?: string): Promise<boolean> => {
     let sessionId = currentSessionId
 
     // Auto-create session if none exists
@@ -323,7 +324,7 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
       } catch (err: unknown) {
         const error = err as { response?: { data?: { detail?: string } }, message?: string };
         toast.error(getApiErrorMessage(error.response?.data?.detail || error.message, (key) => t(key), 'apiErrors.failedToCreateSession'))
-        return
+        return false
       }
     }
 
@@ -341,6 +342,7 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
     // view, whichever session is selected when the reply comes.
     setTurnView(turnSessionId, () => ({ answering: true, question: userMessage }))
 
+    let answered = false
     try {
       // Build context and send message
       const context = await buildContext()
@@ -360,6 +362,7 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
         (cached) => (cached ? { ...cached, messages: response.messages } : cached)
       )
       setTurnView(turnSessionId, () => ({ answering: false, messages: response.messages }))
+      answered = true
     } catch (err: unknown) {
       const error = err as { response?: { data?: { detail?: string } }, message?: string };
       console.error('Error sending message:', error)
@@ -376,6 +379,7 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
     if (queryClient.getQueryData(sessionKey)) {
       setTurnView(turnSessionId, (view) => (view && !view.answering ? undefined : view))
     }
+    return answered
   }, [
     notebookId,
     currentSessionId,

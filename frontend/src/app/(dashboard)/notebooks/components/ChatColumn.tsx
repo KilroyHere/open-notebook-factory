@@ -145,7 +145,7 @@ export function ChatColumn({ workspace, isLoading }: ChatColumnProps) {
             isLoadingMessages={chat.isLoadingMessages}
             contextIndicators={null}
             onSendMessage={(message, modelOverride) =>
-              void workspace.sendMainMessage(message, modelOverride)
+              workspace.sendMainMessage(message, modelOverride)
             }
             modelOverride={
               chat.currentSession?.model_override ??
