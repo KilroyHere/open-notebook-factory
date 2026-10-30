@@ -112,3 +112,30 @@ export function buildReferenceTitles(
   }
   return titles
 }
+
+const DOCUMENT_CITATION = /\[((?:source_insight|source|note):[^\]\s]+)\]/g
+const LEADING_CITATION_MARKERS =
+  /^[ \t]*(?:\[(?:source_insight|source|note):[^\]\s]+\][ \t]*)+/gm
+const CITATION_MARKER = /[ \t]*\[(?:source_insight|source|note):[^\]\s]+\]/g
+
+/** Distinct `source:` / `note:` / `source_insight:` citations in `text`, first seen first. */
+export function documentCitations(text: string): string[] {
+  return Array.from(
+    new Set(Array.from(text.matchAll(DOCUMENT_CITATION), (match) => match[1]))
+  )
+}
+
+/**
+ * Remove citation markers from text a learner will edit, so a draft never
+ * shows raw record IDs. Math and other Markdown are left as written.
+ */
+export function stripCitationMarkers(text: string): string {
+  return text
+    .replace(LEADING_CITATION_MARKERS, '')
+    .replace(CITATION_MARKER, '')
+    .replace(/[ \t]+([.,;:!?])/g, '$1')
+    .split('\n')
+    .map((line) => line.trimEnd())
+    .join('\n')
+    .trim()
+}

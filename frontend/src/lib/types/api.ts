@@ -364,6 +364,8 @@ export interface LearningResolutionDraft {
   conclusion: string
   relevance: string
   open_questions: string[]
+  /** Documents the draft relied on; the text fields carry no citation markers. */
+  citations?: string[]
 }
 
 export interface RecentlyViewedResponse {

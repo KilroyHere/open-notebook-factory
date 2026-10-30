@@ -29,7 +29,9 @@ import {
 import { useTranslation } from '@/lib/hooks/use-translation'
 import {
   createLearningUpdateDraft,
+  documentCitations,
   ReferenceTitles,
+  stripCitationMarkers,
   toPlainTextPreview,
   normalizeOpenQuestions,
 } from '@/lib/utils/learning-asides'
@@ -110,6 +112,9 @@ export function LearningAsidePanel({
   const [conclusion, setConclusion] = useState('')
   const [relevance, setRelevance] = useState('')
   const [openQuestions, setOpenQuestions] = useState<string[]>([])
+  // Citations the prefilled text relied on. The fields show no raw
+  // `[source:id]` markers, so the evidence travels here and is sent on resolve.
+  const [draftCitations, setDraftCitations] = useState<string[]>([])
   const [isDrafting, setIsDrafting] = useState(false)
   const [draftFailed, setDraftFailed] = useState(false)
   // Each draft request gets a number; a reply for an older one is ignored.
@@ -162,6 +167,28 @@ export function LearningAsidePanel({
     }
   }
 
+  // Fill the form without raw citation markers, keeping their citations.
+  const prefill = (
+    draft: {
+      conclusion: string
+      relevance?: string | null
+      citations?: string[]
+    },
+    questions: string[] = []
+  ) => {
+    setConclusion(stripCitationMarkers(draft.conclusion))
+    setRelevance(stripCitationMarkers(draft.relevance ?? ''))
+    setOpenQuestions(questions.map(stripCitationMarkers))
+    setDraftCitations(
+      Array.from(
+        new Set([
+          ...(draft.citations ?? []),
+          ...documentCitations(`${draft.conclusion}\n${draft.relevance ?? ''}`),
+        ])
+      )
+    )
+  }
+
   const openResolution = async () => {
     if (!activeAside) return
     const requestId = ++draftRequest.current
@@ -169,30 +196,25 @@ export function LearningAsidePanel({
     setDraftFailed(false)
     if (activeAside.status === 'resolved' && latestUpdate) {
       // Updating a resolution starts from what the learner already approved.
-      setConclusion(latestUpdate.conclusion)
-      setRelevance(latestUpdate.relevance ?? '')
-      setOpenQuestions(latestUpdate.open_questions)
+      prefill(latestUpdate, latestUpdate.open_questions)
       return
     }
     if (!onDraftResolution || !latestAnswerContent.trim()) {
-      setConclusion(latestAnswerDraft)
-      setRelevance('')
-      setOpenQuestions([])
+      prefill({ conclusion: latestAnswerDraft })
       return
     }
-    setConclusion('')
-    setRelevance('')
-    setOpenQuestions([])
+    prefill({ conclusion: '' })
     setIsDrafting(true)
     try {
       const draft = await onDraftResolution(activeAside.id)
       if (requestId !== draftRequest.current) return
-      setConclusion(draft.conclusion.trim() || latestAnswerDraft)
-      setRelevance(draft.relevance ?? '')
-      setOpenQuestions(normalizeOpenQuestions(draft.open_questions ?? []))
+      prefill(
+        { ...draft, conclusion: draft.conclusion.trim() || latestAnswerDraft },
+        normalizeOpenQuestions(draft.open_questions ?? [])
+      )
     } catch {
       if (requestId !== draftRequest.current) return
-      setConclusion(latestAnswerDraft)
+      prefill({ conclusion: latestAnswerDraft })
       setDraftFailed(true)
     } finally {
       if (requestId === draftRequest.current) setIsDrafting(false)
@@ -221,11 +243,12 @@ export function LearningAsidePanel({
 
   const resolve = async () => {
     if (!activeAside || !conclusion.trim() || isResolving || isDrafting) return
-    const citationMatches = `${conclusion}\n${relevance}`.match(
-      /\[(?:source|note|source_insight):[^\]]+\]/g
-    )
+    // The draft's citations plus any the learner typed into the fields.
     const citations = Array.from(
-      new Set((citationMatches ?? []).map((value) => value.slice(1, -1)))
+      new Set([
+        ...draftCitations,
+        ...documentCitations(`${conclusion}\n${relevance}`),
+      ])
     )
     try {
       await onResolve(activeAside.id, {

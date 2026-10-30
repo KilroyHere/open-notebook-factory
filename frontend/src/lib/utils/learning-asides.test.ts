@@ -4,6 +4,8 @@ import {
   childDiveForQuestion,
   createAsideTitle,
   createLearningUpdateDraft,
+  documentCitations,
+  stripCitationMarkers,
   toPlainTextPreview,
   normalizeOpenQuestions,
 } from './learning-asides'
@@ -92,5 +94,23 @@ describe('learning aside text helpers', () => {
         'Why a Gaussian prior?',
       ])
     ).toEqual(['Why a Gaussian prior?', 'When is the bound tight?'])
+  })
+})
+
+describe('citation markers in editable drafts', () => {
+  it('lists distinct document citations in first-seen order', () => {
+    expect(
+      documentCitations(
+        'a [source:paper] b [note:margin] [source:paper] [learning_update:x] [source_insight:l]'
+      )
+    ).toEqual(['source:paper', 'note:margin', 'source_insight:l'])
+  })
+
+  it('removes markers but keeps prose, lists and math as written', () => {
+    expect(
+      stripCitationMarkers(
+        'Scores use $\\sqrt{d_k}$ [source:xh9gy] [note:m].\n[source:a] Then\n- item [source:b]\n  - nested'
+      )
+    ).toBe('Scores use $\\sqrt{d_k}$.\nThen\n- item\n  - nested')
   })
 })

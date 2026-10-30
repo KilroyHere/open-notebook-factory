@@ -184,6 +184,9 @@ class LearningResolutionDraftResponse(BaseModel):
     conclusion: str
     relevance: str = ""
     open_questions: List[str] = Field(default_factory=list)
+    # Documents the draft relied on (e.g. "source:abc"); the text fields carry
+    # no citation markers, so send these back as the resolve request's citations.
+    citations: List[str] = Field(default_factory=list)
 
 
 class LearningAsideMessageResponse(BaseModel):

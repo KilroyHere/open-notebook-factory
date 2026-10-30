@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { LearningAsidePanel } from './LearningAsidePanel'
-import { LearningAside } from '@/lib/types/api'
+import { LearningAside, LearningResolutionDraft } from '@/lib/types/api'
 
 const aside: LearningAside = {
   id: 'learning_aside:one',
@@ -185,18 +185,10 @@ describe('LearningAsidePanel', () => {
   })
 
   it('prefills every field from the model draft and sends edited open questions', async () => {
-    let finishDraft: (value: {
-      conclusion: string
-      relevance: string
-      open_questions: string[]
-    }) => void = () => undefined
+    let finishDraft: (value: LearningResolutionDraft) => void = () => undefined
     const onDraftResolution = vi.fn(
       () =>
-        new Promise<{
-          conclusion: string
-          relevance: string
-          open_questions: string[]
-        }>((resolve) => {
+        new Promise<LearningResolutionDraft>((resolve) => {
           finishDraft = resolve
         })
     )
@@ -227,15 +219,18 @@ describe('LearningAsidePanel', () => {
     expect(submit).toBeDisabled()
 
     finishDraft({
-      conclusion: 'Log is concave, so Jensen gives the ELBO [source:paper].',
-      relevance: 'It justifies the first derivation step.',
+      conclusion: 'Log is concave, so Jensen bounds $\\log p(x)$.',
+      // A marker that slipped through is still kept out of the field.
+      relevance: 'It justifies the first derivation step [note:margin].',
       open_questions: ['When is the bound tight?', 'Why a Gaussian prior?'],
+      citations: ['source:paper'],
     })
 
+    // Raw record IDs never reach the editable fields; math stays as written.
     await waitFor(() =>
       expect(
         screen.getByPlaceholderText('learningAsides.conclusionPlaceholder')
-      ).toHaveValue('Log is concave, so Jensen gives the ELBO [source:paper].')
+      ).toHaveValue('Log is concave, so Jensen bounds $\\log p(x)$.')
     )
     expect(screen.queryByText('learningAsides.drafting')).not.toBeInTheDocument()
     expect(
@@ -264,6 +259,15 @@ describe('LearningAsidePanel', () => {
     fireEvent.click(
       screen.getByRole('button', { name: 'learningAsides.addOpenQuestion' })
     )
+    // A citation the learner types is sent along with the draft's.
+    fireEvent.change(
+      screen.getByPlaceholderText('learningAsides.relevancePlaceholder'),
+      {
+        target: {
+          value: 'It justifies the first derivation step [source:typed].',
+        },
+      }
+    )
 
     fireEvent.click(
       screen.getAllByRole('button', { name: 'learningAsides.resolve' }).at(-1)!
@@ -271,13 +275,13 @@ describe('LearningAsidePanel', () => {
 
     await waitFor(() =>
       expect(onResolve).toHaveBeenCalledWith('learning_aside:one', {
-        conclusion: 'Log is concave, so Jensen gives the ELBO [source:paper].',
-        relevance: 'It justifies the first derivation step.',
+        conclusion: 'Log is concave, so Jensen bounds $\\log p(x)$.',
+        relevance: 'It justifies the first derivation step [source:typed].',
         open_questions: [
           'When is the bound tight?',
           'What does the KL gap mean?',
         ],
-        citations: ['source:paper'],
+        citations: ['source:paper', 'note:margin', 'source:typed'],
         include_in_main: true,
         save_as_note: false,
       })
@@ -354,6 +358,54 @@ describe('LearningAsidePanel', () => {
       screen.getByPlaceholderText('learningAsides.openQuestionPlaceholder')
     ).toHaveValue('Approved question?')
     expect(onDraftResolution).not.toHaveBeenCalled()
+  })
+
+  it('keeps an approved resolution\'s evidence without showing its IDs', async () => {
+    const onResolve = vi.fn().mockResolvedValue(undefined)
+    render(
+      <LearningAsidePanel
+        {...baseProps}
+        onResolve={onResolve}
+        activeAside={{
+          ...aside,
+          status: 'resolved',
+          updates: [
+            {
+              id: 'learning_update:one',
+              aside_id: aside.id,
+              conclusion: 'Approved conclusion [source:paper].',
+              relevance: 'Approved relevance.',
+              open_questions: [],
+              citations: ['source:paper', 'note:margin'],
+              include_in_main: true,
+              version: 1,
+              created: aside.created,
+              updated: aside.updated,
+            },
+          ],
+        }}
+      />
+    )
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'learningAsides.resolveAgain' })
+    )
+    expect(
+      await screen.findByPlaceholderText('learningAsides.conclusionPlaceholder')
+    ).toHaveValue('Approved conclusion.')
+    fireEvent.click(
+      screen.getAllByRole('button', { name: 'learningAsides.resolve' }).at(-1)!
+    )
+
+    await waitFor(() =>
+      expect(onResolve).toHaveBeenCalledWith(
+        'learning_aside:one',
+        expect.objectContaining({
+          conclusion: 'Approved conclusion.',
+          citations: ['source:paper', 'note:margin'],
+        })
+      )
+    )
   })
 
   it('asks the question of an empty nested dive in one click', async () => {

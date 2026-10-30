@@ -37,12 +37,19 @@ _INTERNAL_ID = re.compile(
     r"\[?\b(?:learning_aside|learning_update|learning_journey|learning_section|"
     r"chat_session|message):[^\]\s,;.]+\]?"
 )
+_CITATION_BODY = r"\[(?:source_insight|source|note|insight):[^\]\s]+\]"
+# A marker opening a line takes the spaces after it; any other marker takes the
+# spaces before it, so "bound [source:x]." becomes "bound.".
+_LEADING_CITATION_MARKER = re.compile(rf"^[ \t]*(?:{_CITATION_BODY}[ \t]*)+", re.M)
+_CITATION_MARKER = re.compile(rf"[ \t]*{_CITATION_BODY}")
 _BLANK_BRACKETS = re.compile(r"\[\s*\]")
 _SPACE_BEFORE_PUNCT = re.compile(r"[ \t]+([.,;:!?])")
 _MULTI_SPACE = re.compile(r"[ \t]{2,}")
 
 
 class LearningResolutionDraft(BaseModel):
+    """What the model is asked to return."""
+
     conclusion: str = Field(
         description="What the learner learned in this aside, 1 to 4 specific sentences"
     )
@@ -54,6 +61,17 @@ class LearningResolutionDraft(BaseModel):
         default_factory=list,
         description="0 to 3 self-contained follow-up questions worth their own dive",
     )
+
+
+class LearningResolutionDraftResult(LearningResolutionDraft):
+    """The draft shown to the learner.
+
+    Text fields carry no ``[source:...]`` markers: raw record IDs read as
+    broken text in an editable field. The documents the draft relied on are
+    returned in ``citations`` so the resolution still records its evidence.
+    """
+
+    citations: List[str] = Field(default_factory=list)
 
 
 def _role_label(role: str) -> str:
@@ -111,23 +129,34 @@ def sanitize_draft_text(
     return "\n".join(line.rstrip() for line in cleaned.strip().splitlines())
 
 
+def strip_document_citations(text: str) -> str:
+    """Remove document citation markers, keeping the surrounding prose tidy."""
+    cleaned = _LEADING_CITATION_MARKER.sub("", text)
+    cleaned = _CITATION_MARKER.sub("", cleaned)
+    cleaned = _SPACE_BEFORE_PUNCT.sub(r"\1", cleaned)
+    return "\n".join(line.rstrip() for line in cleaned.strip().splitlines())
+
+
 def _clean_draft(
     draft: LearningResolutionDraft,
     allowed_citations: Sequence[str],
     internal_ids: Sequence[str],
-) -> LearningResolutionDraft:
+) -> LearningResolutionDraftResult:
     def clean(value: str) -> str:
         return sanitize_draft_text(value, allowed_citations, internal_ids)
 
+    conclusion = clean(draft.conclusion)
+    relevance = clean(draft.relevance)
     questions: List[str] = []
     for question in draft.open_questions:
-        cleaned_question = clean(str(question))
+        cleaned_question = strip_document_citations(clean(str(question)))
         if cleaned_question and cleaned_question not in questions:
             questions.append(cleaned_question)
-    return LearningResolutionDraft(
-        conclusion=clean(draft.conclusion),
-        relevance=clean(draft.relevance),
+    return LearningResolutionDraftResult(
+        conclusion=strip_document_citations(conclusion),
+        relevance=strip_document_citations(relevance),
         open_questions=questions[:MAX_OPEN_QUESTIONS],
+        citations=document_citations(f"{conclusion}\n{relevance}"),
     )
 
 
@@ -139,13 +168,14 @@ async def draft_learning_resolution(
     transcript: Sequence[Dict[str, str]],
     model_id: Optional[str],
     internal_ids: Sequence[str] = (),
-) -> LearningResolutionDraft:
+) -> LearningResolutionDraftResult:
     """Ask the aside's chat model for an editable resolution draft.
 
     ``parent_context`` is the aside's ``context_snapshot`` and ``transcript``
     the aside's own messages, both as ``{"role", "content"}`` dicts.
     ``internal_ids`` lists record and message IDs that must not appear in the
-    draft even if the model echoes them.
+    draft even if the model echoes them. Document citations the draft used
+    are moved out of the text into ``citations``.
     """
     transcript_text = _format_turns(transcript, TRANSCRIPT_TURN_CHARS)
     allowed_citations = document_citations(transcript_text)

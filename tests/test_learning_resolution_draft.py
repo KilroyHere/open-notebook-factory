@@ -15,6 +15,7 @@ from open_notebook.graphs.learning_resolution import (
     document_citations,
     draft_learning_resolution,
     sanitize_draft_text,
+    strip_document_citations,
 )
 
 NOW = datetime(2026, 10, 29, tzinfo=timezone.utc)
@@ -87,6 +88,15 @@ def test_sanitize_strips_internal_ids_and_unknown_citations():
     assert MESSAGE_ID not in cleaned
 
 
+def test_strip_document_citations_keeps_the_prose_tidy():
+    assert strip_document_citations(
+        "A bound [source:paper] [note:margin].\n"
+        "[source_insight:lemma] Then the gap closes.\n"
+        "- item [source:paper]\n"
+        "  - nested $\\sqrt{d_k}$"
+    ) == ("A bound.\nThen the gap closes.\n- item\n  - nested $\\sqrt{d_k}$")
+
+
 def test_sanitize_never_removes_short_ids_from_prose():
     # A short context id must not eat ordinary words that contain it.
     assert sanitize_draft_text("The ai answered.", [], ["ai"]) == "The ai answered."
@@ -102,9 +112,11 @@ async def test_draft_uses_the_aside_model_and_returns_a_cleaned_structured_draft
                     "Log is concave, so Jensen turns the evidence into a lower "
                     "bound [source:paper] [learning_update:old]."
                 ),
-                "relevance": "It justifies the first ELBO step [source:made_up].",
+                "relevance": (
+                    "It justifies the first ELBO step [source:made_up] [note:margin]."
+                ),
                 "open_questions": [
-                    "Why is the bound tight when q equals the posterior?",
+                    "Why is the bound tight when q equals the posterior? [source:paper]",
                     "Why is the bound tight when q equals the posterior?",
                     "  ",
                     "When does the gap vanish?",
@@ -123,7 +135,10 @@ async def test_draft_uses_the_aside_model_and_returns_a_cleaned_structured_draft
             title="Why does Jensen's inequality apply?",
             anchor="The ELBO follows from Jensen's inequality.",
             parent_context=[{"role": "human", "content": "Derive the ELBO."}],
-            transcript=TRANSCRIPT,
+            transcript=[
+                *TRANSCRIPT,
+                {"role": "ai", "content": "See the margin note [note:margin]."},
+            ],
             model_id="model:aside",
         )
 
@@ -134,11 +149,12 @@ async def test_draft_uses_the_aside_model_and_returns_a_cleaned_structured_draft
     assert "Derive the ELBO." in prompt
     assert "The ELBO follows from Jensen's inequality." in prompt
     assert "[source:paper]" in prompt
+    # Editable fields carry no raw record IDs; the evidence moves to citations.
     assert draft.conclusion == (
-        "Log is concave, so Jensen turns the evidence into a lower bound "
-        "[source:paper]."
+        "Log is concave, so Jensen turns the evidence into a lower bound."
     )
     assert draft.relevance == "It justifies the first ELBO step."
+    assert draft.citations == ["source:paper", "note:margin"]
     assert draft.open_questions == [
         "Why is the bound tight when q equals the posterior?",
         "When does the gap vanish?",
@@ -208,6 +224,7 @@ def test_draft_endpoint_uses_session_model_and_hides_internal_ids(client):
                 "conclusion": "Log is concave, so Jensen gives a lower bound.",
                 "relevance": "It justifies the first ELBO step.",
                 "open_questions": ["When is the bound tight?"],
+                "citations": ["source:paper"],
             }
         )
     )
@@ -247,6 +264,7 @@ def test_draft_endpoint_uses_session_model_and_hides_internal_ids(client):
         "conclusion": "Log is concave, so Jensen gives a lower bound.",
         "relevance": "It justifies the first ELBO step.",
         "open_questions": ["When is the bound tight?"],
+        "citations": ["source:paper"],
     }
     assert draft.await_args is not None
     kwargs = draft.await_args.kwargs
