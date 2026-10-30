@@ -16,6 +16,30 @@ export function messageIdFromChatHash(hash: string): string | null {
   }
 }
 
+/** The chat's message list scroller (a Radix ScrollArea viewport). */
+export const CHAT_SCROLLER_SELECTOR = '[data-slot="scroll-area-viewport"]'
+
+// Scroll only the chat's own scroller. element.scrollIntoView() also scrolls
+// every ancestor, including the ScrollArea root that merely clips, which
+// shifts the whole list and leaves an empty band under it.
+function scrollChatTo(scroller: HTMLElement, top: number): void {
+  if (typeof scroller.scrollTo === 'function') {
+    scroller.scrollTo({ top, behavior: 'smooth' })
+  } else {
+    scroller.scrollTop = top
+  }
+}
+
+/** Scroll the chat to `end` (the sentinel after the last message). */
+export function scrollChatToEnd(end: HTMLElement): void {
+  const scroller = end.closest<HTMLElement>(CHAT_SCROLLER_SELECTOR)
+  if (!scroller) {
+    end.scrollIntoView?.({ behavior: 'smooth' })
+    return
+  }
+  scrollChatTo(scroller, scroller.scrollHeight)
+}
+
 export function focusChatMessage(messageId: string): boolean {
   if (typeof document === 'undefined') return false
   const domId = chatMessageDomId(messageId)
@@ -23,7 +47,17 @@ export function focusChatMessage(messageId: string): boolean {
   if (!element) return false
 
   window.history.replaceState(null, '', `#${domId}`)
-  element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  const scroller = element.closest<HTMLElement>(CHAT_SCROLLER_SELECTOR)
+  if (scroller) {
+    const view = scroller.getBoundingClientRect()
+    const box = element.getBoundingClientRect()
+    scrollChatTo(
+      scroller,
+      scroller.scrollTop + box.top - view.top - (view.height - box.height) / 2
+    )
+  } else {
+    element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
   element.focus({ preventScroll: true })
   element.classList.add('ring-2', 'ring-teal', 'ring-offset-2')
   window.setTimeout(() => {
@@ -39,8 +73,6 @@ export function inlineDiveDomId(asideId: string): string {
   return `${INLINE_DIVE_PREFIX}${encodeURIComponent(asideId)}`
 }
 
-/** The chat's message list scroller (a Radix ScrollArea viewport). */
-export const CHAT_SCROLLER_SELECTOR = '[data-slot="scroll-area-viewport"]'
 const REVEAL_MARGIN_PX = 24
 
 /**
@@ -66,10 +98,5 @@ export function revealInChat(
   if (block === 'start' || aboveBy < 0) delta = aboveBy
   else if (belowBy > 0) delta = Math.min(belowBy, aboveBy)
   if (Math.abs(delta) < 1) return
-  const top = scroller.scrollTop + delta
-  if (typeof scroller.scrollTo === 'function') {
-    scroller.scrollTo({ top, behavior: 'smooth' })
-  } else {
-    scroller.scrollTop = top
-  }
+  scrollChatTo(scroller, scroller.scrollTop + delta)
 }

@@ -5,6 +5,7 @@ import {
   inlineDiveDomId,
   messageIdFromChatHash,
   revealInChat,
+  scrollChatToEnd,
 } from './chat-navigation'
 
 describe('chat navigation', () => {
@@ -111,3 +112,59 @@ describe('revealInChat', () => {
   })
 })
 
+
+describe('scrolling inside the chat only', () => {
+  function scrollerWith(child: HTMLElement) {
+    const scroller = document.createElement('div')
+    scroller.dataset.slot = 'scroll-area-viewport'
+    scroller.getBoundingClientRect = () => ({ top: 100, height: 600 }) as DOMRect
+    scroller.scrollTo = vi.fn()
+    Object.defineProperty(scroller, 'scrollTop', { value: 1000, writable: true })
+    Object.defineProperty(scroller, 'scrollHeight', { value: 5000 })
+    scroller.appendChild(child)
+    document.body.appendChild(scroller)
+    return scroller
+  }
+
+  beforeEach(() => {
+    window.HTMLElement.prototype.scrollIntoView = vi.fn()
+  })
+
+  afterEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  it('centres a focused message by scrolling the chat, not its ancestors', () => {
+    const message = document.createElement('div')
+    message.id = chatMessageDomId('ai:centre')
+    message.getBoundingClientRect = () => ({ top: 500, height: 100 }) as DOMRect
+    const scroller = scrollerWith(message)
+
+    expect(focusChatMessage('ai:centre')).toBe(true)
+
+    expect(scroller.scrollTo).toHaveBeenCalledWith({
+      top: 1000 + 500 - 100 - (600 - 100) / 2,
+      behavior: 'smooth',
+    })
+    expect(message.scrollIntoView).not.toHaveBeenCalled()
+  })
+
+  it('scrolls the chat to its end without scrollIntoView', () => {
+    const end = document.createElement('div')
+    const scroller = scrollerWith(end)
+
+    scrollChatToEnd(end)
+
+    expect(scroller.scrollTo).toHaveBeenCalledWith({ top: 5000, behavior: 'smooth' })
+    expect(end.scrollIntoView).not.toHaveBeenCalled()
+  })
+
+  it('falls back to scrollIntoView outside a chat scroller', () => {
+    const end = document.createElement('div')
+    document.body.appendChild(end)
+
+    scrollChatToEnd(end)
+
+    expect(end.scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth' })
+  })
+})

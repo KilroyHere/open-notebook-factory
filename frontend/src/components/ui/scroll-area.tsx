@@ -9,6 +9,7 @@ function ScrollArea({
   className,
   children,
   viewportClassName,
+  onScroll,
   ...props
 }: React.ComponentProps<typeof ScrollAreaPrimitive.Root> & {
   viewportClassName?: string
@@ -17,6 +18,17 @@ function ScrollArea({
     <ScrollAreaPrimitive.Root
       data-slot="scroll-area"
       className={cn("relative", className)}
+      // Only the viewport scrolls; the root just clips. Browsers still scroll
+      // a clipping root to reveal a focused or scrollIntoView() target, which
+      // shifts the viewport and leaves an empty band, so undo any such scroll.
+      onScroll={(event) => {
+        const root = event.currentTarget
+        if (event.target === root && (root.scrollTop !== 0 || root.scrollLeft !== 0)) {
+          root.scrollTop = 0
+          root.scrollLeft = 0
+        }
+        onScroll?.(event)
+      }}
       {...props}
     >
       <ScrollAreaPrimitive.Viewport

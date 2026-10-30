@@ -33,6 +33,7 @@ import {
   chatMessageDomId,
   focusChatMessage,
   messageIdFromChatHash,
+  scrollChatToEnd,
 } from '@/lib/utils/chat-navigation'
 import { cn } from '@/lib/utils'
 import type { ReferenceTitles } from '@/lib/utils/learning-asides'
@@ -153,7 +154,7 @@ export function ChatPanel({
       anchoredHashRef.current = hash
       return
     }
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (messagesEndRef.current) scrollChatToEnd(messagesEndRef.current)
   }, [messages])
 
   const asideControl = onOpenAsides ? (
