@@ -263,6 +263,8 @@ export const bnIN = {
     toggleRecentlyViewed: "সম্প্রতি দেখা টগল করুন",
     lastViewed: "{{time}} দেখা হয়েছে",
     studio: "স্টুডিও",
+    collapseColumn: "{{name}} সংকুচিত করুন",
+    expandColumn: "{{name}} প্রসারিত করুন",
     backToNotebooks: "নোটবুকে ফিরে যান",
   },
   sources: {

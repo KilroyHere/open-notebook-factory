@@ -263,6 +263,8 @@ export const jaJP = {
     toggleRecentlyViewed: "最近表示した項目の表示切替",
     lastViewed: "{{time}}に表示",
     studio: "スタジオ",
+    collapseColumn: "{{name}}を折りたたむ",
+    expandColumn: "{{name}}を展開",
     backToNotebooks: "ノートブック一覧に戻る",
   },
   sources: {

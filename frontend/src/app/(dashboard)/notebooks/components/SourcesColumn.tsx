@@ -21,7 +21,7 @@ import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { useModalManager } from '@/lib/hooks/use-modal-manager'
 import { ContextMode } from '../[id]/page'
 import type { SourceBulkAction } from '@/lib/utils/source-context'
-import { CollapsibleColumn, createCollapseButton } from '@/components/notebooks/CollapsibleColumn'
+import { CollapsibleColumn, CollapseColumnButton } from '@/components/notebooks/CollapsibleColumn'
 import { useNotebookColumnsStore } from '@/lib/stores/notebook-columns-store'
 import { useTranslation } from '@/lib/hooks/use-translation'
 import { cn } from '@/lib/utils'
@@ -76,9 +76,9 @@ export function SourcesColumn({
   const sourcesLabel = t('navigation.sources')
   const collapseButton = useMemo(
     () =>
-      allowCollapse && !embedded
-        ? createCollapseButton(toggleSources, sourcesLabel)
-        : null,
+      allowCollapse && !embedded ? (
+        <CollapseColumnButton onToggle={toggleSources} label={sourcesLabel} />
+      ) : null,
     [allowCollapse, embedded, sourcesLabel, toggleSources]
   )
 

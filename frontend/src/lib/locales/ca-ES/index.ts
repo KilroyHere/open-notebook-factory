@@ -263,6 +263,8 @@ export const caES = {
     toggleRecentlyViewed: "Commuta els vistos recentment",
     lastViewed: "Vist {{time}}",
     studio: "Estudi",
+    collapseColumn: "Plega {{name}}",
+    expandColumn: "Desplega {{name}}",
     backToNotebooks: "Torna als quaderns",
   },
   sources: {

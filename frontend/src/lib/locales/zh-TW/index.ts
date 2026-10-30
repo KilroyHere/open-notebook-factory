@@ -263,6 +263,8 @@ export const zhTW = {
     toggleRecentlyViewed: "切換最近檢視",
     lastViewed: "檢視於{{time}}",
     studio: "工作室",
+    collapseColumn: "收合{{name}}",
+    expandColumn: "展開{{name}}",
     backToNotebooks: "返回筆記本",
   },
   sources: {

@@ -263,6 +263,8 @@ export const plPL = {
     toggleRecentlyViewed: "Przełącz ostatnio przeglądane",
     lastViewed: "Wyświetlono {{time}}",
     studio: "Studio",
+    collapseColumn: "Zwiń {{name}}",
+    expandColumn: "Rozwiń {{name}}",
     backToNotebooks: "Wróć do notatników",
   },
   sources: {

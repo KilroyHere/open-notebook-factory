@@ -263,6 +263,8 @@ export const ruRU = {
     toggleRecentlyViewed: "Показать/скрыть недавно просмотренные",
     lastViewed: "Просмотрено {{time}}",
     studio: "Студия",
+    collapseColumn: "Свернуть панель «{{name}}»",
+    expandColumn: "Развернуть панель «{{name}}»",
     backToNotebooks: "Назад к блокнотам",
   },
   sources: {

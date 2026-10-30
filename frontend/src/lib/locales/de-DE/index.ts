@@ -266,6 +266,8 @@ export const deDE = {
     toggleRecentlyViewed: "Zuletzt angesehen ein-/ausblenden",
     lastViewed: "Angesehen {{time}}",
     studio: "Studio",
+    collapseColumn: "{{name}} einklappen",
+    expandColumn: "{{name}} ausklappen",
     backToNotebooks: "Zurück zu den Notizbüchern",
   },
   sources: {

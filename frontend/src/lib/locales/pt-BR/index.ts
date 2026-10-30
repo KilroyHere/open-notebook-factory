@@ -263,6 +263,8 @@ export const ptBR = {
     toggleRecentlyViewed: "Alternar vistos recentemente",
     lastViewed: "Visto {{time}}",
     studio: "Estúdio",
+    collapseColumn: "Recolher {{name}}",
+    expandColumn: "Expandir {{name}}",
     backToNotebooks: "Voltar aos cadernos",
   },
   sources: {

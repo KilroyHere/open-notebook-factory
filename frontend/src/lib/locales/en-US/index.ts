@@ -261,6 +261,8 @@ export const enUS = {
     toggleRecentlyViewed: "Toggle recently viewed",
     lastViewed: "Viewed {{time}}",
     studio: "Studio",
+    collapseColumn: "Collapse {{name}}",
+    expandColumn: "Expand {{name}}",
     backToNotebooks: "Back to notebooks",
   },
   sources: {

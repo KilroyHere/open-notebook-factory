@@ -263,6 +263,8 @@ export const itIT = {
     toggleRecentlyViewed: "Mostra/nascondi visti di recente",
     lastViewed: "Visto {{time}}",
     studio: "Studio",
+    collapseColumn: "Comprimi {{name}}",
+    expandColumn: "Espandi {{name}}",
     backToNotebooks: "Torna ai notebook",
   },
   sources: {

@@ -263,6 +263,8 @@ export const zhCN = {
     toggleRecentlyViewed: "切换最近查看",
     lastViewed: "查看于{{time}}",
     studio: "工作室",
+    collapseColumn: "收起{{name}}",
+    expandColumn: "展开{{name}}",
     backToNotebooks: "返回笔记本",
   },
   sources: {

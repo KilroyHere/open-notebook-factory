@@ -104,14 +104,15 @@ describe('StudioColumn', () => {
   it('collapses to a labelled rail and expands again', () => {
     render(<StudioColumn workspace={createWorkspace([aside])} notes={notes} />)
 
+    // Translated labels; CollapsibleColumn's own test checks the column name.
     const collapse = screen.getByRole('button', {
-      name: 'Collapse notebooks.studio',
+      name: 'notebooks.collapseColumn',
     })
     expect(collapse).toHaveAttribute('aria-expanded', 'true')
     fireEvent.click(collapse)
 
     const expand = screen.getByRole('button', {
-      name: 'Expand notebooks.studio',
+      name: 'notebooks.expandColumn',
     })
     expect(expand).toHaveAttribute('aria-expanded', 'false')
     expect(screen.queryByRole('tab')).toBeNull()
@@ -134,7 +135,9 @@ describe('StudioColumn', () => {
     )
 
     // The sheet has no desktop collapse control.
-    expect(screen.queryByRole('button', { name: /^Collapse / })).toBeNull()
+    expect(
+      screen.queryByRole('button', { name: 'notebooks.collapseColumn' })
+    ).toBeNull()
     fireEvent.click(screen.getByText('Current active aside'))
     expect(onShowConversation).toHaveBeenCalledTimes(1)
     // Opened where it lives (inline under its message when it can be),

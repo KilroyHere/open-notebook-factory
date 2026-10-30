@@ -263,6 +263,8 @@ export const trTR = {
     toggleRecentlyViewed: "Son görüntülenenleri aç/kapat",
     lastViewed: "{{time}} görüntülendi",
     studio: "Stüdyo",
+    collapseColumn: "{{name}} panelini daralt",
+    expandColumn: "{{name}} panelini genişlet",
     backToNotebooks: "Not defterlerine dön",
   },
   sources: {

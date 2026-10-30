@@ -263,6 +263,8 @@ export const frFR = {
     toggleRecentlyViewed: "Afficher/masquer les éléments récents",
     lastViewed: "Consulté {{time}}",
     studio: "Studio",
+    collapseColumn: "Réduire {{name}}",
+    expandColumn: "Développer {{name}}",
     backToNotebooks: "Retour aux carnets",
   },
   sources: {

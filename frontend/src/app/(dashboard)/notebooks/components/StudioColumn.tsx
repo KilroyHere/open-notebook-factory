@@ -5,7 +5,7 @@ import { GitBranch, PanelRight, StickyNote } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   CollapsibleColumn,
-  createCollapseButton,
+  CollapseColumnButton,
 } from '@/components/notebooks/CollapsibleColumn'
 import { JourneyStats } from '@/components/notebooks/JourneyStats'
 import { LearningJourneyRail } from '@/components/notebooks/LearningJourneyRail'
@@ -86,8 +86,9 @@ export function StudioColumn({
             {t('common.notes')}
           </TabsTrigger>
         </TabsList>
-        {presentation === 'rail' &&
-          createCollapseButton(toggleStudio, label, 'right')}
+        {presentation === 'rail' && (
+          <CollapseColumnButton onToggle={toggleStudio} label={label} side="right" />
+        )}
       </div>
       <TabsContent
         value="journey"

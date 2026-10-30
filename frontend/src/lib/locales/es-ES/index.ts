@@ -263,6 +263,8 @@ export const esES = {
     toggleRecentlyViewed: "Alternar vistos recientemente",
     lastViewed: "Visto {{time}}",
     studio: "Estudio",
+    collapseColumn: "Contraer {{name}}",
+    expandColumn: "Expandir {{name}}",
     backToNotebooks: "Volver a los cuadernos",
   },
   sources: {
