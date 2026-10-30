@@ -523,6 +523,7 @@ export const esES = {
     statsSummary: "Resumen del recorrido",
     statsLearned: "Aprendido",
     statsSavedForLater: "Guardado para después",
+    usedWhatYouLearned: "Usó lo que aprendiste: {{summary}}",
     status: {
       active: "Activo",
       parked: "Aparcado",

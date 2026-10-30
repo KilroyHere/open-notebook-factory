@@ -26,10 +26,10 @@ import { useModalManager } from '@/lib/hooks/use-modal-manager'
 import { toast } from 'sonner'
 import { useTranslation } from '@/lib/hooks/use-translation'
 import {
-  LearningMergeEvent,
   LearningThreadLinks,
   learningMergesForMessage,
 } from '@/components/notebooks/LearningThreadLinks'
+import { LearningMergeChip } from '@/components/notebooks/LearningMergeChip'
 import {
   chatMessageDomId,
   focusChatMessage,
@@ -494,6 +494,20 @@ const ChatMessage = memo(function ChatMessage({
           wide && message.type === 'ai' ? 'w-full max-w-full' : 'max-w-[80%]'
         )}
       >
+        {/* A reply that used an aside's conclusion says so, collapsed. */}
+        {appliedUpdates.map(({ aside, update }) => (
+          <LearningMergeChip
+            key={`${aside.id}:${update.id}`}
+            aside={aside}
+            update={update}
+            asides={learningAsides}
+            onOpenAside={onOpenLearningAside}
+            onReferenceClick={onReferenceClick}
+            onDiveIntoQuestion={onDiveIntoQuestion}
+            onParkQuestion={onParkQuestion}
+            referenceTitles={referenceTitles}
+          />
+        ))}
         <div
           className={`rounded-lg px-4 py-2 border ${
             message.type === 'human'
@@ -510,19 +524,6 @@ const ChatMessage = memo(function ChatMessage({
             <p className="text-sm break-words">{message.content}</p>
           )}
         </div>
-        {appliedUpdates.map(({ aside, update }) => (
-          <LearningMergeEvent
-            key={`${aside.id}:${update.id}`}
-            aside={aside}
-            update={update}
-            asides={learningAsides}
-            onOpenAside={onOpenLearningAside}
-            onReferenceClick={onReferenceClick}
-            onDiveIntoQuestion={onDiveIntoQuestion}
-            onParkQuestion={onParkQuestion}
-            referenceTitles={referenceTitles}
-          />
-        ))}
         {message.type === 'ai' && (
           <>
             <MessageActions

@@ -523,6 +523,7 @@ export const bnIN = {
     statsSummary: "যাত্রার সারাংশ",
     statsLearned: "শেখা হয়েছে",
     statsSavedForLater: "পরের জন্য রাখা",
+    usedWhatYouLearned: "যা শিখেছেন তা ব্যবহার করা হয়েছে: {{summary}}",
     status: {
       active: "সক্রিয়",
       parked: "স্থগিত",

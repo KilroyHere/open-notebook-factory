@@ -521,6 +521,7 @@ export const enUS = {
     statsSummary: "Journey summary",
     statsLearned: "Learned",
     statsSavedForLater: "Saved for later",
+    usedWhatYouLearned: "Used what you learned: {{summary}}",
     status: {
       active: "Active",
       parked: "Parked",

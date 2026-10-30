@@ -523,6 +523,7 @@ export const caES = {
     statsSummary: "Resum del recorregut",
     statsLearned: "Après",
     statsSavedForLater: "Desat per a més tard",
+    usedWhatYouLearned: "Ha fet servir el que has après: {{summary}}",
     status: {
       active: "Actiu",
       parked: "Aparcat",

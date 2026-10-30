@@ -523,6 +523,7 @@ export const itIT = {
     statsSummary: "Riepilogo del percorso",
     statsLearned: "Imparato",
     statsSavedForLater: "Salvato per dopo",
+    usedWhatYouLearned: "Ha usato ciò che hai imparato: {{summary}}",
     status: {
       active: "Attiva",
       parked: "In sospeso",

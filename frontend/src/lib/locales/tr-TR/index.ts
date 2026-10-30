@@ -523,6 +523,7 @@ export const trTR = {
     statsSummary: "Yolculuk özeti",
     statsLearned: "Öğrenilen",
     statsSavedForLater: "Sonraya kaydedilen",
+    usedWhatYouLearned: "Öğrendiklerini kullandı: {{summary}}",
     status: {
       active: "Etkin",
       parked: "Ertelendi",

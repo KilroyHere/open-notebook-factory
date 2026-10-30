@@ -523,6 +523,7 @@ export const jaJP = {
     statsSummary: "学習ジャーニーの概要",
     statsLearned: "学んだこと",
     statsSavedForLater: "後で見る",
+    usedWhatYouLearned: "学んだ内容を使用: {{summary}}",
     status: {
       active: "進行中",
       parked: "保留中",

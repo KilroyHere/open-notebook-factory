@@ -523,6 +523,7 @@ export const zhTW = {
     statsSummary: "學習旅程概覽",
     statsLearned: "已學到",
     statsSavedForLater: "稍後再看",
+    usedWhatYouLearned: "已使用你學到的內容：{{summary}}",
     status: {
       active: "進行中",
       parked: "已暫存",

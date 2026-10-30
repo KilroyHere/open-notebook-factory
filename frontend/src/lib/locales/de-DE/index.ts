@@ -526,6 +526,7 @@ export const deDE = {
     statsSummary: "Übersicht der Lernreise",
     statsLearned: "Gelernt",
     statsSavedForLater: "Für später gemerkt",
+    usedWhatYouLearned: "Nutzt, was du gelernt hast: {{summary}}",
     status: {
       active: "Aktiv",
       parked: "Geparkt",

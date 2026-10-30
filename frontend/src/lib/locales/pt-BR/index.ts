@@ -523,6 +523,7 @@ export const ptBR = {
     statsSummary: "Resumo da jornada",
     statsLearned: "Aprendido",
     statsSavedForLater: "Salvo para depois",
+    usedWhatYouLearned: "Usou o que você aprendeu: {{summary}}",
     status: {
       active: "Ativo",
       parked: "Adiado",

@@ -523,6 +523,7 @@ export const ruRU = {
     statsSummary: "Сводка пути",
     statsLearned: "Изучено",
     statsSavedForLater: "Отложено на потом",
+    usedWhatYouLearned: "Использовано то, что вы узнали: {{summary}}",
     status: {
       active: "Активно",
       parked: "Отложено",

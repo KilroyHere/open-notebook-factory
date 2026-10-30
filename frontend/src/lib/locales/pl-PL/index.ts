@@ -523,6 +523,7 @@ export const plPL = {
     statsSummary: "Podsumowanie ścieżki",
     statsLearned: "Nauczone",
     statsSavedForLater: "Zapisane na później",
+    usedWhatYouLearned: "Wykorzystano to, czego się nauczyłeś: {{summary}}",
     status: {
       active: "Aktywna",
       parked: "Odłożona",

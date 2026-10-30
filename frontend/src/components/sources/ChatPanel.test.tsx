@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ChatPanel } from './ChatPanel'
+import type { LearningAside } from '@/lib/types/api'
 
 // useTranslation is mocked globally in setup.ts (t returns the key string)
 
@@ -235,5 +236,86 @@ describe('ChatPanel composer', () => {
     )
 
     expect(screen.getByTestId('context-chip')).toHaveTextContent('chat.contextNone')
+  })
+
+  describe('a reply that used what the learner resolved', () => {
+    const aside: LearningAside = {
+      id: 'learning_aside:one',
+      journey_id: 'learning_journey:one',
+      parent_session_id: 'chat_session:main',
+      chat_session_id: 'chat_session:aside',
+      title: 'Why Jensen applies',
+      status: 'resolved',
+      anchor: { type: 'message', message_id: 'ai:origin', content: 'Origin' },
+      messages: [],
+      updates: [
+        {
+          id: 'learning_update:one',
+          aside_id: 'learning_aside:one',
+          conclusion: 'The logarithm is concave so the bound holds.',
+          relevance: 'It justifies the ELBO.',
+          open_questions: [],
+          citations: [],
+          include_in_main: true,
+          applied_message_id: 'ai:merged',
+          version: 1,
+          created: '2026-10-29T00:00:00Z',
+          updated: '2026-10-29T00:00:00Z',
+        },
+      ],
+      created: '2026-10-29T00:00:00Z',
+      updated: '2026-10-29T00:00:00Z',
+    }
+
+    const renderReply = () =>
+      render(
+        <ChatPanel
+          workspaceMode
+          messages={[
+            { id: 'ai:origin', type: 'ai', content: 'Origin answer' },
+            { id: 'ai:merged', type: 'ai', content: 'Merged answer' },
+          ]}
+          isStreaming={false}
+          contextIndicators={null}
+          onSendMessage={vi.fn()}
+          learningAsides={[aside]}
+          onOpenLearningAside={vi.fn()}
+          onNavigateToMessage={vi.fn()}
+        />
+      )
+
+    it('shows a collapsed chip above that reply only', () => {
+      renderReply()
+
+      const chips = screen.getAllByRole('button', {
+        name: /learningAsides\.usedWhatYouLearned/,
+      })
+      expect(chips).toHaveLength(1)
+      expect(chips[0]).toHaveAttribute('aria-expanded', 'false')
+      // Above the reply: the chip comes before the reply text in the row.
+      expect(
+        chips[0].compareDocumentPosition(screen.getByText('Merged answer')) &
+          Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy()
+      // The full summary card stays closed until asked for.
+      expect(screen.queryByText('learningAsides.origin')).toBeNull()
+    })
+
+    it('expands into the merge summary and collapses again', () => {
+      renderReply()
+
+      const chip = screen.getByRole('button', {
+        name: /learningAsides\.usedWhatYouLearned/,
+      })
+      fireEvent.click(chip)
+      expect(chip).toHaveAttribute('aria-expanded', 'true')
+      expect(screen.getByText('learningAsides.summary')).toBeInTheDocument()
+      expect(screen.getByText('learningAsides.origin')).toBeInTheDocument()
+      expect(screen.getAllByText('learningAsides.whyItMatters')).toHaveLength(2)
+
+      fireEvent.click(chip)
+      expect(chip).toHaveAttribute('aria-expanded', 'false')
+      expect(screen.queryByText('learningAsides.origin')).toBeNull()
+    })
   })
 })

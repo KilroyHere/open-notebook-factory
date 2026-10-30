@@ -523,6 +523,7 @@ export const zhCN = {
     statsSummary: "学习旅程概览",
     statsLearned: "已学到",
     statsSavedForLater: "稍后再看",
+    usedWhatYouLearned: "已使用你学到的内容：{{summary}}",
     status: {
       active: "进行中",
       parked: "已暂存",

@@ -523,6 +523,7 @@ export const frFR = {
     statsSummary: "Résumé du parcours",
     statsLearned: "Appris",
     statsSavedForLater: "Gardé pour plus tard",
+    usedWhatYouLearned: "A utilisé ce que vous avez appris : {{summary}}",
     status: {
       active: "Actif",
       parked: "En attente",
