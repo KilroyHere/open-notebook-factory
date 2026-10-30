@@ -205,5 +205,18 @@ describe('useNotebookWorkspace across chat sessions', () => {
 
     expect(result.current.chat.messages).toEqual(stored[B.id])
     expect(misplacedSections()).toEqual([])
+
+    // Back in A, the question gets its section in A's journey.
+    act(() => result.current.chat.switchSession(A.id))
+    await waitFor(() => expect(result.current.chat.messages).toEqual(stored[A.id]))
+    await waitFor(() =>
+      expect(learningApi.syncSections).toHaveBeenCalledWith(
+        expect.objectContaining({
+          main_session_id: A.id,
+          sections: [{ start_message_id: 'human:a2', title: 'Is the bound tight?' }],
+        })
+      )
+    )
+    expect(misplacedSections()).toEqual([])
   })
 })
