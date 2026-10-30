@@ -1,4 +1,4 @@
-# ADR-0XX: Deep dives open inline under their answer; full height is the fallback
+# ADR-015: Deep dives open inline under their answer; full height is the fallback
 
 - **Status**: Accepted
 - **Date**: 2026-10
