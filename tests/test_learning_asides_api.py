@@ -1,5 +1,6 @@
 """API coverage for learning-aside lifecycle and context integration."""
 
+import json
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from types import SimpleNamespace
@@ -648,8 +649,32 @@ def test_patch_schemas_do_not_advertise_null(client, schema, field):
     components = client.get("/openapi.json").json()["components"]["schemas"]
     definition = components[schema]["properties"][field]
 
-    assert "null" not in str(definition)
+    assert "null" not in json.dumps(definition)
+    assert "anyOf" not in definition
     assert field not in components[schema].get("required", [])
+
+
+@pytest.mark.parametrize(
+    ("path", "body", "field"),
+    [
+        ("/api/learning/asides/learning_aside:one", {"status": "bogus"}, "status"),
+        ("/api/learning/asides/learning_aside:one", {"title": ""}, "title"),
+        ("/api/learning/asides/learning_aside:one", {"title": 5}, "title"),
+        ("/api/learning/asides/learning_aside:one", {"title": "x" * 201}, "title"),
+        ("/api/learning/sections/learning_section:one", {"pinned": "maybe"}, "pinned"),
+        ("/api/learning/sections/learning_section:one", {"title": 5}, "title"),
+    ],
+)
+def test_patch_rejects_a_bad_value_with_one_error_at_the_field(
+    client, path, body, field
+):
+    """A wrong value gets one error that names the field, not one per union arm."""
+    response = client.patch(path, json=body)
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert len(detail) == 1, detail
+    assert detail[0]["loc"] == ["body", field]
 
 
 @pytest.mark.parametrize("field", ["title", "pinned"])
