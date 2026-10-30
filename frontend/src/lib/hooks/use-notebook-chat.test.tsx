@@ -242,6 +242,47 @@ describe('useNotebookChat context', () => {
     )
   })
 
+  it("counts no conclusions left out while another session's count stands in", async () => {
+    const A = {
+      id: 'chat_session:A',
+      title: 'A',
+      notebook_id: 'notebook:1',
+      created,
+      updated: created,
+      message_count: 0,
+      model_override: null,
+    }
+    const B = { ...A, id: 'chat_session:B', title: 'B' }
+    vi.mocked(chatApi.listSessions).mockResolvedValue([A, B])
+    vi.mocked(chatApi.getSession).mockImplementation(async (id: string) => ({
+      ...(id === A.id ? A : B),
+      messages: [],
+    }))
+    const countB = deferred<BuildContextResponse>()
+    vi.mocked(chatApi.buildContext).mockImplementation(async (request) =>
+      request.session_id === B.id
+        ? countB.promise
+        : contextResponse({ learning_updates_omitted: 2 })
+    )
+    const { result } = renderChat()
+    await waitFor(() => expect(result.current.learningUpdatesOmitted).toBe(2))
+
+    act(() => result.current.switchSession(B.id))
+    await waitFor(() =>
+      expect(chatApi.buildContext).toHaveBeenCalledWith(
+        expect.objectContaining({ session_id: B.id })
+      )
+    )
+
+    // A's two left-out conclusions are not B's.
+    expect(result.current.learningUpdatesOmitted).toBe(0)
+    await act(async () => {
+      countB.resolve(contextResponse({ learning_updates_omitted: 1 }))
+      await countB.promise
+    })
+    await waitFor(() => expect(result.current.learningUpdatesOmitted).toBe(1))
+  })
+
   it('keeps none when the context carries no conclusions', async () => {
     const { result } = renderChat()
 

@@ -14,6 +14,7 @@ import { chatApi } from '@/lib/api/chat'
 import { QUERY_KEYS } from '@/lib/api/query-client'
 import {
   BuildContextRequest,
+  BuildContextResponse,
   NotebookChatMessage,
   NotebookChatSessionWithMessages,
   CreateNotebookChatSessionRequest,
@@ -38,6 +39,9 @@ type TurnView =
 type TurnViews = Readonly<Record<string, TurnView>>
 
 const NO_MESSAGES: NotebookChatMessage[] = []
+
+/** A context count, and the session it was counted for (null: none yet). */
+type SessionCount = BuildContextResponse & { countedFor: string | null }
 
 /**
  * `stored` with the question on its way after it, unless `stored` already
@@ -218,7 +222,10 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
   const contextQuery = useMemo(
     () => ({
       queryKey: [...QUERY_KEYS.notebookChatContext(notebookId), contextRequest] as const,
-      queryFn: () => chatApi.buildContext(contextRequest),
+      queryFn: async (): Promise<SessionCount> => ({
+        ...(await chatApi.buildContext(contextRequest)),
+        countedFor: contextRequest.session_id ?? null,
+      }),
       retry: false,
       // An entry carries the full text a turn would send; drop it as soon as
       // its selection is no longer the current one.
@@ -244,6 +251,13 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
     }
     return ids
   }, [context, countingAnew])
+  // How many conclusions the limit leaves out is the selected session's own
+  // count; another session's, standing in until this one is counted, says
+  // nothing about this session's conclusions.
+  const learningUpdatesOmitted =
+    context && context.countedFor === (currentSessionId ?? null)
+      ? context.learning_updates_omitted ?? 0
+      : 0
 
   // A source or note can change without changing the selection (a source
   // finishes processing, gets an insight, a note is edited): count again.
@@ -266,7 +280,10 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
   // also updates the counts.
   const buildContext = useCallback(async () => {
     const response = await chatApi.buildContext(contextRequest)
-    queryClient.setQueryData(contextQuery.queryKey, response)
+    queryClient.setQueryData<SessionCount>(contextQuery.queryKey, {
+      ...response,
+      countedFor: contextRequest.session_id ?? null,
+    })
     return response.context
   }, [contextQuery.queryKey, contextRequest, queryClient])
 
@@ -413,7 +430,7 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
     tokenCount: context?.token_count ?? 0,
     charCount: context?.char_count ?? 0,
     /** Accepted conclusions the context limit keeps out of main chat. */
-    learningUpdatesOmitted: context?.learning_updates_omitted ?? 0,
+    learningUpdatesOmitted,
     /** IDs of the accepted conclusions main chat's counted context keeps. */
     keptLearningUpdateIds,
     pendingModelOverride,
