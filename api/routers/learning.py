@@ -34,6 +34,7 @@ from api.routers._chat_shared import (
     normalize_record_id,
 )
 from open_notebook.database.repository import ensure_record_id, repo_query
+from open_notebook.domain.base import ObjectModel
 from open_notebook.domain.learning import (
     AsideAnchor,
     LearningAside,
@@ -280,13 +281,15 @@ async def get_journey_resume(
         ),
         open_asides[-1] if open_asides else None,
     )
-    discarded = {aside.id for aside in response.asides if aside.status == "discarded"}
+    # The same rule as main chat: only a resolved aside's latest, included
+    # conclusion counts as accepted.
+    resolved = {aside.id for aside in response.asides if aside.status == "resolved"}
     accepted_findings = [
         update.conclusion
         for update in response.updates
         if update.include_in_main
         and not update.superseded
-        and update.aside_id not in discarded
+        and update.aside_id in resolved
     ]
     current_point: Optional[str]
     if active_aside:
@@ -709,16 +712,31 @@ async def _save_resolution_note(
         await note.add_to_notebook(notebook_id)
         await update.set_saved_note(note.id or "")
     except Exception:
-        for record in (note, update):
-            if not record.id:
-                continue
-            try:
-                await record.delete()
-            except Exception:
-                logger.exception(
-                    f"Could not remove {record.id} after its resolution failed"
-                )
+        await _remove_records(note, update)
         raise
+
+
+async def _saved_note(update: LearningUpdate) -> Optional[Note]:
+    """The note saved with ``update``, if it still exists."""
+    if not update.saved_note:
+        return None
+    try:
+        return await Note.get(update.saved_note)
+    except NotFoundError:
+        return None
+
+
+async def _remove_records(*records: ObjectModel) -> None:
+    """Delete what a failed resolution stored, best effort."""
+    for record in records:
+        if not record.id:
+            continue
+        try:
+            await record.delete()
+        except Exception:
+            logger.exception(
+                f"Could not remove {record.id} after its resolution failed"
+            )
 
 
 @router.post("/asides/{aside_id}/resolve", response_model=LearningAsideResponse)
@@ -729,8 +747,9 @@ async def resolve_aside(aside_id: str, request: ResolveLearningAsideRequest):
     concurrent resolutions before anything else is written. With
     ``save_as_note`` the note follows; if it cannot be created, linked to the
     notebook or recorded on the version, the note and the version are deleted
-    again and the error is raised. Nothing is then left behind: the aside
-    keeps its status and a retry starts clean.
+    again and the error is raised. The same happens if the aside cannot then
+    be marked resolved. Nothing is left behind: the aside keeps its status
+    and a retry starts clean.
     """
     aside = await _get_aside(aside_id)
     if aside.status == "discarded":
@@ -750,7 +769,14 @@ async def resolve_aside(aside_id: str, request: ResolveLearningAsideRequest):
         await _save_resolution_note(update, aside, journey.notebook)
 
     aside.status = "resolved"
-    await aside.save()
+    try:
+        await aside.save()
+    except Exception:
+        # Main chat only uses resolved asides' conclusions, and the client sees
+        # a failure: remove this version (and its note) so a retry starts clean.
+        note = await _saved_note(update)
+        await _remove_records(*([note] if note else []), update)
+        raise
     # Back to the parent thread, unless the learner is in another aside now
     # (an aside can be resolved from Studio while a different one is open).
     if journey.active_session == aside.chat_session:

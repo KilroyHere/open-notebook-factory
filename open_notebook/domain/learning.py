@@ -187,10 +187,15 @@ class LearningJourney(ObjectModel):
         """The journey's learning updates, oldest first.
 
         ``include_unmerged=False`` keeps only what may enter main chat: the
-        latest version of each aside that is not discarded, if it is included
-        in main. Otherwise every stored version of every aside is listed.
+        latest version of each resolved aside, if it is included in main. Only
+        a resolved aside's conclusion is listed and switchable in the UI, so no
+        other aside's update reaches main chat (stored data can hold an
+        accepted update on an aside that was later reopened, parked or
+        discarded). Otherwise every stored version of every aside is listed.
         """
         asides = await self.get_asides(include_discarded=include_unmerged)
+        if not include_unmerged:
+            asides = [aside for aside in asides if aside.status == "resolved"]
         aside_ids = [ensure_record_id(aside.id) for aside in asides if aside.id]
         if not aside_ids:
             return []

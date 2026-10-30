@@ -456,6 +456,79 @@ async def test_a_discarded_asides_conclusion_stays_out_of_main_chat():
     ]
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status", ["active", "parked"])
+async def test_only_resolved_asides_conclusions_reach_main_chat(status):
+    from api.routers._chat_shared import load_main_learning_context
+
+    async with memory_database() as db:
+        notebook, journey, kept = await journey_with_aside()
+        reopened = await add_aside(notebook, journey, "Why a Gaussian prior?")
+        with no_transcripts():
+            await resolve(kept, "Kept conclusion", save_as_note=False)
+            await resolve(reopened, "Reopened conclusion", save_as_note=False)
+        # Before status changes were guarded, a resolved aside could be parked
+        # or reopened, so stored data can hold one with an accepted update.
+        await db.query(
+            "UPDATE $aside SET status = $status",
+            {"aside": RecordID.parse(reopened.id or ""), "status": status},
+        )
+        merged = await journey.get_updates(include_unmerged=False)
+        with patch("api.routers._chat_shared.token_count", new=len):
+            learning = await load_main_learning_context(
+                journey.main_session, notebook_id=notebook.id
+            )
+
+    # The UI lists and lets the learner switch only resolved asides'
+    # conclusions, so main chat uses no others.
+    assert [update.conclusion for update in merged] == ["Kept conclusion"]
+    assert [update.conclusion for update in learning.updates] == ["Kept conclusion"]
+
+
+@pytest.mark.asyncio
+async def test_resume_lists_only_resolved_asides_findings():
+    from api.routers.learning import get_journey_resume
+
+    async with memory_database() as db:
+        notebook, journey, kept = await journey_with_aside()
+        reopened = await add_aside(notebook, journey, "Why a Gaussian prior?")
+        with no_transcripts():
+            await resolve(kept, "Kept conclusion", save_as_note=False)
+            await resolve(reopened, "Reopened conclusion", save_as_note=False)
+            await db.query(
+                "UPDATE $aside SET status = 'parked'",
+                {"aside": RecordID.parse(reopened.id or "")},
+            )
+            resume = await get_journey_resume(
+                notebook_id=notebook.id or "", main_session_id=journey.main_session
+            )
+
+    assert resume.accepted_findings == ["Kept conclusion"]
+
+
+@pytest.mark.asyncio
+async def test_resolve_saves_nothing_when_the_aside_cannot_be_marked_resolved():
+    async with memory_database() as db:
+        _, journey, aside = await journey_with_aside()
+        failure = DatabaseOperationError("The database is unavailable")
+        with (
+            no_transcripts(),
+            patch.object(LearningAside, "save", side_effect=failure),
+        ):
+            with pytest.raises(DatabaseOperationError, match="unavailable"):
+                await resolve(aside, "Jensen gives a lower bound.")
+        updates = await count(db, "learning_update")
+        notes = await count(db, "note")
+        stored_aside = await LearningAside.get(aside.id or "")
+        stored_journey = await LearningJourney.get(journey.id or "")
+
+    # The version and its note were stored before the aside's status; both
+    # are removed again, so a retry starts clean and main chat gains nothing.
+    assert (updates, notes) == (0, 0)
+    assert stored_aside.status == "active"
+    assert stored_journey.active_session == aside.chat_session
+
+
 # --- Creating an aside ---------------------------------------------------------
 
 

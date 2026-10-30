@@ -184,8 +184,7 @@ async def load_main_learning_context(
     ``POST /chat/context`` returns its result for display,
     ``POST /chat/execute`` sends the same result to the model, so the two cannot
     disagree, and an aside turn gets the result for its journey's main session.
-    The updates are the latest, included version of each aside that is not
-    discarded, on the journey whose main session is ``session_id``, the newest
+    The updates are the latest, included version of each resolved aside, on the journey whose main session is ``session_id``, the newest
     first within LEARNING_UPDATES_TOKEN_BUDGET; an aside's own session has no
     journey and gets none. When ``notebook_id`` is given, a journey that
     belongs to another notebook contributes nothing.
