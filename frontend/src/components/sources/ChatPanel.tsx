@@ -503,7 +503,7 @@ const ChatMessage = memo(function ChatMessage({
               onReferenceClick={onReferenceClick}
             />
           ) : (
-            <p className="text-sm break-all">{message.content}</p>
+            <p className="text-sm break-words">{message.content}</p>
           )}
         </div>
         {appliedUpdates.map(({ aside, update }) => (

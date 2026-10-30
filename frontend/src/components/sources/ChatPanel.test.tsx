@@ -161,4 +161,23 @@ describe('ChatPanel composer', () => {
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'model-picker' })).toBeInTheDocument()
   })
+
+  it('wraps human messages at word boundaries instead of mid-word', () => {
+    render(
+      <ChatPanel
+        messages={[
+          { id: 'h1', type: 'human', content: 'Why does this work and happen to converge?' },
+        ]}
+        isStreaming={false}
+        contextIndicators={null}
+        onSendMessage={vi.fn()}
+      />
+    )
+
+    const bubble = screen.getByText('Why does this work and happen to converge?')
+    // break-all splits ordinary words ("works a / nd"); break-words only
+    // breaks a string that cannot fit on a line by itself.
+    expect(bubble).not.toHaveClass('break-all')
+    expect(bubble).toHaveClass('break-words')
+  })
 })
