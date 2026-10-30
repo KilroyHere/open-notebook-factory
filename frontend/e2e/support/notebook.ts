@@ -69,18 +69,6 @@ export function createMockApi(): MockApi {
   return new MockApi({ notebook: NOTEBOOK, sources: SOURCES })
 }
 
-/** A main-chat session with one earlier exchange, before QUESTION is asked. */
-export function seedConversation(api: MockApi) {
-  const session = api.addSession('Getting started')
-  api.addMessage(session.messages, 'human', 'What are these two sources about?')
-  api.addMessage(
-    session.messages,
-    'ai',
-    'Both explain the Transformer, a model that reads text with attention.'
-  )
-  return { session }
-}
-
 /** A main-chat session in which QUESTION got ANSWER. */
 export function seedAnsweredQuestion(api: MockApi) {
   const session = api.addSession(QUESTION)

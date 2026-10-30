@@ -44,3 +44,38 @@ export async function whatYouLearned(page: Page) {
 export function errorToast(page: Page) {
   return page.locator('[data-sonner-toast][data-type="error"]')
 }
+
+/**
+ * Record, from now on, whether a main-chat message with `text` ever stops
+ * being on screen, however briefly (a MutationObserver sees every change).
+ * The returned function says whether it did.
+ */
+export async function watchChatMessage(
+  page: Page,
+  text: string
+): Promise<() => Promise<boolean>> {
+  await page.evaluate((watched) => {
+    const record = { left: false }
+    const shown = () =>
+      Array.from(document.querySelectorAll('[id^="chat-message-"]')).some((row) =>
+        row.textContent?.includes(watched)
+      )
+    new MutationObserver(() => {
+      if (!shown()) record.left = true
+    }).observe(document.body, { childList: true, subtree: true })
+    ;(window as unknown as { e2eChatWatch: typeof record }).e2eChatWatch = record
+  }, text)
+  return () =>
+    page.evaluate(
+      () => (window as unknown as { e2eChatWatch: { left: boolean } }).e2eChatWatch.left
+    )
+}
+
+/** Wait until the page has drawn `count` more frames. */
+export async function nextFrames(page: Page, count = 2): Promise<void> {
+  await page.evaluate(async (frames) => {
+    for (let frame = 0; frame < frames; frame++) {
+      await new Promise((resolve) => requestAnimationFrame(resolve))
+    }
+  }, count)
+}

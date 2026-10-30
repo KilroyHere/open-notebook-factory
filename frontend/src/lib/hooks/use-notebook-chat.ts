@@ -15,12 +15,21 @@ import { QUERY_KEYS } from '@/lib/api/query-client'
 import {
   BuildContextRequest,
   NotebookChatMessage,
+  NotebookChatSessionWithMessages,
   CreateNotebookChatSessionRequest,
   UpdateNotebookChatSessionRequest,
   SourceListResponse,
   NoteResponse
 } from '@/lib/types/api'
 import type { ContextSelections } from '@/lib/types/notebook-context'
+
+/** The ID prefix of a question shown before the API has stored it. */
+export const PENDING_MESSAGE_PREFIX = 'temp-'
+
+/** A question on its way, shown before the API has stored it (and given it an ID). */
+export function isPendingMessage(message: Pick<NotebookChatMessage, 'id'>): boolean {
+  return message.id.startsWith(PENDING_MESSAGE_PREFIX)
+}
 
 interface UseNotebookChatParams {
   notebookId: string
@@ -69,17 +78,20 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
   })
 
   // Fetch current session with messages
-  const {
-    data: currentSession,
-    refetch: refetchCurrentSession
-  } = useQuery({
+  const { data: currentSession } = useQuery({
     queryKey: QUERY_KEYS.notebookChatSession(currentSessionId!),
     queryFn: () => chatApi.getSession(currentSessionId!),
     enabled: !!notebookId && !!currentSessionId
   })
 
-  // Update messages when current session changes
+  // Turns on their way. A read of the session that lands meanwhile predates
+  // the turn (a new session's first read is empty), so it must not replace
+  // the question shown while the model answers.
+  const turnsInFlight = useRef(0)
+
+  // Show the session's messages as read from the API.
   useEffect(() => {
+    if (turnsInFlight.current > 0) return
     if (currentSession?.messages) {
       setMessages(currentSession.messages)
     }
@@ -250,11 +262,13 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
 
     // Add user message optimistically
     const userMessage: NotebookChatMessage = {
-      id: `temp-${Date.now()}`,
+      id: `${PENDING_MESSAGE_PREFIX}${Date.now()}`,
       type: 'human',
       content: message,
       timestamp: new Date().toISOString()
     }
+    const sessionKey = QUERY_KEYS.notebookChatSession(sessionId)
+    turnsInFlight.current += 1
     setMessages(prev => [...prev, userMessage])
     setIsSending(true)
 
@@ -268,27 +282,36 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
         model_override: modelOverride ?? (currentSession?.model_override ?? undefined)
       })
 
-      // Update messages with API response
+      // A read of the session still on its way started before this reply
+      // and knows nothing of the turn: drop it, and keep the reply in the
+      // cache too, so neither puts the earlier conversation back.
+      await queryClient.cancelQueries({ queryKey: sessionKey, exact: true })
+      queryClient.setQueryData<NotebookChatSessionWithMessages>(
+        sessionKey,
+        (cached) => (cached ? { ...cached, messages: response.messages } : cached)
+      )
       setMessages(response.messages)
-
-      // Refetch current session to get updated data
-      await refetchCurrentSession()
     } catch (err: unknown) {
       const error = err as { response?: { data?: { detail?: string } }, message?: string };
       console.error('Error sending message:', error)
       toast.error(getApiErrorMessage(error.response?.data?.detail || error.message, (key) => t(key), 'apiErrors.failedToSendMessage'))
       // Remove optimistic message on error
-      setMessages(prev => prev.filter(msg => !msg.id.startsWith('temp-')))
+      setMessages(prev => prev.filter(msg => !isPendingMessage(msg)))
     } finally {
+      turnsInFlight.current -= 1
       setIsSending(false)
     }
+
+    // Read the session afresh. A refetch would join a first read still in
+    // flight (one with no data yet is not restarted), so cancel that first.
+    await queryClient.cancelQueries({ queryKey: sessionKey, exact: true })
+    await queryClient.refetchQueries({ queryKey: sessionKey, exact: true })
   }, [
     notebookId,
     currentSessionId,
     currentSession,
     pendingModelOverride,
     buildContext,
-    refetchCurrentSession,
     queryClient,
     t
   ])

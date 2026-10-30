@@ -16,7 +16,6 @@ import {
   QUESTION,
   SOURCES,
   seedAnsweredQuestion,
-  seedConversation,
   seedResolvedDive,
 } from './support/notebook'
 import {
@@ -24,32 +23,46 @@ import {
   diveComposer,
   errorToast,
   mainComposer,
+  nextFrames,
   openNotebook,
   studio,
+  watchChatMessage,
   whatYouLearned,
 } from './support/notebook-page'
 
 // Deep dives ("learning asides") on the notebook page, against the mocked
 // API in ./support/mock-api.ts: no backend, database or model.
 
-test('an answer in the main chat shows numbered citations and a titled References list', async ({
+test('the first question of a new chat stays on screen, and its answer shows numbered citations and a titled References list', async ({
   page,
   api,
 }) => {
-  // Ask in a conversation that is already on screen. In a brand-new session
-  // the session's first read can still be pending when the reply comes,
-  // and its empty message list then replaces the reply (an app race).
-  const { session } = seedConversation(api)
+  // A notebook without a chat yet. The model takes its time, as models do,
+  // so the new session's first read comes back before the answer.
   api.chatReplies.push(ANSWER)
+  const answerNow = api.hold('POST', /^\/chat\/execute$/)
+  const readNow = api.hold('GET', /^\/chat\/sessions\/[^/]+$/)
   await openNotebook(page)
-  await expect(chatMessage(page, 'Both explain the Transformer')).toBeVisible()
 
   await mainComposer(page).fill(QUESTION)
   await mainComposer(page).press('ControlOrMeta+Enter')
-
   await expect(chatMessage(page, QUESTION)).toBeVisible()
+  const questionLeft = await watchChatMessage(page, QUESTION)
+
+  // The session's first read: nothing is stored yet. The page renders what
+  // it read before the model answers. (How long the model takes changes
+  // nothing for a correct page; waiting lets a wrong one show the gap.)
+  const firstRead = page.waitForEvent('requestfinished', (request) =>
+    /^\/api\/chat\/sessions\/[^/]+$/.test(new URL(request.url()).pathname)
+  )
+  readNow()
+  await firstRead
+  await nextFrames(page)
+  answerNow()
+
   const answer = chatMessage(page, 'Self-attention lets every token')
   await expect(answer).toBeVisible()
+  await expect(chatMessage(page, QUESTION)).toBeVisible()
   // Citations are numbered in the order the sources are first cited...
   await expect(answer.getByRole('button', { name: '1', exact: true })).toHaveCount(2)
   await expect(answer.getByRole('button', { name: '2', exact: true })).toHaveCount(1)
@@ -59,10 +72,16 @@ test('an answer in the main chat shows numbered citations and a titled Reference
     await expect(answer.getByRole('button', { name: title })).toBeVisible()
   }
   await expect(answer).not.toContainText('source:')
+  // The question never left the chat while the answer was on its way.
+  expect(await questionLeft()).toBe(false)
 
-  // The turn went to the open session, with both sources in its context.
+  // The first message created the session; the turn went to it, with both
+  // sources in its context.
+  expect(api.callsTo('POST', '/chat/sessions').map((call) => call.body)).toEqual([
+    { notebook_id: NOTEBOOK.id, title: QUESTION },
+  ])
   const [turn] = api.callsTo<SendNotebookChatMessageRequest>('POST', '/chat/execute')
-  expect(turn.body).toMatchObject({ session_id: session.id, message: QUESTION })
+  expect(turn.body).toMatchObject({ session_id: api.sessions[0].id, message: QUESTION })
   expect(turn.body.context.sources).toHaveLength(SOURCES.length)
 })
 

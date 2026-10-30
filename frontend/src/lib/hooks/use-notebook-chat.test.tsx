@@ -7,6 +7,8 @@ import { chatApi } from '@/lib/api/chat'
 import { QUERY_KEYS } from '@/lib/api/query-client'
 import type {
   BuildContextResponse,
+  NotebookChatMessage,
+  NotebookChatSessionWithMessages,
   NoteResponse,
   SourceListResponse,
 } from '@/lib/types/api'
@@ -265,5 +267,102 @@ describe('useNotebookChat context', () => {
     })
 
     expect(result.current.tokenCount).toBe(200)
+  })
+})
+
+describe('useNotebookChat messages', () => {
+  const session = {
+    id: 'chat_session:new',
+    title: 'Why is the ELBO a bound?',
+    notebook_id: 'notebook:1',
+    created,
+    updated: created,
+    message_count: 0,
+    model_override: null,
+  }
+  const question: NotebookChatMessage = {
+    id: 'human:1',
+    type: 'human',
+    content: 'Why is the ELBO a bound?',
+  }
+  const reply: NotebookChatMessage = {
+    id: 'ai:1',
+    type: 'ai',
+    content: 'Jensen: the log of an expectation bounds the expected log.',
+  }
+  const turn = { session_id: session.id, messages: [question, reply] }
+
+  beforeEach(() => {
+    vi.mocked(chatApi.getSession).mockReset()
+    vi.mocked(chatApi.sendMessage).mockReset()
+    vi.mocked(chatApi.listSessions).mockResolvedValue([])
+    vi.mocked(chatApi.createSession).mockResolvedValue(session)
+    vi.mocked(chatApi.buildContext).mockResolvedValue(contextResponse())
+  })
+
+  it("keeps a new session's first question on screen while its reply is on its way", async () => {
+    const firstRead = deferred<NotebookChatSessionWithMessages>()
+    const answer = deferred<typeof turn>()
+    vi.mocked(chatApi.getSession)
+      .mockReturnValueOnce(firstRead.promise)
+      .mockResolvedValue({ ...session, messages: [question, reply] })
+    vi.mocked(chatApi.sendMessage).mockReturnValue(answer.promise)
+    const { result } = renderChat()
+
+    let sending: Promise<void> = Promise.resolve()
+    await act(async () => {
+      sending = result.current.sendMessage(question.content)
+    })
+    await waitFor(() => expect(chatApi.getSession).toHaveBeenCalledTimes(1))
+    // The new session's first read comes back while the model is still
+    // answering, with nothing stored yet.
+    await act(async () => {
+      firstRead.resolve({ ...session, messages: [] })
+      await firstRead.promise
+    })
+    await waitFor(() =>
+      expect(result.current.currentSession).toMatchObject({ messages: [] })
+    )
+
+    expect(result.current.messages.map((message) => message.content)).toEqual([
+      question.content,
+    ])
+
+    await act(async () => {
+      answer.resolve(turn)
+      await sending
+    })
+    expect(result.current.messages).toEqual([question, reply])
+  })
+
+  it('keeps the reply when a read sent before it comes back after it, and reads the session again', async () => {
+    const earlierRead = deferred<NotebookChatSessionWithMessages>()
+    vi.mocked(chatApi.getSession)
+      .mockReturnValueOnce(earlierRead.promise)
+      .mockResolvedValue({ ...session, messages: [question, reply] })
+    vi.mocked(chatApi.sendMessage).mockResolvedValue(turn)
+    const { result } = renderChat()
+
+    let sending: Promise<void> = Promise.resolve()
+    await act(async () => {
+      sending = result.current.sendMessage(question.content)
+    })
+    await waitFor(() => expect(result.current.messages).toEqual([question, reply]))
+
+    // The session's first read was sent before the turn was stored and
+    // comes back last, with the conversation as it was then.
+    await act(async () => {
+      earlierRead.resolve({ ...session, messages: [] })
+      await sending
+    })
+
+    // After the turn the session is read afresh, not taken from that read.
+    expect(chatApi.getSession).toHaveBeenCalledTimes(2)
+    await waitFor(() =>
+      expect(result.current.currentSession).toMatchObject({
+        messages: [question, reply],
+      })
+    )
+    expect(result.current.messages).toEqual([question, reply])
   })
 })
