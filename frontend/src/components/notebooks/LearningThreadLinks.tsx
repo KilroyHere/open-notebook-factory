@@ -11,9 +11,13 @@ import {
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { ReferencedMarkdown } from '@/components/common/ReferencedMarkdown'
 import { LearningAside, LearningUpdate } from '@/lib/types/api'
 import { useTranslation } from '@/lib/hooks/use-translation'
-import { childDiveForQuestion } from '@/lib/utils/learning-asides'
+import {
+  childDiveForQuestion,
+  toPlainTextPreview,
+} from '@/lib/utils/learning-asides'
 import { cn } from '@/lib/utils'
 
 interface LearningThreadLinksProps {
@@ -230,15 +234,23 @@ export function LearningMergeEvent({
         <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-fern" />
         <p className="text-xs font-semibold">{t('learningAsides.summary')}</p>
       </div>
-      <p className="mt-1 break-words text-xs">{update.conclusion}</p>
+      <div className="mt-1 min-w-0">
+        <ReferencedMarkdown
+          content={update.conclusion}
+          onReferenceClick={onReferenceClick}
+        />
+      </div>
       {update.relevance && (
         <div className="mt-2">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             {t('learningAsides.whyItMatters')}
           </p>
-          <p className="mt-1 break-words text-xs text-muted-foreground">
-            {update.relevance}
-          </p>
+          <div className="mt-1 min-w-0 text-muted-foreground">
+            <ReferencedMarkdown
+              content={update.relevance}
+              onReferenceClick={onReferenceClick}
+            />
+          </div>
         </div>
       )}
       <LearningQuestionList
@@ -312,7 +324,7 @@ export function LearningThreadLinks({
                     </p>
                   </div>
                   <p className="mt-1 line-clamp-3 break-words text-xs text-muted-foreground">
-                    {latestUpdate.conclusion}
+                    {toPlainTextPreview(latestUpdate.conclusion)}
                   </p>
                   {latestUpdate.relevance && (
                     <div className="mt-1">
@@ -320,7 +332,7 @@ export function LearningThreadLinks({
                         {t('learningAsides.whyItMatters')}
                       </p>
                       <p className="mt-1 line-clamp-2 break-words text-xs text-muted-foreground">
-                        {latestUpdate.relevance}
+                        {toPlainTextPreview(latestUpdate.relevance)}
                       </p>
                     </div>
                   )}

@@ -138,6 +138,35 @@ describe('LearningThreadLinks', () => {
     expect(onReferenceClick).toHaveBeenCalledWith('source_insight', 'lemma')
   })
 
+  it('renders math in the merged summary and keeps the capsule preview plain', () => {
+    const update = {
+      ...resolvedAside.updates[0],
+      conclusion: 'Scores are divided by $\\sqrt{d_k}$.',
+      relevance: 'It explains the $\\sqrt{d_k}$ factor [source:paper].',
+    }
+    const { container, unmount } = render(
+      <LearningMergeEvent aside={resolvedAside} update={update} />
+    )
+    expect(screen.queryByText(/\$\\sqrt/)).not.toBeInTheDocument()
+    expect(container.querySelectorAll('.katex')).toHaveLength(2)
+    unmount()
+
+    render(
+      <LearningThreadLinks
+        messageId="ai:origin"
+        asides={[{ ...resolvedAside, updates: [update] }]}
+        onOpenAside={vi.fn()}
+        onNavigateToMessage={vi.fn()}
+      />
+    )
+    expect(
+      screen.getByText('Scores are divided by sqrt d_k.')
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('It explains the sqrt d_k factor.')
+    ).toBeInTheDocument()
+  })
+
   it('starts or parks a nested dive from an open question', () => {
     const onDiveIntoQuestion = vi.fn()
     const onParkQuestion = vi.fn()

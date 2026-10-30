@@ -421,9 +421,12 @@ export function LearningAsidePanel({
                         <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                           {t('learningAsides.whyItMatters')}
                         </p>
-                        <p className="text-sm text-muted-foreground">
-                          {latestUpdate.relevance}
-                        </p>
+                        <div className="min-w-0 text-muted-foreground">
+                          <ReferencedMarkdown
+                            content={latestUpdate.relevance}
+                            onReferenceClick={onReferenceClick}
+                          />
+                        </div>
                       </div>
                     )}
                     {latestUpdate.open_questions.length > 0 && (

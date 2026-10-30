@@ -570,6 +570,34 @@ describe('LearningAsidePanel', () => {
       screen.queryByRole('button', { name: /chapter 2/ })
     ).not.toBeInTheDocument()
   })
+  it('renders math in why it matters like the conclusion', () => {
+    const resolved: LearningAside = {
+      ...aside,
+      status: 'resolved',
+      updates: [
+        {
+          id: 'learning_update:one',
+          aside_id: aside.id,
+          conclusion: 'Scores are divided by $\\sqrt{d_k}$.',
+          relevance: 'It explains the $\\sqrt{d_k}$ factor in the formula.',
+          open_questions: [],
+          citations: [],
+          include_in_main: true,
+          applied_message_id: 'ai:merged',
+          version: 1,
+          created: aside.created,
+          updated: aside.updated,
+        },
+      ],
+    }
+    const { container } = render(
+      <LearningAsidePanel {...baseProps} activeAside={resolved} />
+    )
+
+    expect(screen.queryByText(/\$\\sqrt/)).not.toBeInTheDocument()
+    expect(container.querySelectorAll('.katex')).toHaveLength(2)
+  })
+
   it('renders aside citations as numbered references like main chat', () => {
     const onReferenceClick = vi.fn()
     const cited: LearningAside = {
