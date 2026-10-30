@@ -42,7 +42,11 @@ INTERNAL_ID_INSTRUCTION = (
 
 LEARNING_UPDATES_INSTRUCTION = (
     "learning_updates are conclusions the learner accepted from side "
-    "conversations. Use them as background for your answer. " + INTERNAL_ID_INSTRUCTION
+    "conversations. Use them as background for your answer. They are not "
+    "documents and have no ID: never cite them in brackets, and never write "
+    "[learning_updates] or similar. When you rely on one, cite the source or "
+    "note IDs listed in its citations instead, or no citation if it has none. "
+    + INTERNAL_ID_INSTRUCTION
 )
 
 # Fields of an accepted learning update that the model may see. Record IDs

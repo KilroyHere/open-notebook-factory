@@ -324,6 +324,19 @@ export function createReferenceLinkComponent(
   return ReferenceLinkComponent
 }
 
+// Internal learning records are not documents, but the model sometimes cites
+// them anyway ("[learning_updates]", "[source:a, learning_update:x]"). Drop
+// those tokens so they never render as text or as broken citations.
+const INTERNAL_CITATION =
+  '(?:learning_updates?|learning_asides?|learning_journeys?|learning_sections?|chat_sessions?)(?::[A-Za-z0-9_-]+)?'
+
+export function stripInternalCitations(text: string): string {
+  return text
+    .replace(new RegExp(`\\s*,\\s*${INTERNAL_CITATION}(?=[^\\[\\]\\n]*\\])`, 'g'), '')
+    .replace(new RegExp(`\\[${INTERNAL_CITATION}\\s*,\\s*`, 'g'), '[')
+    .replace(new RegExp(`[ \\t]*\\[${INTERNAL_CITATION}\\]`, 'g'), '')
+}
+
 /**
  * Convert references in text to compact numbered format with reference list
  *
@@ -346,6 +359,8 @@ export function createReferenceLinkComponent(
  * Output: "See [1] and [2]. Also [1] again.\n\nReferences:\n[1] - [source:abc]\n[2] - [note:xyz]"
  */
 export function convertReferencesToCompactMarkdown(text: string, referencesLabel: string = 'References'): string {
+  text = stripInternalCitations(text)
+
   // Step 1: Parse all references using existing function
   const references = parseSourceReferences(text)
 
