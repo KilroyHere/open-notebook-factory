@@ -119,6 +119,8 @@ Each source also has its own chat. Open the source and click **Chat with Sources
 
 Source chat always uses that source's full text and insights; there are no context levels. Long sources are truncated to fit about 50,000 tokens, so questions about the later parts of a very long document may not be answerable there; use notebook chat with the source at *Full content* instead (large contexts switch to your Large Context Model). **Save to note** is not available in source chat (the source isn't tied to one notebook); use **Copy to clipboard**.
 
+Answers cite the source and its insights with numbered references. The **References** list under an answer names the source by its title and each insight by its type (for example **Dense Summary**); anything else it cites reads **Note 1**, **Insight 2** and so on. Click a number or a name to open the item.
+
 ---
 
 ## When Something Goes Wrong

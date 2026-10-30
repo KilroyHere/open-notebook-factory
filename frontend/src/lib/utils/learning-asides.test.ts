@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { LearningAside, LearningJourney, LearningUpdate } from '@/lib/types/api'
 import {
+  buildReferenceTitles,
   canOpenInline,
   childDiveForQuestion,
   childDives,
@@ -284,6 +285,24 @@ describe('journeyStats', () => {
       expect(next.asides[1]).toBe(leftOut)
       expect(journeyStats(next.asides).learned).toBe(0)
       expect(withIncludeInMain([v1], 'learning_update:other', false)).toEqual([v1])
+    })
+  })
+})
+
+describe('buildReferenceTitles', () => {
+  it('names insights by the transformation that made them', () => {
+    expect(
+      buildReferenceTitles(
+        [{ id: 'source:paper', title: 'Attention Is All You Need' }],
+        [],
+        [
+          { id: 'source_insight:dense', insight_type: ' Dense Summary ' },
+          { id: 'source_insight:blank', insight_type: '  ' },
+        ]
+      )
+    ).toEqual({
+      'source:paper': 'Attention Is All You Need',
+      'source_insight:dense': 'Dense Summary',
     })
   })
 })

@@ -1,3 +1,4 @@
+import type { SourceInsightResponse } from '@/lib/api/insights'
 import {
   LearningAside,
   LearningJourney,
@@ -87,7 +88,10 @@ export function normalizeOpenQuestions(questions: string[]): string[] {
   return result
 }
 
-/** Titles of cited documents, keyed `source:<id>` / `note:<id>` without the record prefix. */
+/**
+ * Titles of cited documents, keyed `source:<id>` / `note:<id>` /
+ * `source_insight:<id>` without the record prefix.
+ */
 export type ReferenceTitles = Record<string, string>
 
 function bareRecordId(id: string, table: string): string {
@@ -98,10 +102,15 @@ export function referenceTitleKey(type: string, id: string): string {
   return `${type}:${bareRecordId(id, type)}`
 }
 
-/** Look up the titles a learning update's evidence buttons can show. */
+/**
+ * The titles a References list and a learning update's evidence buttons can
+ * show: each source's and note's title, and each insight's type (the
+ * transformation that made it, such as "Dense Summary").
+ */
 export function buildReferenceTitles(
   sources: Pick<SourceListResponse, 'id' | 'title'>[] = [],
-  notes: Pick<NoteResponse, 'id' | 'title'>[] = []
+  notes: Pick<NoteResponse, 'id' | 'title'>[] = [],
+  insights: Pick<SourceInsightResponse, 'id' | 'insight_type'>[] = []
 ): ReferenceTitles {
   const titles: ReferenceTitles = {}
   for (const source of sources) {
@@ -111,6 +120,10 @@ export function buildReferenceTitles(
   for (const note of notes) {
     const title = note.title?.trim()
     if (title) titles[referenceTitleKey('note', note.id)] = title
+  }
+  for (const insight of insights) {
+    const title = insight.insight_type?.trim()
+    if (title) titles[referenceTitleKey('source_insight', insight.id)] = title
   }
   return titles
 }
