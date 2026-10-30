@@ -46,6 +46,8 @@ export function useAsideResolution({
   const [isDrafting, setIsDrafting] = useState(false)
   const [draftFailed, setDraftFailed] = useState(false)
   const [includeInMain, setIncludeInMain] = useState(true)
+  // Whether the learner changed "use in main chat" in the form itself.
+  const [includeChosen, setIncludeChosen] = useState(false)
   const [saveAsNote, setSaveAsNote] = useState(false)
   // Each draft request gets a number; a reply for an older one is ignored.
   const draftRequest = useRef(0)
@@ -66,6 +68,17 @@ export function useAsideResolution({
       .find((message) => message.type === 'ai')?.content ?? ''
   const latestAnswerDraft = createLearningUpdateDraft(latestAnswerContent)
   const latestUpdate = aside?.updates.at(-1)
+
+  // While a resolution is being updated, "Use in main chat" can also be
+  // switched in the summary or in Studio. Follow that stored choice, so
+  // submitting doesn't bring back a conclusion the learner just left out,
+  // unless they changed the form's own checkbox.
+  const storedInclude = latestUpdate?.include_in_main
+  useEffect(() => {
+    if (!isOpen || includeChosen || status !== 'resolved') return
+    if (storedInclude === undefined) return
+    setIncludeInMain(storedInclude)
+  }, [includeChosen, isOpen, status, storedInclude])
 
   // Fill the form without raw citation markers, keeping their citations.
   const prefill = (
@@ -94,6 +107,7 @@ export function useAsideResolution({
     const requestId = ++draftRequest.current
     setIsOpen(true)
     setDraftFailed(false)
+    setIncludeChosen(false)
     if (aside.status === 'resolved' && latestUpdate) {
       // Updating a resolution starts from what the learner already approved,
       // including whether main chat uses it: a conclusion they left out
@@ -144,6 +158,11 @@ export function useAsideResolution({
     )
   }
 
+  const chooseIncludeInMain = (value: boolean) => {
+    setIncludeChosen(true)
+    setIncludeInMain(value)
+  }
+
   const removeOpenQuestion = (index: number) => {
     setOpenQuestions((questions) =>
       questions.filter((_, position) => position !== index)
@@ -187,7 +206,7 @@ export function useAsideResolution({
     updateOpenQuestion,
     removeOpenQuestion,
     includeInMain,
-    setIncludeInMain,
+    setIncludeInMain: chooseIncludeInMain,
     saveAsNote,
     setSaveAsNote,
     start,
