@@ -66,6 +66,10 @@ The conclusions share a budget of 4,000 tokens per turn (`LEARNING_UPDATES_TOKEN
 
 To leave one conclusion out of main chat without re-resolving its aside, send `PATCH /api/learning/updates/{id}` with `{"include_in_main": false}`; `true` puts it back. It changes that version in place (no new version) and returns it. Only the latest version of an aside can be changed: a superseded version returns 400, an unknown ID 404.
 
+## Learning asides
+
+`POST /api/learning/asides` accepts anchor text (`anchor.content`) up to 200,000 characters, since **Go deeper** sends the whole answer; longer requests return 422. The aside stores the first 20,000 characters, cut at a word boundary and ending in "…" (`ANCHOR_CONTENT_MAX_CHARS` in `open_notebook/domain/learning.py`). The anchor's `message_id` and the aside's branch snapshot still lead to the full answer.
+
 ## Async operations
 
 Source processing, embedding and podcast generation run on the background worker (see [architecture.md](architecture.md#background-jobs)). The endpoint that starts them returns right away with a record and/or a job id:

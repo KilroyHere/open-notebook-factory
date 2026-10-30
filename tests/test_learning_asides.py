@@ -323,6 +323,61 @@ class TestLearningModels:
         assert anchor.content == "selected explanation"
         assert aside.title == "Why does this follow?"
 
+    def test_long_anchor_is_stored_clipped_at_a_word_boundary(self):
+        from open_notebook.domain.learning import ANCHOR_CONTENT_MAX_CHARS
+
+        text = "  " + "word " * 10_000 + "  "
+
+        anchor = AsideAnchor(content=text)
+
+        assert len(anchor.content) <= ANCHOR_CONTENT_MAX_CHARS
+        assert anchor.content.endswith("word…")
+        assert text.strip().startswith(anchor.content[:-1])
+
+    def test_anchor_within_the_limit_is_kept_whole(self):
+        from open_notebook.domain.learning import ANCHOR_CONTENT_MAX_CHARS
+
+        text = "a" * ANCHOR_CONTENT_MAX_CHARS
+
+        assert AsideAnchor(content=f" {text} ").content == text
+
+    @pytest.mark.parametrize(
+        ("text", "expected"),
+        [
+            # Within the limit once stripped: unchanged.
+            ("  alpha beta gamm  ", "alpha beta gamm"),
+            # The cut falls inside "gamma": the partial word is dropped.
+            ("alpha beta gamma", "alpha beta…"),
+            ("alpha beta   gamma", "alpha beta…"),
+            ("alpha\nbeta gamma", "alpha\nbeta…"),
+            # The cut falls right after "gam": it is a whole word and stays.
+            ("alpha beta gam xyz", "alpha beta gam…"),
+            # No whitespace at all: cut through.
+            ("abcdefghijklmnopq", "abcdefghijklmn…"),
+        ],
+    )
+    def test_clip_anchor_content(self, text, expected):
+        from open_notebook.domain.learning import clip_anchor_content
+
+        clipped = clip_anchor_content(text, limit=15)
+
+        assert clipped == expected
+        assert len(clipped) <= 15
+
+    def test_clip_cuts_through_a_last_word_too_long_to_drop(self):
+        from open_notebook.domain.learning import (
+            ANCHOR_CONTENT_MAX_CHARS,
+            clip_anchor_content,
+        )
+
+        # One space near the start, then a single 30,000-character token.
+        text = "start " + "x" * 30_000
+
+        clipped = clip_anchor_content(text)
+
+        assert len(clipped) == ANCHOR_CONTENT_MAX_CHARS
+        assert clipped == text[: ANCHOR_CONTENT_MAX_CHARS - 1] + "…"
+
     @pytest.mark.parametrize(
         ("factory", "message"),
         [

@@ -23,6 +23,7 @@ An aside is a child `chat_session` with a SurrealDB `learning_aside` record that
 - The main prompt stays compact and receives only accepted conclusions.
 - Branches remain auditable and can be reopened without rewriting earlier updates.
 - Stable message identifiers and source snapshots are part of the feature contract.
+- The anchor snapshot is bounded: an aside stores at most 20,000 characters of anchor text, clipped at a word boundary. The API accepts up to 200,000, so Go deeper can send a whole long answer; the anchor's message ID and the branch snapshot keep the full text.
 - Those identifiers stay server-side: an aside's model sees its anchor as type and text, plus the source ID when it is a citable document. Message IDs, the UI locator and learning record IDs never reach a prompt.
 - Deleting notebooks or main sessions must cascade through hidden child sessions and updates.
 - The child session carries its own marker, `chat_session.kind = "learning_aside"`, set when the aside is created (migration 29 marked existing ones). Session lists filter on that field; looking every session up in `learning_aside` grew with all asides in the database.

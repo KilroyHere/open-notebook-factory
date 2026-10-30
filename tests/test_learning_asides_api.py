@@ -644,6 +644,115 @@ def test_create_aside_rejects_empty_anchor_before_domain_work(client):
     assert response.status_code == 422
 
 
+def test_go_deeper_on_a_long_answer_stores_a_clipped_anchor(client):
+    """Go deeper sends the whole answer; only the stored anchor is clipped."""
+    from langchain_core.messages import AIMessage, HumanMessage
+
+    from open_notebook.domain.learning import ANCHOR_CONTENT_MAX_CHARS
+
+    long_answer = "The evidence lower bound follows from Jensen's inequality. " * 600
+    long_answer = long_answer.strip()
+    assert len(long_answer) > 30_000
+    checkpoint = SimpleNamespace(
+        values={
+            "messages": [
+                HumanMessage(content="Explain the ELBO", id="human-1"),
+                AIMessage(content=long_answer, id="ai-long"),
+            ]
+        }
+    )
+    saved = {}
+
+    async def save_session(session):
+        session.id = "chat_session:child"
+        session.created = NOW
+        session.updated = NOW
+
+    async def save_aside(aside):
+        aside.id = "learning_aside:aside"
+        aside.created = NOW
+        aside.updated = NOW
+        saved["aside"] = aside
+
+    with (
+        patch(
+            "api.routers.learning._verify_notebook_session",
+            new_callable=AsyncMock,
+            return_value=(
+                "chat_session:main",
+                SimpleNamespace(id="notebook:one"),
+                SimpleNamespace(model_override=None),
+            ),
+        ),
+        patch("api.routers.learning.chat_graph.get_state", return_value=checkpoint),
+        patch(
+            "api.routers.learning.LearningAside.get_for_chat_session",
+            new_callable=AsyncMock,
+            return_value=None,
+        ),
+        patch(
+            "api.routers.learning.LearningJourney.get_or_create",
+            new_callable=AsyncMock,
+            return_value=_journey(),
+        ),
+        patch("api.routers.learning.ChatSession.save", new=save_session),
+        patch(
+            "api.routers.learning.ChatSession.relate_to_notebook",
+            new_callable=AsyncMock,
+        ),
+        patch("api.routers.learning.LearningAside.save", new=save_aside),
+        patch("api.routers.learning.LearningJourney.save", new_callable=AsyncMock),
+        patch(
+            "api.routers.learning._aside_response",
+            new_callable=AsyncMock,
+            side_effect=lambda aside: _aside_response(aside),
+        ),
+    ):
+        response = client.post(
+            "/api/learning/asides",
+            json={
+                "notebook_id": "notebook:one",
+                "parent_session_id": "chat_session:main",
+                "anchor": {
+                    "type": "message",
+                    "message_id": "ai-long",
+                    "content": long_answer,
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    stored = saved["aside"]
+    kept = stored.anchor.content
+    assert len(kept) <= ANCHOR_CONTENT_MAX_CHARS
+    assert kept.endswith("…")
+    # A prefix of the answer, cut between two words.
+    assert long_answer.startswith(kept[:-1])
+    assert long_answer[len(kept) - 1].isspace()
+    assert response.json()["anchor"]["content"] == kept
+    # The message id and the branch snapshot keep the whole answer.
+    assert stored.anchor.message_id == "ai-long"
+    assert stored.context_snapshot[-1] == {
+        "id": "ai-long",
+        "role": "ai",
+        "content": long_answer,
+    }
+
+
+def test_create_aside_rejects_an_anchor_over_the_hard_limit(client):
+    response = client.post(
+        "/api/learning/asides",
+        json={
+            "notebook_id": "notebook:one",
+            "parent_session_id": "chat_session:main",
+            "anchor": {"type": "message", "content": "x" * 200_001},
+        },
+    )
+
+    assert response.status_code == 422
+    assert "200000" in str(response.json()["detail"])
+
+
 _REPLY = {
     "messages": [
         SimpleNamespace(id="human:one", type="human"),

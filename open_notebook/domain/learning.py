@@ -17,20 +17,60 @@ AsideStatus = Literal["active", "parked", "resolved", "discarded"]
 JourneyStatus = Literal["active", "archived"]
 AnchorType = Literal["message", "source", "citation", "equation"]
 
+# Characters of anchor text an aside stores. Longer anchors are accepted (Go
+# deeper sends the whole answer) and clipped to this; the anchor's message_id
+# and the aside's context_snapshot still lead to the full text.
+ANCHOR_CONTENT_MAX_CHARS = 20_000
+# How far back from the limit the clip looks for a word boundary. A last word
+# longer than this (a URL, text without spaces) is cut through instead.
+_ANCHOR_WORD_BOUNDARY_WINDOW = 2_000
+
+
+def clip_anchor_content(text: str, limit: int = ANCHOR_CONTENT_MAX_CHARS) -> str:
+    """Strip ``text`` and, if it is longer than ``limit``, clip it with "…".
+
+    The result is at most ``limit`` characters. The cut ends at a word
+    boundary, so no word is split, unless the word at the cut is longer than
+    ``_ANCHOR_WORD_BOUNDARY_WINDOW``.
+    """
+    text = text.strip()
+    if len(text) <= limit:
+        return text
+    head = text[: limit - 1]
+    if not text[limit - 1].isspace():
+        # The cut falls inside a word: end at the whitespace before it.
+        floor = max(0, len(head) - _ANCHOR_WORD_BOUNDARY_WINDOW)
+        for index in range(len(head) - 1, floor - 1, -1):
+            if head[index].isspace():
+                head = head[:index]
+                break
+    return head.rstrip() + "…"
+
 
 class AsideAnchor(BaseModel):
     """Stable origin for an aside.
 
     ``content`` is a snapshot so an aside remains understandable when its
-    originating message or source changes. The optional locator fields provide
-    a route back to the live object when it still exists.
+    originating message or source changes. Text over ANCHOR_CONTENT_MAX_CHARS
+    is clipped (:func:`clip_anchor_content`). The optional locator fields
+    provide a route back to the live object when it still exists.
     """
 
     type: AnchorType = "message"
-    content: str = Field(min_length=1, max_length=20_000)
+    content: str = Field(min_length=1, max_length=ANCHOR_CONTENT_MAX_CHARS)
     message_id: Optional[str] = None
     source_id: Optional[str] = None
     locator: Optional[str] = Field(default=None, max_length=1_000)
+
+    @field_validator("content", mode="before")
+    @classmethod
+    def clip_long_content(cls, value: Any) -> Any:
+        if isinstance(value, str) and len(value) > ANCHOR_CONTENT_MAX_CHARS:
+            clipped = clip_anchor_content(value)
+            if not clipped:
+                raise InvalidInputError("Aside anchor content cannot be empty")
+            return clipped
+        return value
 
     @field_validator("content")
     @classmethod
