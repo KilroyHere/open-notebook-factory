@@ -218,7 +218,9 @@ describe('useNotebookChat context', () => {
     // Cached counts are not enough for a turn: it is rebuilt every time.
     expect(chatApi.buildContext).toHaveBeenCalledTimes(2)
     expect(context).toEqual({ sources: [{ id: 'source:a' }], notes: [] })
-    expect(result.current.tokenCount).toBe(900)
+    // The reply reaches the counts through the query cache, which notifies
+    // its observers on its own schedule.
+    await waitFor(() => expect(result.current.tokenCount).toBe(900))
   })
 
   it('recounts when a source changes but the selection does not', async () => {

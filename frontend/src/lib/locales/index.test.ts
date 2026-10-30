@@ -124,7 +124,10 @@ describe('Unused Key Detection', () => {
   it(
     'all en-US leaf keys should be referenced in source files',
     () => {
-      const srcDir = path.resolve(__dirname, '../../..')
+      // Only the app's own source: scanning frontend/ would also read every
+      // .ts file in node_modules (tens of thousands), which is slow enough to
+      // time out under load and could match a key in library code.
+      const srcDir = path.resolve(__dirname, '../..')
       const localesDir = path.resolve(__dirname)
 
       const files = fs.readdirSync(srcDir, { recursive: true }) as string[]
