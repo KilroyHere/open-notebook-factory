@@ -4,6 +4,7 @@ import { ChatColumn } from './ChatColumn'
 import { useNotes } from '@/lib/hooks/use-notes'
 import { useNotebookChat } from '@/lib/hooks/use-notebook-chat'
 import { useLearningAsides } from '@/lib/hooks/use-learning-asides'
+import type { SourceListResponse } from '@/lib/types/api'
 
 const { openModal } = vi.hoisted(() => ({ openModal: vi.fn() }))
 
@@ -188,8 +189,25 @@ describe('ChatColumn', () => {
       })
     )
 
-    render(<ChatColumn {...baseProps} sourcesLoading={false} />)
-    fireEvent.click(screen.getByRole('button', { name: 'common.source paper' }))
+    render(
+      <ChatColumn
+        {...baseProps}
+        sources={[
+          {
+            id: 'source:paper',
+            title: 'Attention Is All You Need',
+          } as SourceListResponse,
+        ]}
+        sourcesLoading={false}
+      />
+    )
+    // The button names the notebook's source, not its record ID.
+    expect(
+      screen.queryByRole('button', { name: /paper/ })
+    ).not.toBeInTheDocument()
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Attention Is All You Need' })
+    )
 
     expect(openModal).toHaveBeenCalledWith('source', 'paper')
   })

@@ -16,6 +16,8 @@ import { LearningAside, LearningUpdate } from '@/lib/types/api'
 import { useTranslation } from '@/lib/hooks/use-translation'
 import {
   childDiveForQuestion,
+  ReferenceTitles,
+  referenceTitleKey,
   toPlainTextPreview,
 } from '@/lib/utils/learning-asides'
 import { cn } from '@/lib/utils'
@@ -28,6 +30,7 @@ interface LearningThreadLinksProps {
   onReferenceClick?: (type: string, id: string) => void
   onDiveIntoQuestion?: (parent: LearningAside, question: string) => void
   onParkQuestion?: (parent: LearningAside, question: string) => void
+  referenceTitles?: ReferenceTitles
 }
 
 export interface EvidenceCitation {
@@ -86,28 +89,52 @@ function evidenceLabel(
   return t('common.source')
 }
 
+/**
+ * The document's title when the notebook knows it, otherwise a numbered
+ * generic label ("Source 1"). Record IDs are never shown.
+ */
+export function evidenceButtonLabels(
+  evidence: EvidenceCitation[],
+  titles: ReferenceTitles,
+  t: (key: string) => string
+): string[] {
+  const counts: Partial<Record<EvidenceCitation['type'], number>> = {}
+  return evidence.map((item) => {
+    const position = (counts[item.type] ?? 0) + 1
+    counts[item.type] = position
+    return (
+      titles[referenceTitleKey(item.type, item.id)] ??
+      `${evidenceLabel(item.type, t)} ${position}`
+    )
+  })
+}
+
 export function LearningEvidenceButtons({
   citations,
   onReferenceClick,
+  referenceTitles = {},
   className,
 }: {
   citations: string[]
   onReferenceClick?: (type: string, id: string) => void
+  referenceTitles?: ReferenceTitles
   className?: string
 }) {
   const { t } = useTranslation()
   if (!onReferenceClick) return null
   const evidence = evidenceCitations(citations)
   if (evidence.length === 0) return null
+  const labels = evidenceButtonLabels(evidence, referenceTitles, t)
 
   return (
     <div className={cn('mt-2 flex flex-wrap gap-1', className)}>
-      {evidence.map((item) => (
+      {evidence.map((item, index) => (
         <Button
           key={`${item.type}:${item.id}`}
           variant="outline"
           size="sm"
           className="h-7 max-w-full"
+          title={labels[index]}
           onClick={() => onReferenceClick(item.type, item.id)}
         >
           {item.type === 'note' ? (
@@ -117,9 +144,7 @@ export function LearningEvidenceButtons({
           ) : (
             <FileText className="h-3.5 w-3.5 text-teal" />
           )}
-          <span className="truncate">
-            {evidenceLabel(item.type, t)} {item.id}
-          </span>
+          <span className="truncate">{labels[index]}</span>
         </Button>
       ))}
     </div>
@@ -217,6 +242,7 @@ export function LearningMergeEvent({
   onReferenceClick,
   onDiveIntoQuestion,
   onParkQuestion,
+  referenceTitles,
 }: {
   aside: LearningAside
   update: LearningUpdate
@@ -225,6 +251,7 @@ export function LearningMergeEvent({
   onReferenceClick?: (type: string, id: string) => void
   onDiveIntoQuestion?: (parent: LearningAside, question: string) => void
   onParkQuestion?: (parent: LearningAside, question: string) => void
+  referenceTitles?: ReferenceTitles
 }) {
   const { t } = useTranslation()
 
@@ -264,6 +291,7 @@ export function LearningMergeEvent({
       <LearningEvidenceButtons
         citations={update.citations}
         onReferenceClick={onReferenceClick}
+        referenceTitles={referenceTitles}
       />
       <p className="mt-2 text-xs text-muted-foreground">
         {t('learningAsides.origin')}{' '}
@@ -293,6 +321,7 @@ export function LearningThreadLinks({
   onReferenceClick,
   onDiveIntoQuestion,
   onParkQuestion,
+  referenceTitles,
 }: LearningThreadLinksProps) {
   const { t } = useTranslation()
   const branches = asides.filter(
@@ -347,6 +376,7 @@ export function LearningThreadLinks({
                   <LearningEvidenceButtons
                     citations={latestUpdate.citations}
                     onReferenceClick={onReferenceClick}
+                    referenceTitles={referenceTitles}
                   />
                 </div>
                 <Badge variant="outline" className="shrink-0">

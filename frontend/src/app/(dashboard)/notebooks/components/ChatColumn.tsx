@@ -17,7 +17,11 @@ import { ContextSelections } from '../[id]/page'
 import { useTranslation } from '@/lib/hooks/use-translation'
 import { LearningAside, NotebookChatMessage, SourceListResponse } from '@/lib/types/api'
 import { focusChatMessage } from '@/lib/utils/chat-navigation'
-import { childDiveForQuestion, createAsideTitle } from '@/lib/utils/learning-asides'
+import {
+  buildReferenceTitles,
+  childDiveForQuestion,
+  createAsideTitle,
+} from '@/lib/utils/learning-asides'
 
 interface ChatColumnProps {
   notebookId: string
@@ -167,6 +171,12 @@ export function ChatColumn({ notebookId, contextSelections, sources, sourcesLoad
     await learning.refreshJourney()
   }
 
+  // Evidence buttons name the cited source or note instead of its record ID.
+  const referenceTitles = useMemo(
+    () => buildReferenceTitles(sources, notes),
+    [sources, notes]
+  )
+
   // Calculate context stats for indicator
   const contextStats = useMemo(() => {
     let sourcesInsights = 0
@@ -304,6 +314,7 @@ export function ChatColumn({ notebookId, contextSelections, sources, sourcesLoad
             onReferenceClick={handleReferenceClick}
             onDiveIntoQuestion={diveIntoQuestion}
             onParkQuestion={parkQuestion}
+            referenceTitles={referenceTitles}
           />
         ) : (
           <ChatPanel
@@ -346,6 +357,7 @@ export function ChatColumn({ notebookId, contextSelections, sources, sourcesLoad
             onNavigateToMessage={navigateToMainMessage}
             onDiveIntoQuestion={diveIntoQuestion}
             onParkQuestion={parkQuestion}
+            referenceTitles={referenceTitles}
             workspaceMode
           />
         )}

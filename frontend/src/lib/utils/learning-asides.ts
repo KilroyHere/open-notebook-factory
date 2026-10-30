@@ -1,4 +1,8 @@
-import { LearningAside } from '@/lib/types/api'
+import {
+  LearningAside,
+  NoteResponse,
+  SourceListResponse,
+} from '@/lib/types/api'
 
 const INLINE_REFERENCE = /\[(?:source_insight|insight|source|note):[^\]]+\]/g
 const MARKDOWN_LINK = /\[([^\]]+)\]\([^)]+\)/g
@@ -79,4 +83,32 @@ export function normalizeOpenQuestions(questions: string[]): string[] {
     result.push(trimmed)
   }
   return result
+}
+
+/** Titles of cited documents, keyed `source:<id>` / `note:<id>` without the record prefix. */
+export type ReferenceTitles = Record<string, string>
+
+function bareRecordId(id: string, table: string): string {
+  return id.startsWith(`${table}:`) ? id.slice(table.length + 1) : id
+}
+
+export function referenceTitleKey(type: string, id: string): string {
+  return `${type}:${bareRecordId(id, type)}`
+}
+
+/** Look up the titles a learning update's evidence buttons can show. */
+export function buildReferenceTitles(
+  sources: Pick<SourceListResponse, 'id' | 'title'>[] = [],
+  notes: Pick<NoteResponse, 'id' | 'title'>[] = []
+): ReferenceTitles {
+  const titles: ReferenceTitles = {}
+  for (const source of sources) {
+    const title = source.title?.trim()
+    if (title) titles[referenceTitleKey('source', source.id)] = title
+  }
+  for (const note of notes) {
+    const title = note.title?.trim()
+    if (title) titles[referenceTitleKey('note', note.id)] = title
+  }
+  return titles
 }

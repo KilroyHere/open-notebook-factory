@@ -550,14 +550,21 @@ describe('LearningAsidePanel', () => {
         {...baseProps}
         activeAside={resolved}
         onReferenceClick={onReferenceClick}
+        referenceTitles={{ 'source:paper': 'Attention Is All You Need' }}
       />
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'common.source paper' }))
-    fireEvent.click(screen.getByRole('button', { name: 'common.note margin' }))
     fireEvent.click(
-      screen.getByRole('button', { name: 'common.insight lemma' })
+      screen.getByRole('button', { name: 'Attention Is All You Need' })
     )
+    // Unknown titles get a numbered label instead of the record ID.
+    fireEvent.click(screen.getByRole('button', { name: 'common.note 1' }))
+    fireEvent.click(
+      screen.getByRole('button', { name: 'common.insight 1' })
+    )
+    expect(
+      screen.queryByRole('button', { name: /paper|margin|lemma/ })
+    ).not.toBeInTheDocument()
 
     expect(onReferenceClick).toHaveBeenNthCalledWith(1, 'source', 'paper')
     expect(onReferenceClick).toHaveBeenNthCalledWith(2, 'note', 'margin')

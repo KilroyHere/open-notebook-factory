@@ -29,6 +29,7 @@ import {
 import { useTranslation } from '@/lib/hooks/use-translation'
 import {
   createLearningUpdateDraft,
+  ReferenceTitles,
   toPlainTextPreview,
   normalizeOpenQuestions,
 } from '@/lib/utils/learning-asides'
@@ -63,6 +64,8 @@ interface LearningAsidePanelProps {
   onReferenceClick?: (type: string, id: string) => void
   onDiveIntoQuestion?: (parent: LearningAside, question: string) => void
   onParkQuestion?: (parent: LearningAside, question: string) => void
+  /** Source and note titles for the evidence buttons. */
+  referenceTitles?: ReferenceTitles
 }
 
 const statusTranslationKeys: Record<LearningAsideStatus, string> = {
@@ -98,6 +101,7 @@ export function LearningAsidePanel({
   onReferenceClick,
   onDiveIntoQuestion,
   onParkQuestion,
+  referenceTitles,
 }: LearningAsidePanelProps) {
   const { t } = useTranslation()
   const [showList, setShowList] = useState(!activeAside)
@@ -444,6 +448,7 @@ export function LearningAsidePanel({
                     <LearningEvidenceButtons
                       citations={latestUpdate.citations}
                       onReferenceClick={onReferenceClick}
+                      referenceTitles={referenceTitles}
                       className="mt-3 border-t pt-3"
                     />
                     <div className="mt-3 flex flex-wrap gap-2 border-t pt-3">

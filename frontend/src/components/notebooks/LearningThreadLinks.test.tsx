@@ -1,10 +1,13 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import {
+  evidenceButtonLabels,
+  evidenceCitations,
   LearningMergeEvent,
   LearningThreadLinks,
   learningMergesForMessage,
 } from './LearningThreadLinks'
+import { buildReferenceTitles } from '@/lib/utils/learning-asides'
 import { LearningAside } from '@/lib/types/api'
 
 const resolvedAside: LearningAside = {
@@ -85,16 +88,20 @@ describe('LearningThreadLinks', () => {
         onOpenAside={vi.fn()}
         onNavigateToMessage={vi.fn()}
         onReferenceClick={onReferenceClick}
+        referenceTitles={{
+          'source:paper': 'Attention Is All You Need',
+          'note:margin': 'Margin notes',
+        }}
       />
     )
 
     expect(screen.getByText('learningAsides.openQuestions')).toBeInTheDocument()
     expect(screen.getByText('Why choose a Gaussian prior?')).toBeInTheDocument()
     fireEvent.click(
-      screen.getByRole('button', { name: 'common.source paper' })
+      screen.getByRole('button', { name: 'Attention Is All You Need' })
     )
     expect(onReferenceClick).toHaveBeenCalledWith('source', 'paper')
-    fireEvent.click(screen.getByRole('button', { name: 'common.note margin' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Margin notes' }))
     expect(onReferenceClick).toHaveBeenCalledWith('note', 'margin')
     expect(
       screen.queryByRole('button', { name: /chapter 2/ })
@@ -132,9 +139,7 @@ describe('LearningThreadLinks', () => {
       screen.getByRole('button', { name: 'learningAsides.viewTranscript' })
     )
     expect(onOpenAside).toHaveBeenCalledWith(resolvedAside.id)
-    fireEvent.click(
-      screen.getByRole('button', { name: 'common.insight lemma' })
-    )
+    fireEvent.click(screen.getByRole('button', { name: 'common.insight 1' }))
     expect(onReferenceClick).toHaveBeenCalledWith('source_insight', 'lemma')
   })
 
@@ -285,5 +290,41 @@ describe('LearningThreadLinks', () => {
     expect(onReferenceClick).toHaveBeenCalledWith('source', 'paper')
     expect(learningMergesForMessage([cited], 'ai:merged')).toHaveLength(1)
     expect(learningMergesForMessage([cited], 'ai:origin')).toHaveLength(0)
+  })
+})
+
+describe('evidenceButtonLabels', () => {
+  const t = (key: string) => key
+
+  it('uses known titles and numbers unknown documents per type', () => {
+    const evidence = evidenceCitations([
+      'source:xh9gyghko5bnl78ad8tp',
+      'source:known',
+      'source:other',
+      'note:n1',
+    ])
+
+    expect(
+      evidenceButtonLabels(evidence, { 'source:known': 'Known paper' }, t)
+    ).toEqual(['common.source 1', 'Known paper', 'common.source 3', 'common.note 1'])
+  })
+
+  it('matches notebook records whose IDs carry the table prefix', () => {
+    const titles = buildReferenceTitles(
+      [
+        { id: 'source:abc', title: 'Paper' },
+        { id: 'source:untitled', title: null },
+      ],
+      [{ id: 'note:n1', title: '  Margin  ' }]
+    )
+
+    expect(titles).toEqual({ 'source:abc': 'Paper', 'note:n1': 'Margin' })
+    expect(
+      evidenceButtonLabels(
+        evidenceCitations(['source:abc', 'source:untitled', 'note:n1']),
+        titles,
+        t
+      )
+    ).toEqual(['Paper', 'common.source 2', 'Margin'])
   })
 })

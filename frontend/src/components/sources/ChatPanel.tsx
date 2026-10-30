@@ -33,6 +33,7 @@ import {
   messageIdFromChatHash,
 } from '@/lib/utils/chat-navigation'
 import { cn } from '@/lib/utils'
+import type { ReferenceTitles } from '@/lib/utils/learning-asides'
 import { isSendShortcut, sendShortcutHint } from '@/lib/utils/composer-shortcut'
 
 interface NotebookContextStats {
@@ -74,6 +75,8 @@ interface ChatPanelProps {
   onNavigateToMessage?: (messageId: string) => void
   onDiveIntoQuestion?: (parent: LearningAside, question: string) => void
   onParkQuestion?: (parent: LearningAside, question: string) => void
+  /** Source and note titles for learning-update evidence buttons. */
+  referenceTitles?: ReferenceTitles
   workspaceMode?: boolean
 }
 
@@ -103,6 +106,7 @@ export function ChatPanel({
   onNavigateToMessage,
   onDiveIntoQuestion,
   onParkQuestion,
+  referenceTitles,
   workspaceMode = false
 }: ChatPanelProps) {
   const { t } = useTranslation()
@@ -240,6 +244,7 @@ export function ChatPanel({
                   onNavigateToMessage={onNavigateToMessage}
                   onDiveIntoQuestion={onDiveIntoQuestion}
                   onParkQuestion={onParkQuestion}
+                  referenceTitles={referenceTitles}
                   wide={workspaceMode}
                 />
               ))
@@ -453,6 +458,7 @@ interface ChatMessageProps {
   onNavigateToMessage?: (messageId: string) => void
   onDiveIntoQuestion?: (parent: LearningAside, question: string) => void
   onParkQuestion?: (parent: LearningAside, question: string) => void
+  referenceTitles?: ReferenceTitles
   wide?: boolean
 }
 
@@ -466,6 +472,7 @@ const ChatMessage = memo(function ChatMessage({
   onNavigateToMessage,
   onDiveIntoQuestion,
   onParkQuestion,
+  referenceTitles,
   wide = false
 }: ChatMessageProps) {
   const appliedUpdates = learningMergesForMessage(learningAsides, message.id)
@@ -516,6 +523,7 @@ const ChatMessage = memo(function ChatMessage({
             onReferenceClick={onReferenceClick}
             onDiveIntoQuestion={onDiveIntoQuestion}
             onParkQuestion={onParkQuestion}
+            referenceTitles={referenceTitles}
           />
         ))}
         {message.type === 'ai' && (
@@ -536,6 +544,7 @@ const ChatMessage = memo(function ChatMessage({
                 onReferenceClick={onReferenceClick}
                 onDiveIntoQuestion={onDiveIntoQuestion}
                 onParkQuestion={onParkQuestion}
+                referenceTitles={referenceTitles}
               />
             )}
           </>
