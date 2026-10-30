@@ -190,19 +190,23 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
     const previous = countedContent.current
     countedContent.current = { sources, notes }
     if (previous.sources === sources && previous.notes === notes) return
-    void queryClient.invalidateQueries(
-      { queryKey: QUERY_KEYS.notebookChatContext(notebookId) },
-      // A count already on its way for a new selection is not restarted.
-      { cancelRefetch: false }
-    )
+    // A count already on its way read the old content, so it is restarted.
+    // (A first count for a new selection has no data yet and is joined, not
+    // restarted.)
+    void queryClient.invalidateQueries({
+      queryKey: QUERY_KEYS.notebookChatContext(notebookId),
+    })
   }, [notebookId, notes, queryClient, sources])
 
-  // What a turn sends is always built fresh, never taken from the cache; the
-  // reply also updates the counts.
+  // What a turn sends is always built fresh by its own request. It must not
+  // join a count in flight: a recount (a conclusion switched, a dive
+  // resolved) cancels that count, and the turn would fail with it. The reply
+  // also updates the counts.
   const buildContext = useCallback(async () => {
-    const response = await queryClient.query({ ...contextQuery, staleTime: 0 })
+    const response = await chatApi.buildContext(contextRequest)
+    queryClient.setQueryData(contextQuery.queryKey, response)
     return response.context
-  }, [contextQuery, queryClient])
+  }, [contextQuery.queryKey, contextRequest, queryClient])
 
   // Send message (synchronous, no streaming)
   const sendMessage = useCallback(async (message: string, modelOverride?: string) => {
