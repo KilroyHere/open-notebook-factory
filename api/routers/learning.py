@@ -738,6 +738,9 @@ async def resolve_aside(aside_id: str, request: ResolveLearningAsideRequest):
 
     aside.status = "resolved"
     await aside.save()
-    journey.active_session = aside.parent_session
-    await journey.save()
+    # Back to the parent thread, unless the learner is in another aside now
+    # (an aside can be resolved from Studio while a different one is open).
+    if journey.active_session == aside.chat_session:
+        journey.active_session = aside.parent_session
+        await journey.save()
     return await _aside_response(aside)

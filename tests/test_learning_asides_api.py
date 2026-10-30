@@ -625,6 +625,54 @@ async def test_resolve_aside_creates_versioned_user_approved_update(client):
     assert update.saved_note is None
 
 
+def test_resolve_leaves_the_journey_on_another_open_aside(client):
+    """Resolving a dive from Studio does not pull the learner out of another."""
+    aside = _aside()
+    journey = _journey(active_session="chat_session:other-dive")
+
+    async def save_update(update):
+        update.id = "learning_update:one"
+        update.created = NOW
+        update.updated = NOW
+
+    with (
+        patch(
+            "api.routers.learning._get_aside",
+            new_callable=AsyncMock,
+            return_value=aside,
+        ),
+        patch(
+            "api.routers.learning.LearningJourney.get",
+            new_callable=AsyncMock,
+            return_value=journey,
+        ),
+        patch(
+            "api.routers.learning.LearningUpdate.get_versions",
+            new_callable=AsyncMock,
+            return_value=[],
+        ),
+        patch("api.routers.learning.LearningUpdate.save", new=save_update),
+        patch("api.routers.learning.LearningAside.save", new_callable=AsyncMock),
+        patch(
+            "api.routers.learning.LearningJourney.save", new_callable=AsyncMock
+        ) as save_journey,
+        patch(
+            "api.routers.learning._aside_response",
+            new_callable=AsyncMock,
+            side_effect=lambda aside: _aside_response(aside),
+        ),
+    ):
+        response = client.post(
+            "/api/learning/asides/aside/resolve",
+            json={"conclusion": "Jensen's inequality gives a lower bound."},
+        )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "resolved"
+    assert journey.active_session == "chat_session:other-dive"
+    save_journey.assert_not_called()
+
+
 @pytest.mark.asyncio
 async def test_resume_offers_parked_aside_when_main_session_is_active(client):
     journey = _journey(active_session="chat_session:main")
