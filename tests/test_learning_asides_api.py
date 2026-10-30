@@ -1984,22 +1984,51 @@ def test_budget_ranks_by_creation_time_not_list_position():
     )
 
 
-def test_budget_stops_at_the_first_update_that_does_not_fit():
+def test_budget_skips_an_update_that_does_not_fit_and_keeps_filling():
     updates = [
         _priced_update("old-short", 10, 1),
         _priced_update("long", 150, 2),
         _priced_update("newest", 100, 3),
     ]
 
-    # "long" does not fit after "newest"; the shorter, older update behind it
-    # is not used to fill the gap.
-    assert _fit(updates, 200) == (["learning_update:newest"], 2)
+    # "long" does not fit after "newest"; the older, shorter one still does.
+    assert _fit(updates, 200) == (
+        ["learning_update:old-short", "learning_update:newest"],
+        1,
+    )
 
 
-def test_budget_leaves_everything_out_when_the_newest_alone_is_too_large():
+def test_budget_skips_a_newest_update_too_large_for_the_whole_budget():
     updates = [_priced_update("small", 10, 1), _priced_update("huge", 500, 2)]
 
-    assert _fit(updates, 200) == ([], 2)
+    assert _fit(updates, 200) == (["learning_update:small"], 1)
+
+
+def test_budget_keeps_filling_past_several_updates_that_do_not_fit():
+    updates = [
+        _priced_update("a", 100, 1),
+        _priced_update("long-1", 250, 2),
+        _priced_update("b", 50, 3),
+        _priced_update("long-2", 500, 4),
+        _priced_update("c", 100, 5),
+    ]
+
+    # c (100), b (150) and a (250) fit; both long ones are skipped.
+    assert _fit(updates, 300) == (
+        ["learning_update:a", "learning_update:b", "learning_update:c"],
+        2,
+    )
+
+
+def test_budget_never_trades_a_newer_update_for_an_older_one():
+    updates = [
+        _priced_update("old-1", 60, 1),
+        _priced_update("old-2", 60, 2),
+        _priced_update("new", 150, 3),
+    ]
+
+    # The newest fits first; only the room it leaves goes to older ones.
+    assert _fit(updates, 200) == (["learning_update:new"], 2)
 
 
 def test_budget_treats_later_list_positions_as_newer_without_timestamps():

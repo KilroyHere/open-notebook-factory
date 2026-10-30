@@ -117,8 +117,8 @@ class BuildContextResponse(BaseModel):
         0,
         description=(
             "Accepted learning updates left out of context.learning_updates (and "
-            "of the model's context) because their token budget was full; the "
-            "oldest are left out first"
+            "of the model's context) because they did not fit in their token "
+            "budget; newer conclusions are kept first"
         ),
     )
 

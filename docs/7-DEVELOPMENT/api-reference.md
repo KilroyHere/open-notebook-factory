@@ -62,7 +62,7 @@ Use `/docs` for request and response shapes. This map shows where things are:
 
 `POST /api/chat/execute` adds the session's accepted learning conclusions (the latest included resolution of each aside that is not discarded, see [ADR-014](decisions/ADR-014-learning-aside-context.md)) to the model's context itself. Any `learning_updates` sent in its `context` are ignored. `POST /api/chat/context` with a `session_id` returns the same conclusions as `context.learning_updates`, for display and the token count.
 
-The conclusions share a budget of 4,000 tokens per turn (`LEARNING_UPDATES_TOKEN_BUDGET` in `api/routers/_chat_shared.py`). The newest are kept first; once one does not fit, it and all older ones are left out of that turn. `learning_updates_omitted` in the `POST /api/chat/context` response counts them.
+The conclusions share a budget of 4,000 tokens per turn (`LEARNING_UPDATES_TOKEN_BUDGET` in `api/routers/_chat_shared.py`). The newest are kept first. One that does not fit in what is left of the budget is left out of that turn, and older ones still fill the rest. `learning_updates_omitted` in the `POST /api/chat/context` response counts those left out.
 
 To leave one conclusion out of main chat without re-resolving its aside, send `PATCH /api/learning/updates/{id}` with `{"include_in_main": false}`; `true` puts it back. It changes that version in place (no new version) and returns it. Only the latest version of an aside can be changed: a superseded version returns 400, an unknown ID 404.
 
