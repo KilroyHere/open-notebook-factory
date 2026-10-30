@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { learningApi } from '@/lib/api/learning'
@@ -63,6 +63,10 @@ export function useLearningAsides({
   const [view, setView] = useState<AsideView>(CLOSED_VIEW)
   const activeAsideId = view.asideId
   const panelOpen = view.fullHeight
+  // A dive belongs to one main conversation: another session closes it.
+  useEffect(() => {
+    setView(CLOSED_VIEW)
+  }, [mainSessionId])
   const [creating, setCreating] = useState<CreatingDive | null>(null)
   // The question on its way to a dive, shown in its transcript until the
   // reply arrives.

@@ -45,13 +45,13 @@ function renderAsides() {
     <QueryClientProvider client={client}>{children}</QueryClientProvider>
   )
   return renderHook(
-    () =>
+    ({ mainSessionId }: { mainSessionId: string }) =>
       useLearningAsides({
         notebookId: 'notebook:1',
-        mainSessionId: 'chat_session:main',
+        mainSessionId,
         buildContext: async () => ({}),
       }),
-    { wrapper }
+    { wrapper, initialProps: { mainSessionId: 'chat_session:main' } }
   )
 }
 
@@ -192,5 +192,15 @@ describe('useLearningAsides', () => {
     expect(result.current.activeAsideId).toBe(aside.id)
     act(() => result.current.collapseAside(aside.id))
     expect(result.current.activeAsideId).toBeNull()
+  })
+
+  it('closes the open dive when the learner switches chat session', () => {
+    const { result, rerender } = renderAsides()
+    act(() => result.current.openAside(aside.id))
+
+    rerender({ mainSessionId: 'chat_session:other' })
+
+    expect(result.current.activeAsideId).toBeNull()
+    expect(result.current.panelOpen).toBe(false)
   })
 })
