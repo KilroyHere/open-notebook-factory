@@ -343,3 +343,26 @@ def test_interrupts_are_ignored_only_while_stopping():
     finally:
         for signum, handler in previous.items():
             signal.signal(signum, handler)
+
+
+def test_stopping_the_database_gives_up_after_a_timeout(monkeypatch, capsys):
+    """A hung Docker daemon must not hang the shutdown.
+
+    Interrupts are ignored while the stack stops, and `docker compose down`
+    inherits that, so only a timeout can end a compose that never returns.
+    """
+    import subprocess
+
+    calls: list[dict] = []
+
+    def hung_compose(command, **kwargs):
+        calls.append({"command": command, **kwargs})
+        raise subprocess.TimeoutExpired(command, kwargs["timeout"])
+
+    monkeypatch.setattr(start_all.subprocess, "run", hung_compose)
+
+    start_all.stop_database({"SURREAL_URL": "ws://localhost:8000/rpc"})
+
+    assert calls[0]["command"] == ["docker", "compose", "down"]
+    assert calls[0]["timeout"] == start_all.COMPOSE_DOWN_TIMEOUT_SECONDS
+    assert "docker compose down" in capsys.readouterr().err

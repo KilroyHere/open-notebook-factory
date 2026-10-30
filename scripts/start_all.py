@@ -150,6 +150,33 @@ def interrupts_ignored() -> Iterator[None]:
             signal.signal(signum, signal.SIG_DFL if handler is None else handler)
 
 
+# How long `docker compose down` may take when the stack stops. Interrupts
+# are ignored while stopping (see interrupts_ignored()) and compose inherits
+# that, so without a limit a hung Docker daemon would hang the shutdown too.
+COMPOSE_DOWN_TIMEOUT_SECONDS = 60
+
+
+def stop_database(environment: Mapping[str, str]) -> None:
+    """Stop the compose database, giving up after COMPOSE_DOWN_TIMEOUT_SECONDS."""
+    try:
+        subprocess.run(
+            ["docker", "compose", "down"],
+            cwd=ROOT,
+            env=dict(environment) or None,
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=COMPOSE_DOWN_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired:
+        print(
+            "`docker compose down` did not finish within "
+            f"{COMPOSE_DOWN_TIMEOUT_SECONDS}s, so the SurrealDB container may "
+            "still be running. Run `docker compose down` once Docker responds.",
+            file=sys.stderr,
+        )
+
+
 def stop_process(process: Optional[subprocess.Popen]) -> None:
     if process is None or process.poll() is not None:
         return
@@ -284,14 +311,7 @@ def main() -> int:
             for handle in log_handles:
                 handle.close()
             if database_started:
-                subprocess.run(
-                    ["docker", "compose", "down"],
-                    cwd=ROOT,
-                    env=environment or None,
-                    check=False,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                )
+                stop_database(environment)
             PID_FILE.unlink(missing_ok=True)
 
     def handle_signal(_signum, _frame) -> None:
