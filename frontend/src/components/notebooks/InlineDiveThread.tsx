@@ -11,7 +11,11 @@ import {
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import type { LearningAside, LearningAsideStatus } from '@/lib/types/api'
+import type {
+  LearningAside,
+  LearningAsideStatus,
+  NotebookChatMessage,
+} from '@/lib/types/api'
 import { useTranslation } from '@/lib/hooks/use-translation'
 import { useAsideResolution } from '@/lib/hooks/use-aside-resolution'
 import {
@@ -88,8 +92,9 @@ function OpenFullHeightButton({
  * Collapsed it is one row: "Deep dive · title" with its status, or
  * "Learned: …" once resolved. Expanded it holds the transcript, a question
  * box and the dive's actions (Wrap up, Save for later, Discard, Open full
- * height), or the resolved summary. Dives started from its open questions
- * nest under it; one level deeper they are rows that open full height.
+ * height), or the resolved summary. Dives started from its open questions,
+ * or from a passage selected in one of its answers, nest under it; one
+ * level deeper they are rows that open full height.
  */
 export function InlineDiveThread(props: InlineDiveThreadProps) {
   const {
@@ -198,6 +203,13 @@ export function InlineDiveThread(props: InlineDiveThreadProps) {
 
   const children = depth <= INLINE_DIVE_MAX_DEPTH ? childDives(asides, aside.id) : []
   const creatingChild = controller?.creating?.parentAsideId === aside.id
+  // A passage selected in one of this dive's answers starts a dive nested
+  // under this one.
+  const goDeeperInDive = controller?.onGoDeeperOnSelection
+  const onGoDeeperOnSelection = goDeeperInDive
+    ? (message: NotebookChatMessage, passage: string) =>
+        goDeeperInDive(dive, message, passage)
+    : undefined
   const label =
     resolved && latestUpdate
       ? t('learningAsides.learnedRow', {
@@ -318,6 +330,8 @@ export function InlineDiveThread(props: InlineDiveThreadProps) {
                       onSendMessage={controller.onSendMessage}
                       onReferenceClick={onReferenceClick}
                       referenceTitles={referenceTitles}
+                      onGoDeeperOnSelection={onGoDeeperOnSelection}
+                      notebookId={controller.notebookId}
                     />
                   )}
                   {resolution.isOpen && (
@@ -339,6 +353,8 @@ export function InlineDiveThread(props: InlineDiveThreadProps) {
                     onSendMessage={controller.onSendMessage}
                     onReferenceClick={onReferenceClick}
                     referenceTitles={referenceTitles}
+                    onGoDeeperOnSelection={onGoDeeperOnSelection}
+                    notebookId={controller.notebookId}
                   />
                   {resolution.isOpen ? (
                     <AsideResolveForm

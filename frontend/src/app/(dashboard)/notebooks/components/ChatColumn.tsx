@@ -90,6 +90,8 @@ export function ChatColumn({ workspace, isLoading }: ChatColumnProps) {
     onUpdateStatus: (asideId, status) =>
       learning.updateStatus({ asideId, status }),
     onSetIncludeInMain: learning.setIncludeInMain,
+    onGoDeeperOnSelection: workspace.openAsideFromDiveSelection,
+    notebookId: workspace.notebookId,
   }
 
   const resumableAside = learning.asides.find(
@@ -215,6 +217,10 @@ export function ChatColumn({ workspace, isLoading }: ChatColumnProps) {
             onParkQuestion={workspace.parkQuestion}
             onSetIncludeInMain={learning.setIncludeInMain}
             referenceTitles={workspace.referenceTitles}
+            onGoDeeperOnSelection={workspace.openAsideFromDiveSelection}
+            notebookId={workspace.notebookId}
+            attention={workspace.attention}
+            onAttended={workspace.onAttended}
           />
         </div>
       )}

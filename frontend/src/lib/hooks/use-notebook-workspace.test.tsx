@@ -192,6 +192,96 @@ describe('useNotebookWorkspace dives', () => {
     expect(input.content).toHaveLength(20_000)
   })
 
+  describe('Go deeper on a passage in a dive', () => {
+    const diveAnswer = { id: 'ai:dive-1', type: 'ai' as const, content: 'Because log is concave.' }
+    const passageDive = dive({ id: 'learning_aside:passage', parent_aside_id: root.id })
+
+    it('nests a dive about the passage under the dive it was selected in', async () => {
+      const createAside = vi.fn().mockImplementation(async (input) => {
+        input.onOpened?.(passageDive)
+        return passageDive
+      })
+      const { result, learning } = renderWorkspace(learningMock({ createAside }))
+
+      act(() =>
+        result.current.openAsideFromDiveSelection(root, diveAnswer, '  log is concave  ')
+      )
+
+      await waitFor(() => expect(createAside).toHaveBeenCalledTimes(1))
+      // Anchored to the dive's answer, in the dive's own conversation.
+      expect(createAside).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'message',
+          content: 'log is concave',
+          message_id: 'ai:dive-1',
+          locator: 'selection',
+          parentAside: root,
+          presentation: 'inline',
+        })
+      )
+      // Opened under its parent's thread with the cursor in its box, and
+      // nothing is asked for the learner.
+      expect(result.current.attention).toEqual({
+        asideId: passageDive.id,
+        scroll: 'nearest',
+        focus: true,
+      })
+      expect(learning.sendMessage).not.toHaveBeenCalled()
+    })
+
+    it('opens full height when it would nest too deep or the learner is there', async () => {
+      const createAside = vi.fn().mockImplementation(async (input) => {
+        input.onOpened?.(passageDive)
+        return passageDive
+      })
+      const nested = renderWorkspace(learningMock({ createAside })).result
+      act(() =>
+        nested.current.openAsideFromDiveSelection(child, diveAnswer, 'log is concave')
+      )
+      await waitFor(() =>
+        expect(createAside).toHaveBeenLastCalledWith(
+          expect.objectContaining({ parentAside: child, presentation: 'full' })
+        )
+      )
+      // The full-height view puts the cursor in its box; nothing scrolls.
+      expect(nested.current.attention).toEqual({
+        asideId: passageDive.id,
+        scroll: null,
+        focus: true,
+      })
+
+      const fullHeight = renderWorkspace(
+        learningMock({
+          createAside,
+          panelOpen: true,
+          activeAside: root,
+          activeAsideId: root.id,
+        })
+      ).result
+      act(() =>
+        fullHeight.current.openAsideFromDiveSelection(root, diveAnswer, 'log is concave')
+      )
+      await waitFor(() =>
+        expect(createAside).toHaveBeenLastCalledWith(
+          expect.objectContaining({ parentAside: root, presentation: 'full' })
+        )
+      )
+    })
+
+    it('keeps at most what the backend stores and ignores an empty passage', async () => {
+      const createAside = vi.fn().mockResolvedValue(passageDive)
+      const { result } = renderWorkspace(learningMock({ createAside }))
+
+      act(() =>
+        result.current.openAsideFromDiveSelection(root, diveAnswer, `  ${'x'.repeat(20_010)}  `)
+      )
+      act(() => result.current.openAsideFromDiveSelection(root, diveAnswer, '   '))
+
+      await waitFor(() => expect(createAside).toHaveBeenCalledTimes(1))
+      expect(createAside.mock.calls[0][0].content).toHaveLength(20_000)
+    })
+  })
+
   it('nests Dive in under an inline parent and asks the question', async () => {
     const created = dive({ id: 'learning_aside:new', parent_aside_id: root.id })
     const createAside = vi.fn().mockResolvedValue(created)

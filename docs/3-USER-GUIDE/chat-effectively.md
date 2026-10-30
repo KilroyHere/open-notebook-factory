@@ -86,6 +86,8 @@ Select part of an assistant answer, with the mouse or by touch, and a small tool
 
 The toolbar comes right after the answer in the tab order: after selecting, press **Tab** to reach it (screen readers announce that actions for the selected text follow the answer). **Escape**, or pressing anywhere else, hides it. Selecting and copying text work as usual, and the **Go deeper** button under each answer still opens a dive about the whole answer.
 
+The same toolbar works on the answers inside a deep dive, under its answer in the chat or in the full-height view. There, **Go deeper** opens a dive about the passage nested under that dive, quoting the passage under **On this passage**, and puts the cursor in its question box. It opens where **Dive in** would open a child: under its parent dive in the chat, or full height when it would nest more than one level deep or when you started it in the full-height view. Its **Back to parent dive** returns to the dive you selected the passage in. **Save to note** saves the passage as a note, as in the main chat.
+
 ## Choosing the Model
 
 The model button on the message row opens **Model Configuration**. Pick a model to use for this session instead of your **Chat Model** default, or click **Reset to Default**. Only language models you have added in **Manage → Models** are listed.

@@ -4,7 +4,8 @@ import { useRef } from 'react'
 import { Loader2, Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ReferencedMarkdown } from '@/components/common/ReferencedMarkdown'
-import type { LearningAside } from '@/lib/types/api'
+import { SelectionActions } from '@/components/sources/SelectionActions'
+import type { LearningAside, NotebookChatMessage } from '@/lib/types/api'
 import { useTranslation } from '@/lib/hooks/use-translation'
 import { useRevealNewReply } from '@/lib/hooks/use-reveal-new-reply'
 import type { ReferenceTitles } from '@/lib/utils/learning-asides'
@@ -16,7 +17,8 @@ import { isOpenDive } from './aside-status'
  * numbered citations and math. While the transcript loads it says so; an
  * empty dive explains what to ask, and a nested dive offers to ask the
  * question it was opened for. A learner at the end of the dive sees the
- * question they send and, once it comes, the start of the reply.
+ * question they send and, once it comes, the start of the reply. Selecting
+ * part of an answer offers Go deeper and Save to note, like in main chat.
  */
 export function AsideTranscript({
   aside,
@@ -26,6 +28,8 @@ export function AsideTranscript({
   onSendMessage,
   onReferenceClick,
   referenceTitles,
+  onGoDeeperOnSelection,
+  notebookId,
   className,
 }: {
   aside: LearningAside
@@ -36,6 +40,10 @@ export function AsideTranscript({
   onSendMessage: (asideId: string, message: string) => Promise<unknown>
   onReferenceClick?: (type: string, id: string) => void
   referenceTitles?: ReferenceTitles
+  /** "Go deeper" on a passage selected in one of the answers. */
+  onGoDeeperOnSelection?: (message: NotebookChatMessage, passage: string) => void
+  /** Where "Save to note" on a selected passage saves it. */
+  notebookId?: string
   className?: string
 }) {
   const { t } = useTranslation()
@@ -95,6 +103,13 @@ export function AsideTranscript({
               content={message.content}
               onReferenceClick={onReferenceClick}
               referenceTitles={referenceTitles}
+              // The nested dive is anchored to this answer by its ID.
+              onGoDeeper={
+                onGoDeeperOnSelection && message.id
+                  ? (passage) => onGoDeeperOnSelection(message, passage)
+                  : undefined
+              }
+              notebookId={notebookId}
             />
           ))}
           {pendingMessage && (
@@ -117,11 +132,15 @@ function TranscriptMessage({
   content,
   onReferenceClick,
   referenceTitles,
+  onGoDeeper,
+  notebookId,
 }: {
   type: string
   content: string
   onReferenceClick?: (type: string, id: string) => void
   referenceTitles?: ReferenceTitles
+  onGoDeeper?: (passage: string) => void
+  notebookId?: string
 }) {
   return (
     // TRANSCRIPT_MESSAGE_ATTRIBUTE: how a new reply is found to reveal it.
@@ -135,11 +154,13 @@ function TranscriptMessage({
         }`}
       >
         {type === 'ai' ? (
-          <ReferencedMarkdown
-            content={content}
-            onReferenceClick={onReferenceClick}
-            referenceTitles={referenceTitles}
-          />
+          <SelectionActions onGoDeeper={onGoDeeper} notebookId={notebookId}>
+            <ReferencedMarkdown
+              content={content}
+              onReferenceClick={onReferenceClick}
+              referenceTitles={referenceTitles}
+            />
+          </SelectionActions>
         ) : (
           <p className="whitespace-pre-wrap">{content}</p>
         )}

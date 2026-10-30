@@ -60,6 +60,11 @@ export function createLearningUpdateDraft(
   return truncateAtWord(firstParagraph, limit)
 }
 
+/**
+ * The dive started from one of `parentId`'s open questions. A dive about a
+ * passage selected in the parent never stands for a question, even when the
+ * passage reads the same.
+ */
 export function childDiveForQuestion(
   asides: LearningAside[],
   parentId: string,
@@ -71,6 +76,7 @@ export function childDiveForQuestion(
     (aside) =>
       aside.parent_aside_id === parentId &&
       aside.status !== 'discarded' &&
+      !isPassageDive(aside) &&
       aside.anchor.content.trim() === normalized
   )
 }

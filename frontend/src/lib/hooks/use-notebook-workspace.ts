@@ -55,6 +55,11 @@ function prefersComposerFocus(): boolean {
   )
 }
 
+/** A selected passage as a dive's anchor: trimmed, and no longer than the backend keeps. */
+function passageAnchorContent(passage: string): string {
+  return passage.trim().slice(0, MAX_ANCHOR_CHARS).trim()
+}
+
 /**
  * The notebook page's conversation state: the main chat, its learning journey,
  * and the actions both the chat column and the Studio column use. The page
@@ -181,7 +186,7 @@ export function useNotebookWorkspace({
     message: NotebookChatMessage,
     passage: string
   ) => {
-    const content = passage.trim().slice(0, MAX_ANCHOR_CHARS).trim()
+    const content = passageAnchorContent(passage)
     if (!content) return
     createInline({
       type: 'message',
@@ -191,10 +196,45 @@ export function useNotebookWorkspace({
     })
   }
 
+  // A dive started inside `parent` nests under its parent's thread, unless
+  // the learner is in the full-height view or the nesting would go too deep.
+  const childNestsInline = (parent: LearningAside) => {
+    if (learning.panelOpen || !isInline(parent)) return false
+    const lineage = diveLineage(parent, knownAsides)
+    return lineage !== null && lineage.depth + 1 <= INLINE_DIVE_MAX_DEPTH
+  }
+
+  // "Go deeper" on a passage selected in a dive's answer: a dive about that
+  // passage, nested under the dive and anchored to that answer, a message of
+  // the dive's own conversation. It opens where Dive in would open a child,
+  // with the cursor in its question box, since the learner asks next.
+  const openAsideFromDiveSelection = (
+    parent: LearningAside,
+    message: NotebookChatMessage,
+    passage: string
+  ) => {
+    const content = passageAnchorContent(passage)
+    if (!content) return
+    const inline = childNestsInline(parent)
+    void createAside({
+      type: 'message',
+      message_id: message.id,
+      content,
+      locator: PASSAGE_LOCATOR,
+      parentAside: parent,
+      presentation: inline ? 'inline' : 'full',
+      onOpened: (aside) =>
+        setAttention({
+          asideId: aside.id,
+          scroll: inline ? 'nearest' : null,
+          focus: true,
+        }),
+    }).catch(() => undefined)
+  }
+
   // Dive in opens the child dive and asks its question right away, so the
   // learner lands on an answer instead of an empty conversation. The child
-  // nests under its parent's thread unless the learner is in the full-height
-  // view or the nesting would go too deep.
+  // nests under its parent's thread when it can (childNestsInline).
   const diveIntoQuestion = (parent: LearningAside, question: string) => {
     const content = question.trim()
     const fullHeight = learning.panelOpen
@@ -209,12 +249,7 @@ export function useNotebookWorkspace({
       }
       return
     }
-    const lineage = diveLineage(parent, knownAsides)
-    const inline =
-      !fullHeight &&
-      isInline(parent) &&
-      lineage !== null &&
-      lineage.depth + 1 <= INLINE_DIVE_MAX_DEPTH
+    const inline = childNestsInline(parent)
     void (async () => {
       const aside = await createAside({
         type: 'message',
@@ -368,6 +403,7 @@ export function useNotebookWorkspace({
     exitFullHeight,
     openAsideFromMessage,
     openAsideFromSelection,
+    openAsideFromDiveSelection,
     diveIntoQuestion,
     parkQuestion,
     renameSection,

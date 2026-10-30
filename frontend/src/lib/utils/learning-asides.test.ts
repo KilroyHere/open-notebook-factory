@@ -86,6 +86,24 @@ describe('learning aside text helpers', () => {
     ).toBeUndefined()
   })
 
+  it('does not take a dive about a selected passage for a question\'s dive', () => {
+    const passage = {
+      id: 'learning_aside:passage',
+      parent_aside_id: 'learning_aside:parent',
+      status: 'active',
+      anchor: {
+        type: 'message',
+        message_id: 'ai:dive-1',
+        content: 'Why a Gaussian prior?',
+        locator: 'selection',
+      },
+    } as LearningAside
+
+    expect(
+      childDiveForQuestion([passage], 'learning_aside:parent', 'Why a Gaussian prior?')
+    ).toBeUndefined()
+  })
+
   it('strips citations, markdown and math from one-line previews', () => {
     expect(
       toPlainTextPreview(

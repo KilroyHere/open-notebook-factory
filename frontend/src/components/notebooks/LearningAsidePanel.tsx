@@ -9,10 +9,12 @@ import {
   LearningAside,
   LearningAsideStatus,
   LearningResolutionDraft,
+  NotebookChatMessage,
   ResolveLearningAsideRequest,
 } from '@/lib/types/api'
 import { useTranslation } from '@/lib/hooks/use-translation'
 import { useAsideResolution } from '@/lib/hooks/use-aside-resolution'
+import type { DiveAttention } from '@/lib/hooks/use-notebook-workspace'
 import {
   isPassageDive,
   ReferenceTitles,
@@ -58,6 +60,17 @@ interface LearningAsidePanelProps {
   onSetIncludeInMain?: SetIncludeInMain
   /** Source and note titles for the evidence buttons. */
   referenceTitles?: ReferenceTitles
+  /** "Go deeper" on a passage selected in one of the open dive's answers. */
+  onGoDeeperOnSelection?: (
+    parent: LearningAside,
+    message: NotebookChatMessage,
+    passage: string
+  ) => void
+  /** Where "Save to note" on a selected passage saves it. */
+  notebookId?: string
+  /** A request to put the cursor in the open dive's question box. */
+  attention?: DiveAttention | null
+  onAttended?: (request: DiveAttention) => void
 }
 
 /**
@@ -86,12 +99,17 @@ export function LearningAsidePanel({
   onParkQuestion,
   onSetIncludeInMain,
   referenceTitles,
+  onGoDeeperOnSelection,
+  notebookId,
+  attention,
+  onAttended,
 }: LearningAsidePanelProps) {
   const { t } = useTranslation()
   const sectionRef = useRef<HTMLElement>(null)
   const headingId = useId()
   const [showList, setShowList] = useState(!activeAside)
   const [showTranscript, setShowTranscript] = useState(true)
+  const [focusRequest, setFocusRequest] = useState(0)
   const resolution = useAsideResolution({
     aside: activeAside,
     onDraftResolution,
@@ -100,13 +118,18 @@ export function LearningAsidePanel({
   })
   const activeAsideId = activeAside?.id
   const latestUpdate = activeAside?.updates.at(-1)
+  // Only a dive off a main-chat answer has its origin in main chat; a nested
+  // dive's anchor, if any, is an answer in its parent dive.
+  const originMessageId = activeAside?.parent_aside_id
+    ? undefined
+    : activeAside?.anchor.message_id
   // After resolving, the way back lands on the reply that received the
   // conclusion, or on the message the aside branched from.
   const returnTarget =
     [...(activeAside?.updates ?? [])]
       .reverse()
       .find((update) => update.applied_message_id)?.applied_message_id ??
-    activeAside?.anchor.message_id
+    originMessageId
   const parentAside = activeAside?.parent_aside_id
     ? asides.find((aside) => aside.id === activeAside.parent_aside_id)
     : undefined
@@ -124,6 +147,20 @@ export function LearningAsidePanel({
   useEffect(() => {
     if (open) sectionRef.current?.focus({ preventScroll: true })
   }, [open])
+
+  // A dive opened here to be asked about (Go deeper on a passage) gets the
+  // cursor in its question box.
+  useEffect(() => {
+    if (!attention || !onAttended || attention.asideId !== activeAsideId) return
+    if (attention.focus) setFocusRequest((count) => count + 1)
+    onAttended(attention)
+  }, [attention, activeAsideId, onAttended])
+
+  const goDeeperInDive =
+    activeAside && onGoDeeperOnSelection
+      ? (message: NotebookChatMessage, passage: string) =>
+          onGoDeeperOnSelection(activeAside, message, passage)
+      : undefined
 
   const visibleAsides = asides.filter(
     (aside) => aside.status !== 'discarded'
@@ -267,14 +304,12 @@ export function LearningAsidePanel({
                     {t('learningAsides.backToParent')}
                   </Button>
                 )}
-                {activeAside.anchor.message_id && (
+                {originMessageId && (
                   <Button
                     variant="ghost"
                     size="sm"
                     className="h-6 px-2"
-                    onClick={() =>
-                      returnToMainMessage(activeAside.anchor.message_id!)
-                    }
+                    onClick={() => returnToMainMessage(originMessageId)}
                   >
                     <ArrowLeft className="mr-1 h-3.5 w-3.5" />
                     {t('learningAsides.backToOrigin')}
@@ -339,6 +374,8 @@ export function LearningAsidePanel({
                     onSendMessage={onSendMessage}
                     onReferenceClick={onReferenceClick}
                     referenceTitles={referenceTitles}
+                    onGoDeeperOnSelection={goDeeperInDive}
+                    notebookId={notebookId}
                   />
                 )}
               </div>
@@ -360,6 +397,7 @@ export function LearningAsidePanel({
                     isSending={isSending}
                     disabled={isAsideLoading}
                     onSendMessage={onSendMessage}
+                    focusRequest={focusRequest}
                   />
                 )}
                 <div className="flex flex-wrap items-center justify-between gap-2">
