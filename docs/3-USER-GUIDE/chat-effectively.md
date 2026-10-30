@@ -54,7 +54,7 @@ A session is one conversation; its messages are saved and reloaded when you come
 
 Use an aside, or *deep dive*, when an answer raises a prerequisite or tangent that you want to explore without filling the main conversation with the detour.
 
-1. Under an assistant answer, click **Go deeper** (its tooltip reads "Open as an aside").
+1. Under an assistant answer, click **Go deeper** (its tooltip reads "Open as an aside"). To dig into one passage rather than the whole answer, select it instead (see [Going deeper on a passage](#going-deeper-on-a-passage)).
 2. The dive opens in the chat, right under that answer: a row reading **Deep dive · <title>** with its status, unfolded into the dive's own conversation. Ask follow-up questions in its box and send with **Ctrl+Enter** (**⌘+Enter** on Mac). The dive keeps the answer and the main conversation up to that point. Its replies have numbered citations and math, like the main chat. A question you send shows in the dive at once while it is being answered.
 3. **Save for later** parks the dive (its row then says *Parked*; write to it or click **Reopen** to continue). **Discard** removes it when the tangent was not useful. **Wrap up** drafts what you learned, right there under the answer, for you to edit and resolve.
 4. Before resolving, edit the proposed conclusion and decide whether to use it in the main conversation, save it as a note, or both.
@@ -64,6 +64,15 @@ Click a dive's row to fold it or unfold it again. One dive is open at a time: op
 The complete aside transcript stays isolated. Only the conclusion you approve is added to future main-chat context. The main chat gets your conclusions newest first, until about 4,000 tokens (roughly 3,000 words) per message are used; the first one that doesn't fit is left out, along with every older one. A resolved dive folds to a **✓ Learned: …** row under the answer it came from, naming the first words of the conclusion. Click it for the summary, with why it matters, open questions, citations that open the existing source, note or insight view, **View transcript**, **Update resolution**, **Open full height** and, after the main chat uses that conclusion, **View merged response**. The reply that received that conclusion carries a small **Used what you learned: …** chip above it; click the chip to expand the same summary, and click it again to fold it away. **Dive in** on an open question starts a nested dive and asks that question at once; it opens under its parent dive in the chat. A dive nested one level deeper than that opens full height instead, and shows in the chat as a row that opens it. **Park question** saves the child without leaving the thread you are reading. The outline and map place the child under its parent.
 
 The **Asides** button lists active, parked and resolved asides in the full-height view. The **Journey** tab in **Studio** starts with three counts: **Learned** (resolved asides whose conclusion the main chat uses), **Open questions** (questions on the latest conclusions that no dive has picked up yet) and **Saved for later** (parked asides). Its **Outline** names each part of the chat as a section. Rename a section or pin it; the name stays when you reload, and pinned sections stay at the top. Each aside still nests under the turn it came from, and clicking one scrolls the chat to its dive and opens it there (full height when it is nested too deep, or when its answer is not in this chat). **Map** shows the main thread, each branch, its summary, and the merged reply. Expanding the map covers the Journey tab; **Outline** brings the list back. **Main thread** in the Journey tab closes any open dive. When you return to a notebook with unfinished work, a resume prompt opens it under its answer. If several branches are unfinished, **Resume** returns to the active branch (or the most recently parked one), not simply the oldest aside. Aside sessions do not appear in the normal **Chat Sessions** list.
+
+### Going deeper on a passage
+
+Select part of an assistant answer, with the mouse or by touch, and a small toolbar appears next to the selection with **Go deeper** and **Save to note**:
+
+- **Go deeper** opens a deep dive about that passage under the answer, titled from the passage. The dive quotes it under **On this passage**, and still knows the whole answer and the conversation before it. Math and citations in the passage are kept.
+- **Save to note** saves the passage as an **AI Generated** note in this notebook, with a generated title, like **Save to note** under an answer does for the whole answer.
+
+The toolbar comes right after the answer in the tab order: after selecting, press **Tab** to reach it (screen readers announce that actions for the selected text follow the answer). **Escape** hides it. Selecting and copying text work as usual, and the **Go deeper** button under each answer still opens a dive about the whole answer.
 
 If you also save the conclusion as a note, it behaves like any other notebook
 note: sessions that include notes in their context can use it. Leave that
@@ -82,7 +91,7 @@ The model button on the message row opens **Model Configuration**. Pick a model 
 Under each AI answer:
 
 - **Copy to clipboard** copies the answer text.
-- **Save to note** saves it as an **AI Generated** note in this notebook, with a generated title. There is no dialog; the note appears in Studio's Notes tab.
+- **Save to note** saves it as an **AI Generated** note in this notebook, with a generated title. There is no dialog; the note appears in Studio's Notes tab. To save only part of an answer, select it and use **Save to note** in the toolbar that appears.
 
 **References** are the numbered links in the answer. They point to whole items (a source, note or insight), not to pages or passages. See [Citations](citations.md) for how to check them.
 

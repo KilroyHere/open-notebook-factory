@@ -529,6 +529,9 @@ export const itIT = {
     saveForLater: "Salva per dopo",
     openFullHeight: "Apri a tutta altezza",
     opening: "Apertura di un approfondimento…",
+    selectedPassage: "Su questo passaggio",
+    selectionActions: "Testo selezionato",
+    selectionActionsHint: "Le azioni per il testo selezionato seguono questa risposta.",
     status: {
       active: "Attiva",
       parked: "In sospeso",

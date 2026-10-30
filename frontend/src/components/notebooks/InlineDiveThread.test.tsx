@@ -431,6 +431,30 @@ describe('InlineDiveThread', () => {
     expect(screen.queryByText(/Exponential families/)).toBeNull()
   })
 
+  it('quotes the passage a dive was started from', () => {
+    const passage: LearningAside = {
+      ...dive,
+      title: 'The probability that a latent explains',
+      anchor: {
+        type: 'message',
+        message_id: 'ai:origin',
+        content: 'The probability that a latent explains $p(x)$ [source:paper].',
+        locator: 'selection',
+      },
+    }
+    render(<Harness asides={[passage, { ...dive, id: 'learning_aside:whole' }]} />)
+
+    fireEvent.click(row(/deepDiveRow:The probability that a latent explains/))
+    expect(screen.getByText('learningAsides.selectedPassage')).toBeInTheDocument()
+    expect(
+      screen.getByText('The probability that a latent explains p(x).')
+    ).toBeInTheDocument()
+
+    // A dive about the whole answer has no quote.
+    fireEvent.click(row(/deepDiveRow:Why Jensen applies/))
+    expect(screen.queryByText('learningAsides.selectedPassage')).toBeNull()
+  })
+
   it('says a new dive is opening under its answer', () => {
     render(
       <Harness asides={[]} overrides={{ creating: { messageId: 'ai:origin' } }} />

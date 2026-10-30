@@ -529,6 +529,9 @@ export const frFR = {
     saveForLater: "Garder pour plus tard",
     openFullHeight: "Ouvrir en pleine hauteur",
     opening: "Ouverture d’un approfondissement…",
+    selectedPassage: "Sur ce passage",
+    selectionActions: "Texte sélectionné",
+    selectionActionsHint: "Les actions pour le texte sélectionné suivent cette réponse.",
     status: {
       active: "Actif",
       parked: "En attente",

@@ -529,6 +529,9 @@ export const esES = {
     saveForLater: "Guardar para después",
     openFullHeight: "Abrir a altura completa",
     opening: "Abriendo una profundización…",
+    selectedPassage: "Sobre este fragmento",
+    selectionActions: "Texto seleccionado",
+    selectionActionsHint: "Las acciones para el texto seleccionado están después de esta respuesta.",
     status: {
       active: "Activo",
       parked: "Aparcado",

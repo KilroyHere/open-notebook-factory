@@ -529,6 +529,9 @@ export const ptBR = {
     saveForLater: "Salvar para depois",
     openFullHeight: "Abrir em altura total",
     opening: "Abrindo um aprofundamento…",
+    selectedPassage: "Sobre este trecho",
+    selectionActions: "Texto selecionado",
+    selectionActionsHint: "As ações para o texto selecionado vêm depois desta resposta.",
     status: {
       active: "Ativo",
       parked: "Adiado",

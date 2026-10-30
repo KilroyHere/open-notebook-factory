@@ -22,12 +22,14 @@ import {
 import {
   childDives,
   INLINE_DIVE_MAX_DEPTH,
+  isPassageDive,
   leadingWords,
   type ReferenceTitles,
 } from '@/lib/utils/learning-asides'
 import { cn } from '@/lib/utils'
 import { ASIDE_STATUS_KEYS, asideStatusVariant, isOpenDive } from './aside-status'
 import { AsideComposer } from './AsideComposer'
+import { AsidePassage } from './AsidePassage'
 import { AsideResolveForm } from './AsideResolveForm'
 import { AsideStatusActions } from './AsideStatusActions'
 import { AsideSummary } from './AsideSummary'
@@ -253,6 +255,7 @@ export function InlineDiveThread(props: InlineDiveThreadProps) {
         <div id={bodyId} hidden={!expanded}>
           {expanded && controller && (
             <div className="mt-1.5 min-w-0 space-y-3 border-l-2 border-teal/40 pl-3">
+              {isPassageDive(dive) && <AsidePassage content={dive.anchor.content} />}
               {resolved && latestUpdate ? (
                 <>
                   <AsideSummary

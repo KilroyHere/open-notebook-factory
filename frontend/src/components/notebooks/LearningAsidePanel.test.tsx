@@ -830,4 +830,22 @@ describe('LearningAsidePanel', () => {
       screen.getByRole('region', { name: aside.title })
     )
   })
+
+  it('quotes the passage of a dive started from a selection', () => {
+    render(
+      <LearningAsidePanel
+        {...baseProps}
+        activeAside={{
+          ...aside,
+          anchor: { ...aside.anchor, content: 'Jensen’s inequality', locator: 'selection' },
+        }}
+      />
+    )
+
+    expect(screen.getByText('learningAsides.selectedPassage')).toBeInTheDocument()
+    expect(screen.getByText('Jensen’s inequality')).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'learningAsides.backToOrigin' })
+    ).toBeInTheDocument()
+  })
 })

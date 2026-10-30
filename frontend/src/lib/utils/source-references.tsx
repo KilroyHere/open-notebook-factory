@@ -522,6 +522,8 @@ export function createCompactReferenceLinkComponent(
           }}
           className="text-primary hover:underline cursor-pointer inline font-medium"
           type="button"
+          // A selected passage copies the citation back as its marker.
+          data-reference={`${type}:${id}`}
         >
           {children}
         </button>

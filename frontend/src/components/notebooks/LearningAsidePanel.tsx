@@ -14,11 +14,13 @@ import {
 import { useTranslation } from '@/lib/hooks/use-translation'
 import { useAsideResolution } from '@/lib/hooks/use-aside-resolution'
 import {
+  isPassageDive,
   ReferenceTitles,
   toPlainTextPreview,
 } from '@/lib/utils/learning-asides'
 import { ASIDE_STATUS_KEYS, asideStatusVariant, isOpenDive } from './aside-status'
 import { AsideComposer } from './AsideComposer'
+import { AsidePassage } from './AsidePassage'
 import { AsideResolveForm } from './AsideResolveForm'
 import { AsideStatusActions } from './AsideStatusActions'
 import { AsideSummary } from './AsideSummary'
@@ -279,6 +281,9 @@ export function LearningAsidePanel({
                 <p className="mt-1 line-clamp-2 break-words text-xs text-muted-foreground">
                   {toPlainTextPreview(activeAside.anchor.content)}
                 </p>
+              )}
+              {isPassageDive(activeAside) && (
+                <AsidePassage content={activeAside.anchor.content} className="mt-1.5" />
               )}
             </div>
 

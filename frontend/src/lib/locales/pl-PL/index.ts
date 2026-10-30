@@ -529,6 +529,9 @@ export const plPL = {
     saveForLater: "Zapisz na później",
     openFullHeight: "Otwórz na pełną wysokość",
     opening: "Otwieranie pogłębienia…",
+    selectedPassage: "O tym fragmencie",
+    selectionActions: "Zaznaczony tekst",
+    selectionActionsHint: "Działania dla zaznaczonego tekstu znajdują się po tej odpowiedzi.",
     status: {
       active: "Aktywna",
       parked: "Odłożona",

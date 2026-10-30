@@ -529,6 +529,9 @@ export const trTR = {
     saveForLater: "Sonraya kaydet",
     openFullHeight: "Tam yükseklikte aç",
     opening: "Derin inceleme açılıyor…",
+    selectedPassage: "Bu bölüm hakkında",
+    selectionActions: "Seçili metin",
+    selectionActionsHint: "Seçili metin için eylemler bu yanıttan sonra gelir.",
     status: {
       active: "Etkin",
       parked: "Ertelendi",

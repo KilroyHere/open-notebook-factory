@@ -529,6 +529,9 @@ export const ruRU = {
     saveForLater: "Отложить на потом",
     openFullHeight: "Открыть во всю высоту",
     opening: "Открываем углубление…",
+    selectedPassage: "Об этом фрагменте",
+    selectionActions: "Выделенный текст",
+    selectionActionsHint: "Действия для выделенного текста находятся после этого ответа.",
     status: {
       active: "Активно",
       parked: "Отложено",

@@ -527,6 +527,9 @@ export const enUS = {
     saveForLater: "Save for later",
     openFullHeight: "Open full height",
     opening: "Opening a deep dive…",
+    selectedPassage: "On this passage",
+    selectionActions: "Selected text",
+    selectionActionsHint: "Actions for the selected text follow this answer.",
     status: {
       active: "Active",
       parked: "Parked",

@@ -161,6 +161,7 @@ export function ChatColumn({ workspace, isLoading }: ChatColumnProps) {
             notebookContextStats={workspace.contextStats}
             notebookId={workspace.notebookId}
             onOpenAside={workspace.openAsideFromMessage}
+            onGoDeeperOnSelection={workspace.openAsideFromSelection}
             onOpenAsides={chat.currentSessionId ? learning.openList : undefined}
             asideCount={
               learning.asides.filter((aside) => aside.status !== 'discarded')

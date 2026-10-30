@@ -22,6 +22,7 @@ import {
 } from '@/components/common/ContextChip'
 import { SessionManager } from '@/components/sources/SessionManager'
 import { MessageActions } from '@/components/sources/MessageActions'
+import { SelectionActions } from '@/components/sources/SelectionActions'
 import { useModalManager } from '@/lib/hooks/use-modal-manager'
 import { toast } from 'sonner'
 import { useTranslation } from '@/lib/hooks/use-translation'
@@ -61,6 +62,8 @@ interface ChatPanelProps {
   notebookId?: string
   // Learning-aside actions (notebook chat only)
   onOpenAside?: (message: SourceChatMessage) => void
+  /** "Go deeper" on a passage selected in an assistant answer. */
+  onGoDeeperOnSelection?: (message: SourceChatMessage, passage: string) => void
   onOpenAsides?: () => void
   asideCount?: number
   learningAsides?: LearningAside[]
@@ -92,6 +95,7 @@ export function ChatPanel({
   notebookContextStats,
   notebookId,
   onOpenAside,
+  onGoDeeperOnSelection,
   onOpenAsides,
   asideCount = 0,
   learningAsides = [],
@@ -233,6 +237,7 @@ export function ChatPanel({
                   notebookId={notebookId}
                   onReferenceClick={handleReferenceClick}
                   onOpenAside={onOpenAside}
+                  onGoDeeperOnSelection={onGoDeeperOnSelection}
                   learningAsides={learningAsides}
                   onOpenLearningAside={onOpenLearningAside}
                   onNavigateToMessage={onNavigateToMessage}
@@ -448,6 +453,7 @@ interface ChatMessageProps {
   notebookId?: string
   onReferenceClick: (type: string, id: string) => void
   onOpenAside?: (message: SourceChatMessage) => void
+  onGoDeeperOnSelection?: (message: SourceChatMessage, passage: string) => void
   learningAsides?: LearningAside[]
   onOpenLearningAside?: (asideId: string) => void
   onNavigateToMessage?: (messageId: string) => void
@@ -462,6 +468,7 @@ const ChatMessage = memo(function ChatMessage({
   notebookId,
   onReferenceClick,
   onOpenAside,
+  onGoDeeperOnSelection,
   learningAsides = [],
   onOpenLearningAside,
   onNavigateToMessage,
@@ -516,11 +523,20 @@ const ChatMessage = memo(function ChatMessage({
           )}
         >
           {message.type === 'ai' ? (
-            <ReferencedMarkdown
-              content={message.content}
-              onReferenceClick={onReferenceClick}
-              referenceTitles={referenceTitles}
-            />
+            <SelectionActions
+              notebookId={notebookId}
+              onGoDeeper={
+                onGoDeeperOnSelection
+                  ? (passage) => onGoDeeperOnSelection(message, passage)
+                  : undefined
+              }
+            >
+              <ReferencedMarkdown
+                content={message.content}
+                onReferenceClick={onReferenceClick}
+                referenceTitles={referenceTitles}
+              />
+            </SelectionActions>
           ) : (
             <p className="text-sm break-words">{message.content}</p>
           )}

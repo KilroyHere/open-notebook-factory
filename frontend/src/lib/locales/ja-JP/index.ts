@@ -529,6 +529,9 @@ export const jaJP = {
     saveForLater: "後で続ける",
     openFullHeight: "縦いっぱいに開く",
     opening: "深掘りを開いています…",
+    selectedPassage: "この箇所について",
+    selectionActions: "選択したテキスト",
+    selectionActionsHint: "選択したテキストの操作は、この回答の後にあります。",
     status: {
       active: "進行中",
       parked: "保留中",

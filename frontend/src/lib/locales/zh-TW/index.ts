@@ -529,6 +529,9 @@ export const zhTW = {
     saveForLater: "稍後繼續",
     openFullHeight: "以全高檢視開啟",
     opening: "正在開啟深入討論…",
+    selectedPassage: "關於這段內容",
+    selectionActions: "所選文字",
+    selectionActionsHint: "所選文字的操作位於此回答之後。",
     status: {
       active: "進行中",
       parked: "已暫存",

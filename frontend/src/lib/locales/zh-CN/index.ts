@@ -529,6 +529,9 @@ export const zhCN = {
     saveForLater: "稍后继续",
     openFullHeight: "以全高视图打开",
     opening: "正在打开深入讨论…",
+    selectedPassage: "关于这段内容",
+    selectionActions: "所选文本",
+    selectionActionsHint: "所选文本的操作位于此回答之后。",
     status: {
       active: "进行中",
       parked: "已暂存",

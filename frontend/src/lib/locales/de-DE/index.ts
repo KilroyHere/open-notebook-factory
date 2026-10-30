@@ -532,6 +532,9 @@ export const deDE = {
     saveForLater: "Für später merken",
     openFullHeight: "In voller Höhe öffnen",
     opening: "Vertiefung wird geöffnet …",
+    selectedPassage: "Zu dieser Passage",
+    selectionActions: "Ausgewählter Text",
+    selectionActionsHint: "Aktionen für den ausgewählten Text folgen nach dieser Antwort.",
     status: {
       active: "Aktiv",
       parked: "Geparkt",

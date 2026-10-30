@@ -529,6 +529,9 @@ export const caES = {
     saveForLater: "Desa per a més tard",
     openFullHeight: "Obre a tota l’alçada",
     opening: "S’està obrint un aprofundiment…",
+    selectedPassage: "Sobre aquest fragment",
+    selectionActions: "Text seleccionat",
+    selectionActionsHint: "Les accions per al text seleccionat són després d’aquesta resposta.",
     status: {
       active: "Actiu",
       parked: "Aparcat",

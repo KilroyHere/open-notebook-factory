@@ -200,6 +200,47 @@ describe('ChatPanel composer', () => {
     expect(list).toHaveClass('mx-auto')
   })
 
+  it('goes deeper on a passage selected in an assistant answer', () => {
+    const onGoDeeperOnSelection = vi.fn()
+    const answer = {
+      id: 'ai:1',
+      type: 'ai' as const,
+      content: 'The probability that a latent explains the data.',
+    }
+    render(
+      <ChatPanel
+        workspaceMode
+        messages={[{ id: 'human:1', type: 'human', content: 'Explain it.' }, answer]}
+        isStreaming={false}
+        contextIndicators={null}
+        onSendMessage={vi.fn()}
+        onGoDeeperOnSelection={onGoDeeperOnSelection}
+      />
+    )
+
+    const text = screen.getByText(answer.content).firstChild!
+    const range = document.createRange()
+    range.setStart(text, 4)
+    range.setEnd(text, 15)
+    window.getSelection()!.removeAllRanges()
+    window.getSelection()!.addRange(range)
+    fireEvent.mouseUp(text)
+    fireEvent.click(screen.getByRole('button', { name: 'learningAsides.goDeeper' }))
+
+    expect(onGoDeeperOnSelection).toHaveBeenCalledWith(answer, 'probability')
+
+    // Your own messages offer nothing.
+    const mine = screen.getByText('Explain it.').firstChild!
+    const own = document.createRange()
+    own.setStart(mine, 0)
+    own.setEnd(mine, 7)
+    window.getSelection()!.removeAllRanges()
+    window.getSelection()!.addRange(own)
+    fireEvent.mouseUp(mine)
+    expect(screen.queryByRole('toolbar')).toBeNull()
+    window.getSelection()!.removeAllRanges()
+  })
+
   it('lets an assistant reply shrink beside its avatar on narrow screens', () => {
     render(
       <ChatPanel

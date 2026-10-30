@@ -529,6 +529,9 @@ export const bnIN = {
     saveForLater: "পরের জন্য রাখুন",
     openFullHeight: "পূর্ণ উচ্চতায় খুলুন",
     opening: "গভীর আলোচনা খোলা হচ্ছে…",
+    selectedPassage: "এই অংশ নিয়ে",
+    selectionActions: "নির্বাচিত লেখা",
+    selectionActionsHint: "নির্বাচিত লেখার জন্য কাজগুলো এই উত্তরের পরে আছে।",
     status: {
       active: "সক্রিয়",
       parked: "স্থগিত",

@@ -171,6 +171,27 @@ describe('useNotebookWorkspace dives', () => {
     )
   })
 
+  it('goes deeper on a passage as a dive under its answer', async () => {
+    const createAside = vi.fn().mockResolvedValue(root)
+    const { result } = renderWorkspace(learningMock({ createAside }))
+
+    act(() => result.current.openAsideFromSelection(answer, `  ${'x'.repeat(20_010)}  `))
+    act(() => result.current.openAsideFromSelection(answer, '   '))
+
+    await waitFor(() => expect(createAside).toHaveBeenCalledTimes(1))
+    const input = createAside.mock.calls[0][0]
+    expect(input).toEqual(
+      expect.objectContaining({
+        type: 'message',
+        message_id: 'ai:1',
+        locator: 'selection',
+        presentation: 'inline',
+      })
+    )
+    // The backend keeps at most 20,000 characters of an anchor.
+    expect(input.content).toHaveLength(20_000)
+  })
+
   it('nests Dive in under an inline parent and asks the question', async () => {
     const created = dive({ id: 'learning_aside:new', parent_aside_id: root.id })
     const createAside = vi.fn().mockResolvedValue(created)
