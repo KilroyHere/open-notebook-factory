@@ -914,6 +914,67 @@ describe('LearningAsidePanel', () => {
     await waitFor(() => expect(input).toHaveValue('Why concave?'))
   })
 
+  it('brings a new reply into view in its own scroller', () => {
+    const question = 'Why concave?'
+    const reply = 'Its second derivative is negative.'
+    const geometry = vi
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockImplementation(function (this: HTMLElement) {
+        const text = this.textContent?.trim()
+        // The learner was at the end: the question was added just below it.
+        const { top, bottom } = this.matches('[data-slot="scroll-area-viewport"]')
+          ? { top: 60, bottom: 600 }
+          : this.hasAttribute('data-dive-transcript')
+            ? { top: 80, bottom: 640 }
+            : text === question
+              ? { top: 590, bottom: 630 }
+              : text === reply
+                ? { top: 646, bottom: 1400 }
+                : { top: 0, bottom: 0 }
+        return { top, bottom, height: bottom - top } as DOMRect
+      })
+    try {
+      const { container, rerender } = render(
+        <LearningAsidePanel {...baseProps} activeAside={aside} />
+      )
+      const viewport = container.querySelector<HTMLElement>(
+        '[data-slot="scroll-area-viewport"]'
+      )!
+      viewport.scrollTo = vi.fn()
+
+      rerender(
+        <LearningAsidePanel
+          {...baseProps}
+          activeAside={aside}
+          isSending
+          pendingMessage={question}
+        />
+      )
+      rerender(
+        <LearningAsidePanel
+          {...baseProps}
+          activeAside={{
+            ...aside,
+            messages: [
+              ...aside.messages,
+              { id: 'human:two', type: 'human', content: question },
+              { id: 'ai:two', type: 'ai', content: reply },
+            ],
+          }}
+        />
+      )
+
+      // A reply taller than the view: its start goes near the top, and the
+      // view shows as much of it as fits from there.
+      expect(viewport.scrollTo).toHaveBeenLastCalledWith({
+        top: 646 - 60 - 24,
+        behavior: 'smooth',
+      })
+    } finally {
+      geometry.mockRestore()
+    }
+  })
+
   it('takes the cursor along when it opens over the chat', () => {
     render(<LearningAsidePanel {...baseProps} activeAside={aside} />)
 

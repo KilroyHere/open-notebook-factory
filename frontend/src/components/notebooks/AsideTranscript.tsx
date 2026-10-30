@@ -1,10 +1,12 @@
 'use client'
 
+import { useRef } from 'react'
 import { Loader2, Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ReferencedMarkdown } from '@/components/common/ReferencedMarkdown'
 import type { LearningAside } from '@/lib/types/api'
 import { useTranslation } from '@/lib/hooks/use-translation'
+import { useRevealNewReply } from '@/lib/hooks/use-reveal-new-reply'
 import type { ReferenceTitles } from '@/lib/utils/learning-asides'
 import { cn } from '@/lib/utils'
 import { isOpenDive } from './aside-status'
@@ -13,7 +15,8 @@ import { isOpenDive } from './aside-status'
  * A dive's conversation: the learner's questions and the answers, with
  * numbered citations and math. While the transcript loads it says so; an
  * empty dive explains what to ask, and a nested dive offers to ask the
- * question it was opened for.
+ * question it was opened for. A learner at the end of the dive sees the
+ * question they send and, once it comes, the start of the reply.
  */
 export function AsideTranscript({
   aside,
@@ -36,10 +39,22 @@ export function AsideTranscript({
   className?: string
 }) {
   const { t } = useTranslation()
+  const transcriptRef = useRef<HTMLDivElement>(null)
+  useRevealNewReply({
+    transcriptRef,
+    asideId: aside.id,
+    messages: aside.messages,
+    waiting: isSending || Boolean(pendingMessage),
+    ready: !isAsideLoading,
+  })
   const empty = aside.messages.length === 0 && !pendingMessage
 
   return (
-    <div className={cn('min-w-0 space-y-4', className)}>
+    <div
+      ref={transcriptRef}
+      data-dive-transcript
+      className={cn('min-w-0 space-y-4', className)}
+    >
       {empty ? (
         isAsideLoading ? (
           // Journey listings carry asides without transcripts; the detail
@@ -109,7 +124,11 @@ function TranscriptMessage({
   referenceTitles?: ReferenceTitles
 }) {
   return (
-    <div className={`flex ${type === 'human' ? 'justify-end' : 'justify-start'}`}>
+    // TRANSCRIPT_MESSAGE_ATTRIBUTE: how a new reply is found to reveal it.
+    <div
+      data-transcript-message=""
+      className={`flex ${type === 'human' ? 'justify-end' : 'justify-start'}`}
+    >
       <div
         className={`min-w-0 max-w-[88%] overflow-hidden break-words rounded-md border px-3 py-2 text-sm [&_*]:max-w-full ${
           type === 'human' ? 'bg-muted' : 'bg-card'
