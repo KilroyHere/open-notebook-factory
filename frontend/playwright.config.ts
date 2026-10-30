@@ -12,8 +12,7 @@ const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE || undefined
 
 export default defineConfig({
   testDir: './e2e',
-  // Not the default test-results/: a stray test-results/.last-run.json is
-  // committed in frontend/, and a run would rewrite it.
+  // Traces and screenshots of failed tests, next to the suite (gitignored).
   outputDir: './e2e/test-results',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,

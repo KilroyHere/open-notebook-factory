@@ -42,6 +42,7 @@ next-env.d.ts
 
 doc_exports/
 
-# playwright (e2e/)
+# playwright (e2e/), and Playwright's default output folder
 /e2e/test-results/
 /playwright-report/
+/test-results/
