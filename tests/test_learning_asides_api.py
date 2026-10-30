@@ -2159,6 +2159,37 @@ def test_execute_chat_sends_and_links_only_updates_within_the_budget(client):
     ]
 
 
+@pytest.mark.parametrize(
+    ("accepted", "expected"),
+    [
+        ([], None),
+        (["kept"], [{"conclusion": "kept cost=10"}]),
+    ],
+    ids=["nothing-accepted", "one-accepted"],
+)
+def test_execute_chat_with_null_learning_updates_uses_the_server_copy(
+    client, accepted, expected
+):
+    """`"learning_updates": null` once failed the turn with a 500."""
+    updates = [_priced_update(name, 10, 1) for name in accepted]
+    request_context: dict[str, Any] = {
+        "sources": [],
+        "learning_updates": None,
+        "learning_updates_instruction": None,
+    }
+    with _journey_with_updates(updates, 4_000):
+        response, model_context, load_learning, _ = _execute_main_chat(
+            client, request_context, notebook_rows=[{"out": "notebook:one"}]
+        )
+
+    assert response.status_code == 200
+    load_learning.assert_awaited_once()
+    assert model_context.get("learning_updates") == expected
+    assert model_context["sources"] == []
+    if expected is None:
+        assert "learning_updates_instruction" not in model_context
+
+
 # --- Including a conclusion in main chat, or leaving it out ------------------
 
 
