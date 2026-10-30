@@ -8,8 +8,10 @@ import {
   LearningJourneyResume,
   LearningResolutionDraft,
   LearningSection,
+  LearningUpdate,
   ResolveLearningAsideRequest,
   SendLearningAsideMessageRequest,
+  UpdateLearningUpdateRequest,
 } from '@/lib/types/api'
 
 export const learningApi = {
@@ -93,6 +95,21 @@ export const learningApi = {
   ) => {
     const response = await apiClient.post<LearningAside>(
       `/learning/asides/${asideId}/resolve`,
+      data
+    )
+    return response.data
+  },
+
+  /**
+   * Include an accepted conclusion in main chat, or leave it out. Only an
+   * aside's latest version can change: a superseded one is a 400.
+   */
+  updateLearningUpdate: async (
+    updateId: string,
+    data: UpdateLearningUpdateRequest
+  ) => {
+    const response = await apiClient.patch<LearningUpdate>(
+      `/learning/updates/${updateId}`,
       data
     )
     return response.data

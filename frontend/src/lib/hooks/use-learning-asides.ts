@@ -9,14 +9,29 @@ import {
   LearningAside,
   LearningAsideAnchor,
   LearningAsideStatus,
+  LearningJourney,
   LearningSection,
+  LearningUpdate,
   ResolveLearningAsideRequest,
 } from '@/lib/types/api'
 
 const EMPTY_SECTIONS: LearningSection[] = []
 import { useTranslation } from '@/lib/hooks/use-translation'
 import { getApiErrorMessage } from '@/lib/utils/error-handler'
-import { createAsideTitle } from '@/lib/utils/learning-asides'
+import {
+  createAsideTitle,
+  journeyWithIncludeInMain,
+  withIncludeInMain,
+} from '@/lib/utils/learning-asides'
+
+/** A learner switching one conclusion in or out of main chat. */
+interface InclusionChange {
+  updateId: string
+  asideId: string
+  includeInMain: boolean
+}
+
+const INCLUSION_MUTATION_KEY = ['learning', 'updates', 'include-in-main'] as const
 
 interface UseLearningAsidesParams {
   notebookId: string
@@ -244,6 +259,14 @@ export function useLearningAsides({
       learningApi.draftResolution(asideId, { model_override: modelOverride }),
   })
 
+  // What main chat receives changed: recount the composer's context. Not
+  // awaited, since building a large notebook's context can take a while.
+  const recountChatContext = useCallback(() => {
+    void queryClient.invalidateQueries({
+      queryKey: QUERY_KEYS.notebookChatContext(notebookId),
+    })
+  }, [notebookId, queryClient])
+
   const resolveMutation = useMutation({
     mutationFn: ({
       asideId,
@@ -254,6 +277,7 @@ export function useLearningAsides({
     }) => learningApi.resolveAside(asideId, data),
     onSuccess: async (aside) => {
       queryClient.setQueryData(QUERY_KEYS.learningAside(aside.id), aside)
+      recountChatContext()
       await refresh(aside.id)
       toast.success(t('learningAsides.resolvedSuccess'))
     },
@@ -304,6 +328,84 @@ export function useLearningAsides({
       )
     },
   })
+
+  // A conclusion's "Use in main chat", wherever it is listed: the journey
+  // (Studio's list and counts) and the open dive (its summary).
+  const showInclusion = useCallback(
+    (updateId: string, asideId: string, include: boolean) => {
+      queryClient.setQueryData<LearningJourney | null>(journeyKey, (current) =>
+        current ? journeyWithIncludeInMain(current, updateId, include) : current
+      )
+      queryClient.setQueryData<LearningAside>(
+        QUERY_KEYS.learningAside(asideId),
+        (current) =>
+          current
+            ? { ...current, updates: withIncludeInMain(current.updates, updateId, include) }
+            : current
+      )
+    },
+    [journeyKey, queryClient]
+  )
+
+  const inclusionMutation = useMutation({
+    mutationKey: INCLUSION_MUTATION_KEY,
+    // One switch at a time, in the order they were clicked, so the server
+    // ends on the learner's last click.
+    scope: { id: 'learning-update-include-in-main' },
+    // A refused switch (a superseded version) fails the same way twice.
+    retry: false,
+    mutationFn: ({ updateId, includeInMain }: InclusionChange) =>
+      learningApi.updateLearningUpdate(updateId, {
+        include_in_main: includeInMain,
+      }),
+    // The switch and Studio's counts move at once; a refetch in flight
+    // must not put the old value back.
+    onMutate: async ({ updateId, asideId, includeInMain }) => {
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: journeyKey, exact: true }),
+        queryClient.cancelQueries({
+          queryKey: QUERY_KEYS.learningAside(asideId),
+          exact: true,
+        }),
+      ])
+      showInclusion(updateId, asideId, includeInMain)
+      return { wasIncluded: !includeInMain }
+    },
+    onError: (error: unknown, { updateId, asideId }, context) => {
+      if (context) showInclusion(updateId, asideId, context.wasIncluded)
+      const apiError = error as {
+        response?: { data?: { detail?: string } }
+        message?: string
+      }
+      toast.error(
+        getApiErrorMessage(
+          apiError.response?.data?.detail || apiError.message,
+          (key) => t(key),
+          'learningAsides.includeInMainFailed'
+        )
+      )
+    },
+    onSettled: (_update, _error, { asideId }) => {
+      // Refetch after the last queued switch only: an earlier reply must
+      // not flip back a switch that is still on its way.
+      if (queryClient.isMutating({ mutationKey: INCLUSION_MUTATION_KEY }) > 1) {
+        return
+      }
+      recountChatContext()
+      void refresh(asideId)
+    },
+  })
+  const { mutate: changeInclusion } = inclusionMutation
+  /** Send `update` with every main-chat message, or leave it out. */
+  const setIncludeInMain = useCallback(
+    (update: Pick<LearningUpdate, 'id' | 'aside_id'>, includeInMain: boolean) =>
+      changeInclusion({
+        updateId: update.id,
+        asideId: update.aside_id,
+        includeInMain,
+      }),
+    [changeInclusion]
+  )
 
   const syncSectionsMutation = useMutation({
     mutationFn: (
@@ -435,6 +537,7 @@ export function useLearningAsides({
     draftResolution: draftMutation.mutateAsync,
     resolveAside: resolveMutation.mutateAsync,
     updateStatus: updateMutation.mutateAsync,
+    setIncludeInMain,
     syncSections: syncSectionsMutation.mutateAsync,
     updateSection: updateSectionMutation.mutateAsync,
   }

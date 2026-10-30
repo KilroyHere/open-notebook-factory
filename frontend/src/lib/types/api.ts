@@ -356,6 +356,11 @@ export interface ResolveLearningAsideRequest {
   save_as_note: boolean
 }
 
+/** `PATCH /learning/updates/{id}`: send a conclusion with main chat, or not. */
+export interface UpdateLearningUpdateRequest {
+  include_in_main: boolean
+}
+
 export interface DraftLearningResolutionRequest {
   model_override?: string
 }

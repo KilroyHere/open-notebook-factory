@@ -89,6 +89,7 @@ export function ChatColumn({ workspace, isLoading }: ChatColumnProps) {
     onResolve: (asideId, data) => learning.resolveAside({ asideId, data }),
     onUpdateStatus: (asideId, status) =>
       learning.updateStatus({ asideId, status }),
+    onSetIncludeInMain: learning.setIncludeInMain,
   }
 
   const resumableAside = learning.asides.find(
@@ -212,6 +213,7 @@ export function ChatColumn({ workspace, isLoading }: ChatColumnProps) {
             onReferenceClick={handleReferenceClick}
             onDiveIntoQuestion={workspace.diveIntoQuestion}
             onParkQuestion={workspace.parkQuestion}
+            onSetIncludeInMain={learning.setIncludeInMain}
             referenceTitles={workspace.referenceTitles}
           />
         </div>

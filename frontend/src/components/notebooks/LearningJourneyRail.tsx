@@ -17,6 +17,8 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { LearningQuestionList } from '@/components/notebooks/LearningUpdateParts'
+import { LearnedConclusions } from '@/components/notebooks/LearnedConclusions'
+import type { SetIncludeInMain } from '@/components/notebooks/IncludeInMainToggle'
 import {
   LearningAside,
   LearningSection,
@@ -40,6 +42,8 @@ interface LearningJourneyRailProps {
   sections?: LearningSection[]
   onRenameSection?: (sectionId: string, title: string) => void
   onTogglePinSection?: (sectionId: string, pinned: boolean) => void
+  /** "Use in main chat" for a resolved dive's conclusion. */
+  onSetIncludeInMain?: SetIncludeInMain
 }
 
 function rootAsides(asides: LearningAside[]): LearningAside[] {
@@ -509,6 +513,7 @@ export function LearningJourneyRail({
   sections = [],
   onRenameSection,
   onTogglePinSection,
+  onSetIncludeInMain,
 }: LearningJourneyRailProps) {
   const { t } = useTranslation()
   const [tab, setTab] = useState('outline')
@@ -592,6 +597,13 @@ export function LearningJourneyRail({
                 <MessageSquare className="mr-1.5 h-3.5 w-3.5" />
                 {t('learningAsides.mainThread')}
               </Button>
+
+              <LearnedConclusions
+                asides={visibleAsides}
+                activeAsideId={activeAsideId}
+                onOpenAside={onOpenAside}
+                onSetIncludeInMain={onSetIncludeInMain}
+              />
 
               {outlineGroups.length > 0 && (
                 <div>

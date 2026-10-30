@@ -8,6 +8,7 @@ import type { LearningAside, LearningUpdate } from '@/lib/types/api'
 import { useTranslation } from '@/lib/hooks/use-translation'
 import type { ReferenceTitles } from '@/lib/utils/learning-asides'
 import { cn } from '@/lib/utils'
+import { IncludeInMainToggle, type SetIncludeInMain } from './IncludeInMainToggle'
 import {
   LearningEvidenceButtons,
   LearningQuestionList,
@@ -15,8 +16,8 @@ import {
 
 /**
  * What a resolved dive concluded: the conclusion, why it matters, its open
- * questions (each can start or park a nested dive) and the evidence, with
- * the caller's actions underneath.
+ * questions (each can start or park a nested dive), the evidence and
+ * whether main chat uses it, with the caller's actions underneath.
  */
 export function AsideSummary({
   aside,
@@ -26,6 +27,7 @@ export function AsideSummary({
   onDiveIntoQuestion,
   onParkQuestion,
   onReferenceClick,
+  onSetIncludeInMain,
   referenceTitles,
   className,
   children,
@@ -37,6 +39,8 @@ export function AsideSummary({
   onDiveIntoQuestion?: (parent: LearningAside, question: string) => void
   onParkQuestion?: (parent: LearningAside, question: string) => void
   onReferenceClick?: (type: string, id: string) => void
+  /** "Use in main chat" for this conclusion; hidden without it. */
+  onSetIncludeInMain?: SetIncludeInMain
   referenceTitles?: ReferenceTitles
   className?: string
   /** Actions under the summary. */
@@ -92,6 +96,14 @@ export function AsideSummary({
         referenceTitles={referenceTitles}
         className="mt-3 border-t pt-3"
       />
+      {/* A superseded version can never reach main chat, so it has no switch. */}
+      {onSetIncludeInMain && !update.superseded && (
+        <IncludeInMainToggle
+          update={update}
+          onChange={onSetIncludeInMain}
+          className="mt-3 border-t pt-3"
+        />
+      )}
       {children && (
         <div className="mt-3 flex flex-wrap gap-2 border-t pt-3">{children}</div>
       )}

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { StudioColumn } from './StudioColumn'
 import { useNotebookColumnsStore } from '@/lib/stores/notebook-columns-store'
@@ -42,6 +42,7 @@ function createWorkspace(
       sections: [],
       activeAsideId: shownAsideId,
       openAside: vi.fn(),
+      setIncludeInMain: vi.fn(),
     },
     shownAsideId,
     openAside: vi.fn(),
@@ -145,6 +146,75 @@ describe('StudioColumn', () => {
     )
     expect(onShowConversation).toHaveBeenCalledTimes(2)
     expect(workspace.showMainThread).toHaveBeenCalled()
+  })
+
+  it('lists what was learned with a switch for main chat that keeps the count', () => {
+    const conclusion = {
+      id: 'learning_update:one',
+      aside_id: 'learning_aside:resolved',
+      conclusion: 'Concavity produces the lower bound.',
+      open_questions: [],
+      citations: [],
+      include_in_main: true,
+      version: 1,
+      created: aside.created,
+      updated: aside.updated,
+    }
+    const resolved: LearningAside = {
+      ...aside,
+      id: 'learning_aside:resolved',
+      title: 'Why Jensen applies',
+      status: 'resolved',
+      updates: [conclusion],
+    }
+    const workspace = createWorkspace([resolved])
+    const onShowConversation = vi.fn()
+    const { rerender } = render(
+      <StudioColumn
+        workspace={workspace}
+        notes={notes}
+        presentation="sheet"
+        onShowConversation={onShowConversation}
+      />
+    )
+    const learnedCount = () =>
+      screen.getByText('learningAsides.statsLearned').closest('div')!
+    expect(learnedCount()).toHaveTextContent('1')
+
+    const learned = screen.getByRole('region', {
+      name: 'learningAsides.whatYouLearned',
+    })
+    fireEvent.click(within(learned).getByRole('checkbox'))
+    // Switching stays in Studio; opening the conclusion goes to the chat.
+    expect(workspace.learning.setIncludeInMain).toHaveBeenCalledWith(
+      conclusion,
+      false
+    )
+    expect(onShowConversation).not.toHaveBeenCalled()
+    fireEvent.click(
+      within(learned).getByRole('button', {
+        name: 'Concavity produces the lower bound.',
+      })
+    )
+    expect(onShowConversation).toHaveBeenCalledTimes(1)
+    expect(workspace.openAside).toHaveBeenCalledWith(resolved.id)
+
+    // Left out of main chat, it is still listed but no longer counted.
+    rerender(
+      <StudioColumn
+        workspace={createWorkspace([
+          { ...resolved, updates: [{ ...conclusion, include_in_main: false }] },
+        ])}
+        notes={notes}
+        presentation="sheet"
+      />
+    )
+    expect(learnedCount()).toHaveTextContent('0')
+    expect(
+      within(
+        screen.getByRole('region', { name: 'learningAsides.whatYouLearned' })
+      ).getByRole('checkbox')
+    ).not.toBeChecked()
   })
 
   it('marks the dive on screen in the outline', () => {

@@ -574,6 +574,49 @@ describe('LearningAsidePanel', () => {
     ).toBeInTheDocument()
   })
 
+  it('switches the resolved conclusion in or out of main chat', () => {
+    const onSetIncludeInMain = vi.fn()
+    const update = {
+      id: 'learning_update:one',
+      aside_id: aside.id,
+      conclusion: 'Jensen gives a lower bound because log is concave.',
+      open_questions: [],
+      citations: [],
+      include_in_main: false,
+      version: 1,
+      created: aside.created,
+      updated: aside.updated,
+    }
+    const { rerender } = render(
+      <LearningAsidePanel
+        {...baseProps}
+        activeAside={{ ...aside, status: 'resolved', updates: [update] }}
+        onSetIncludeInMain={onSetIncludeInMain}
+      />
+    )
+
+    const toggle = screen.getByRole('checkbox', {
+      name: 'learningAsides.useInMainChatFor',
+    })
+    expect(toggle).not.toBeChecked()
+    fireEvent.click(toggle)
+    expect(onSetIncludeInMain).toHaveBeenCalledWith(update, true)
+
+    // A version a newer resolution replaced can never reach main chat.
+    rerender(
+      <LearningAsidePanel
+        {...baseProps}
+        activeAside={{
+          ...aside,
+          status: 'resolved',
+          updates: [{ ...update, superseded: true }],
+        }}
+        onSetIncludeInMain={onSetIncludeInMain}
+      />
+    )
+    expect(screen.queryByRole('checkbox')).toBeNull()
+  })
+
   it('opens source, note, and insight citations from the resolved summary', () => {
     const onReferenceClick = vi.fn()
     const resolved: LearningAside = {

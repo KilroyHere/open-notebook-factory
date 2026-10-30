@@ -1,10 +1,16 @@
 import type { ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, renderHook, waitFor } from '@testing-library/react'
+import { toast } from 'sonner'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useLearningAsides } from './use-learning-asides'
 import { learningApi } from '@/lib/api/learning'
-import type { LearningAside } from '@/lib/types/api'
+import { QUERY_KEYS } from '@/lib/api/query-client'
+import type {
+  LearningAside,
+  LearningJourney,
+  LearningUpdate,
+} from '@/lib/types/api'
 
 vi.mock('@/lib/api/learning', () => ({
   learningApi: {
@@ -16,6 +22,7 @@ vi.mock('@/lib/api/learning', () => ({
     sendMessage: vi.fn(),
     draftResolution: vi.fn(),
     resolveAside: vi.fn(),
+    updateLearningUpdate: vi.fn(),
     syncSections: vi.fn(),
     updateSection: vi.fn(),
   },
@@ -44,7 +51,7 @@ function renderAsides() {
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>{children}</QueryClientProvider>
   )
-  return renderHook(
+  const hook = renderHook(
     ({ mainSessionId }: { mainSessionId: string }) =>
       useLearningAsides({
         notebookId: 'notebook:1',
@@ -53,7 +60,49 @@ function renderAsides() {
       }),
     { wrapper, initialProps: { mainSessionId: 'chat_session:main' } }
   )
+  return { ...hook, client }
 }
+
+function deferred<T>() {
+  let resolve: (value: T) => void = () => undefined
+  let reject: (error: unknown) => void = () => undefined
+  const promise = new Promise<T>((done, fail) => {
+    resolve = done
+    reject = fail
+  })
+  return { promise, resolve, reject }
+}
+
+const conclusion: LearningUpdate = {
+  id: 'learning_update:one',
+  aside_id: 'learning_aside:resolved',
+  conclusion: 'Jensen gives a lower bound because log is concave.',
+  open_questions: [],
+  citations: [],
+  include_in_main: true,
+  version: 1,
+  created,
+  updated: created,
+}
+const resolvedAside: LearningAside = {
+  ...aside,
+  id: 'learning_aside:resolved',
+  status: 'resolved',
+  updates: [conclusion],
+}
+const journey: LearningJourney = {
+  id: 'learning_journey:one',
+  notebook_id: 'notebook:1',
+  main_session_id: 'chat_session:main',
+  status: 'active',
+  asides: [resolvedAside],
+  updates: [conclusion],
+  created,
+  updated: created,
+}
+const listedInclusion = (result: {
+  current: ReturnType<typeof useLearningAsides>
+}) => result.current.asides[0]?.updates[0]?.include_in_main
 
 describe('useLearningAsides', () => {
   beforeEach(() => {
@@ -202,5 +251,146 @@ describe('useLearningAsides', () => {
 
     expect(result.current.activeAsideId).toBeNull()
     expect(result.current.panelOpen).toBe(false)
+  })
+
+  describe('using a conclusion in main chat', () => {
+    beforeEach(() => {
+      vi.mocked(toast.error).mockClear()
+      vi.mocked(learningApi.updateLearningUpdate).mockReset()
+      vi.mocked(learningApi.getJourney).mockResolvedValue(journey)
+    })
+
+    it('leaves a conclusion out at once, saves it and recounts the chat context', async () => {
+      const saving = deferred<LearningUpdate>()
+      vi.mocked(learningApi.updateLearningUpdate).mockReturnValue(saving.promise)
+      const { result, client } = renderAsides()
+      await waitFor(() => expect(listedInclusion(result)).toBe(true))
+      const invalidate = vi.spyOn(client, 'invalidateQueries')
+
+      act(() => result.current.setIncludeInMain(conclusion, false))
+
+      // The switch and Studio's counts move before the server answers.
+      await waitFor(() => expect(listedInclusion(result)).toBe(false))
+      expect(learningApi.updateLearningUpdate).toHaveBeenCalledWith(
+        'learning_update:one',
+        { include_in_main: false }
+      )
+      expect(invalidate).not.toHaveBeenCalled()
+
+      await act(async () => {
+        saving.resolve({ ...conclusion, include_in_main: false })
+        await saving.promise
+      })
+
+      await waitFor(() =>
+        expect(invalidate).toHaveBeenCalledWith({
+          queryKey: QUERY_KEYS.notebookChatContext('notebook:1'),
+        })
+      )
+      expect(invalidate).toHaveBeenCalledWith({
+        queryKey: QUERY_KEYS.learningJourney('notebook:1', 'chat_session:main'),
+      })
+      expect(invalidate).toHaveBeenCalledWith({
+        queryKey: QUERY_KEYS.learningAside(resolvedAside.id),
+      })
+      expect(toast.error).not.toHaveBeenCalled()
+    })
+
+    it('puts the switch back and says why when saving fails', async () => {
+      vi.mocked(learningApi.updateLearningUpdate).mockRejectedValue({
+        response: {
+          data: { detail: 'Version 1 of this conclusion was replaced by version 2.' },
+        },
+      })
+      const { result } = renderAsides()
+      await waitFor(() => expect(listedInclusion(result)).toBe(true))
+      // The refetch after the failure returns what the server kept.
+      vi.mocked(learningApi.getJourney).mockClear()
+
+      act(() => result.current.setIncludeInMain(conclusion, false))
+
+      await waitFor(() =>
+        expect(toast.error).toHaveBeenCalledWith(
+          'Version 1 of this conclusion was replaced by version 2.'
+        )
+      )
+      expect(listedInclusion(result)).toBe(true)
+      await waitFor(() => expect(learningApi.getJourney).toHaveBeenCalled())
+    })
+
+    it('sends quick clicks one after another and keeps the last one on screen', async () => {
+      const first = deferred<LearningUpdate>()
+      const second = deferred<LearningUpdate>()
+      vi.mocked(learningApi.updateLearningUpdate)
+        .mockReturnValueOnce(first.promise)
+        .mockReturnValueOnce(second.promise)
+      const { result } = renderAsides()
+      await waitFor(() => expect(listedInclusion(result)).toBe(true))
+
+      act(() => result.current.setIncludeInMain(conclusion, false))
+      act(() => result.current.setIncludeInMain(conclusion, true))
+      await waitFor(() => expect(listedInclusion(result)).toBe(true))
+      // The second waits for the first, so the server sees them in order.
+      expect(learningApi.updateLearningUpdate).toHaveBeenCalledTimes(1)
+      vi.mocked(learningApi.getJourney).mockClear()
+
+      await act(async () => {
+        first.resolve({ ...conclusion, include_in_main: false })
+        await first.promise
+      })
+      await waitFor(() =>
+        expect(learningApi.updateLearningUpdate).toHaveBeenLastCalledWith(
+          'learning_update:one',
+          { include_in_main: true }
+        )
+      )
+      // No refetch, and the first reply does not undo the second click,
+      // while that click is still on its way.
+      expect(learningApi.getJourney).not.toHaveBeenCalled()
+      expect(listedInclusion(result)).toBe(true)
+
+      await act(async () => {
+        second.resolve({ ...conclusion, include_in_main: true })
+        await second.promise
+      })
+      await waitFor(() => expect(learningApi.getJourney).toHaveBeenCalled())
+      expect(listedInclusion(result)).toBe(true)
+    })
+
+    it('also switches the open dive, so its summary agrees', async () => {
+      vi.mocked(learningApi.getAside).mockResolvedValue(resolvedAside)
+      const saving = deferred<LearningUpdate>()
+      vi.mocked(learningApi.updateLearningUpdate).mockReturnValue(saving.promise)
+      const { result } = renderAsides()
+      act(() => result.current.expandAside(resolvedAside.id))
+      await waitFor(() => expect(result.current.activeAside).toEqual(resolvedAside))
+
+      act(() => result.current.setIncludeInMain(conclusion, false))
+
+      await waitFor(() =>
+        expect(result.current.activeAside?.updates[0].include_in_main).toBe(false)
+      )
+    })
+
+    it('recounts the chat context once an aside is resolved', async () => {
+      vi.mocked(learningApi.resolveAside).mockResolvedValue(resolvedAside)
+      const { result, client } = renderAsides()
+      const invalidate = vi.spyOn(client, 'invalidateQueries')
+
+      await act(async () => {
+        await result.current.resolveAside({
+          asideId: aside.id,
+          data: {
+            conclusion: conclusion.conclusion,
+            include_in_main: true,
+            save_as_note: false,
+          },
+        })
+      })
+
+      expect(invalidate).toHaveBeenCalledWith({
+        queryKey: QUERY_KEYS.notebookChatContext('notebook:1'),
+      })
+    })
   })
 })

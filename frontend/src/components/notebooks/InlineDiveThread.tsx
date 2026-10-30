@@ -270,6 +270,7 @@ export function InlineDiveThread(props: InlineDiveThreadProps) {
                     onDiveIntoQuestion={onDiveIntoQuestion}
                     onParkQuestion={onParkQuestion}
                     onReferenceClick={onReferenceClick}
+                    onSetIncludeInMain={controller.onSetIncludeInMain}
                     referenceTitles={referenceTitles}
                     className="p-3"
                   >

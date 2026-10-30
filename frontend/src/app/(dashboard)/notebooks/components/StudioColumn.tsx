@@ -109,6 +109,7 @@ export function StudioColumn({
           sections={learning.sections}
           onRenameSection={workspace.renameSection}
           onTogglePinSection={workspace.togglePinSection}
+          onSetIncludeInMain={learning.setIncludeInMain}
         />
       </TabsContent>
       <TabsContent

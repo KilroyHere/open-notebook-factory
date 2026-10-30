@@ -99,6 +99,7 @@ const spies = {
   onUpdateStatus: vi.fn(),
   onOpenFullHeight: vi.fn(),
   onAttended: vi.fn(),
+  onSetIncludeInMain: vi.fn(),
 }
 
 // A controller with real expand/collapse state, as the workspace keeps it.
@@ -385,6 +386,18 @@ describe('InlineDiveThread', () => {
       'Jensen gives a lower bound because the logarithm is concave everywhere.'
     )
     expect(spies.onDraftResolution).not.toHaveBeenCalled()
+  })
+
+  it('switches a resolved dive\'s conclusion in or out of main chat from its summary', () => {
+    render(<Harness asides={[resolved]} initialExpanded={resolved.id} />)
+
+    const toggle = screen.getByRole('checkbox', {
+      name: 'learningAsides.useInMainChatFor:Jensen gives a lower bound because the logarithm is concave everywhere.',
+    })
+    expect(toggle).toBeChecked()
+    fireEvent.click(toggle)
+
+    expect(spies.onSetIncludeInMain).toHaveBeenCalledWith(resolved.updates[0], false)
   })
 
   it('nests a dive from an open question and opens deeper ones full height', () => {
