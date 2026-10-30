@@ -30,7 +30,12 @@ Return three fields:
 
 1. **conclusion** - what the learner actually learned in this aside, in 1 to 4 sentences. Be specific to this conversation: name the concrete idea, step, reason or result that was established. Do not write a generic textbook definition of the topic, and do not restate the question. Write it from the learner's point of view as a takeaway ("The ELBO is a lower bound because log is concave, so Jensen's inequality ..."), not as a description of the chat ("The assistant explained ...").
 2. **relevance** - how this conclusion affects the main conversation, in 1 or 2 sentences. Tie it to the passage the aside started from and to what the main conversation was working towards: which step it unblocks, justifies, corrects or changes.
-3. **open_questions** - 0 to 3 follow-up questions the aside raised but did not settle and that are worth their own focused dive. Each must be a single, self-contained question a learner could ask without extra context. Return an empty list when nothing important is left open. Never pad the list.
+3. **open_questions** - the questions this learner would most likely ask next. Before writing them, reread the aside and look for what it left unexplored: a step the assistant stated without justifying, a "why this and not that" choice, an assumption or condition that was not examined, a term that was used but not explained, or a question the learner asked that was only partly answered.
+   - Propose 1 to 3 of them whenever the aside leaves anything like that open, which is almost always. Most asides settle one point and expose the next one.
+   - Return an empty list only when the aside genuinely leaves nothing worth exploring.
+   - Phrase each one as the learner's own next question, in the first person where natural ("Why divide by the square root of d_k and not by d_k itself?"), not as a quiz or exam question that tests recall ("What is the scaling factor in attention?").
+   - Each must be a single, self-contained question that still makes sense later without the conversation: name the concept instead of writing "this" or "it".
+   - Do not ask about something the aside already answered, and do not pad the list with generic questions.
 
 # CITING INSTRUCTIONS
 

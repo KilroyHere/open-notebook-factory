@@ -162,6 +162,44 @@ async def test_draft_uses_the_aside_model_and_returns_a_cleaned_structured_draft
     ]
 
 
+def test_draft_prompt_asks_for_the_learners_next_questions():
+    from ai_prompter import Prompter
+    from langchain_core.output_parsers.pydantic import PydanticOutputParser
+
+    from open_notebook.graphs.learning_resolution import LearningResolutionDraft
+
+    parser: PydanticOutputParser[LearningResolutionDraft] = PydanticOutputParser(
+        pydantic_object=LearningResolutionDraft
+    )
+    rendered = Prompter(
+        prompt_template="learning/resolution_draft",
+        parser=parser,  # type: ignore[arg-type]
+    ).render(
+        data={
+            "title": "Why scale attention scores?",
+            "anchor": "Scores are divided by sqrt(d_k).",
+            "parent_context": "",
+            "transcript": "LEARNER: Why scale?\n\nASSISTANT: To keep softmax stable.",
+            "citations": "",
+        }
+    )
+
+    assert "Why scale attention scores?" in rendered
+    assert "LEARNER: Why scale?" in rendered
+    # Open questions are expected whenever something is left unexplored, and
+    # phrased as the learner's next question rather than a quiz.
+    assert "Propose 1 to 3" in rendered
+    assert (
+        "Return an empty list only when the aside genuinely leaves nothing" in rendered
+    )
+    assert "not as a quiz or exam question" in rendered
+    assert "0 to 3 follow-up questions" not in rendered
+    # The output schema is unchanged and still injected.
+    for field in ("conclusion", "relevance", "open_questions"):
+        assert f'"{field}"' in rendered
+    assert "do not add any" in rendered
+
+
 @pytest.mark.asyncio
 async def test_unparseable_model_output_is_an_external_service_error():
     with patch(

@@ -59,7 +59,10 @@ class LearningResolutionDraft(BaseModel):
     )
     open_questions: List[str] = Field(
         default_factory=list,
-        description="0 to 3 self-contained follow-up questions worth their own dive",
+        description=(
+            "1 to 3 self-contained questions the learner would ask next about "
+            "what the aside left unexplored; empty only if nothing is left open"
+        ),
     )
 
 
