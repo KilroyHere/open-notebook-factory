@@ -263,6 +263,24 @@ describe('LearningThreadLinks', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
+  it('renders math in open questions instead of raw LaTeX', () => {
+    const withMath = {
+      ...resolvedAside,
+      updates: [
+        {
+          ...resolvedAside.updates[0],
+          open_questions: ['Why divide by $\\sqrt{d_k}$ and not $d_k$?'],
+        },
+      ],
+    }
+    const { container } = render(
+      <LearningMergeEvent aside={withMath} update={withMath.updates[0]} />
+    )
+
+    expect(container.querySelector('.katex')).not.toBeNull()
+    expect(container.textContent).not.toContain('$\\sqrt')
+  })
+
   it('opens evidence citations and finds the merge on the destination message', () => {
     const cited = {
       ...resolvedAside,

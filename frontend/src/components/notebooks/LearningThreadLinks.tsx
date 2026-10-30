@@ -12,6 +12,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ReferencedMarkdown } from '@/components/common/ReferencedMarkdown'
+import { InlineMath } from '@/components/common/InlineMath'
 import { LearningAside, LearningUpdate } from '@/lib/types/api'
 import { useTranslation } from '@/lib/hooks/use-translation'
 import {
@@ -185,7 +186,11 @@ export function LearningQuestionList({
               ? childDiveForQuestion(asides, parentAside.id, question)
               : undefined
           if (!interactive || !parentAside) {
-            return <li key={question}>{question}</li>
+            return (
+              <li key={question}>
+                <InlineMath text={question} />
+              </li>
+            )
           }
           if (child && onOpenAside) {
             return (
@@ -196,14 +201,16 @@ export function LearningQuestionList({
                   className="h-auto max-w-full justify-start whitespace-normal px-2 py-1 text-left"
                   onClick={() => onOpenAside(child.id)}
                 >
-                  {question}
+                  <InlineMath text={question} />
                 </Button>
               </li>
             )
           }
           return (
             <li key={question}>
-              <p>{question}</p>
+              <p>
+                <InlineMath text={question} />
+              </p>
               <div className="mt-1 flex flex-wrap gap-1">
                 {onDiveIntoQuestion && (
                   <Button
