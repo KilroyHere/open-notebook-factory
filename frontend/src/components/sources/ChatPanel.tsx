@@ -25,10 +25,8 @@ import { MessageActions } from '@/components/sources/MessageActions'
 import { useModalManager } from '@/lib/hooks/use-modal-manager'
 import { toast } from 'sonner'
 import { useTranslation } from '@/lib/hooks/use-translation'
-import {
-  LearningThreadLinks,
-  learningMergesForMessage,
-} from '@/components/notebooks/LearningThreadLinks'
+import { LearningThreadLinks } from '@/components/notebooks/LearningThreadLinks'
+import { learningMergesForMessage } from '@/components/notebooks/LearningUpdateParts'
 import { LearningMergeChip } from '@/components/notebooks/LearningMergeChip'
 import {
   chatMessageDomId,

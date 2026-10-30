@@ -5,7 +5,7 @@ import { ChevronDown, Sparkles } from 'lucide-react'
 import { useTranslation } from '@/lib/hooks/use-translation'
 import { leadingWords } from '@/lib/utils/learning-asides'
 import { cn } from '@/lib/utils'
-import { LearningMergeEvent } from './LearningThreadLinks'
+import { LearningMergeEvent } from './LearningUpdateParts'
 
 /**
  * The collapsed form of a merge summary on the reply that used it: a small
