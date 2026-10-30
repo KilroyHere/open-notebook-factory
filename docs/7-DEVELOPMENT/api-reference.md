@@ -70,6 +70,8 @@ To leave one conclusion out of main chat without re-resolving its aside, send `P
 
 `POST /api/learning/asides` accepts anchor text (`anchor.content`) up to 200,000 characters, since **Go deeper** sends the whole answer; longer requests return 422. The aside stores the first 20,000 characters, cut at a word boundary and ending in "…" (`ANCHOR_CONTENT_MAX_CHARS` in `open_notebook/domain/learning.py`). The anchor's `message_id` and the aside's branch snapshot still lead to the full answer.
 
+`POST /api/learning/asides/{id}/resolve` stores the conclusion as the aside's next version, one more than the highest stored one; resolutions sent at the same time each get their own version. With `save_as_note: true` the note is created after the version. If the note cannot be created or linked, neither is kept and the request fails (404 when the notebook no longer exists, otherwise 500), so it can simply be retried.
+
 ## Async operations
 
 Source processing, embedding and podcast generation run on the background worker (see [architecture.md](architecture.md#background-jobs)). The endpoint that starts them returns right away with a record and/or a job id:

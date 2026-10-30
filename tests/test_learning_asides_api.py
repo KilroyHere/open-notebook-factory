@@ -474,11 +474,13 @@ async def test_discarded_aside_rejects_new_messages(client):
 async def test_resolve_aside_creates_versioned_user_approved_update(client):
     aside = _aside()
     journey = _journey(active_session="chat_session:child")
+    saved = []
 
     async def save_update(update):
         update.id = "learning_update:second"
         update.created = NOW
         update.updated = NOW
+        saved.append(update)
 
     with (
         patch(
@@ -492,7 +494,7 @@ async def test_resolve_aside_creates_versioned_user_approved_update(client):
             return_value=journey,
         ),
         patch(
-            "api.routers.learning.LearningAside.get_updates",
+            "api.routers.learning.LearningUpdate.get_versions",
             new_callable=AsyncMock,
             return_value=[
                 LearningUpdate(
@@ -528,6 +530,9 @@ async def test_resolve_aside_creates_versioned_user_approved_update(client):
     assert response.json()["status"] == "resolved"
     assert aside.status == "resolved"
     assert journey.active_session == "chat_session:main"
+    [update] = saved
+    assert update.version == 2
+    assert update.saved_note is None
 
 
 @pytest.mark.asyncio

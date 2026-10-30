@@ -749,3 +749,63 @@ class TestIncludeInMainToggle:
         ):
             with pytest.raises(NotFoundError):
                 await update.set_include_in_main(False)
+
+
+class TestSaveAsNextVersion:
+    @staticmethod
+    def _stored(version: int) -> LearningUpdate:
+        return LearningUpdate(
+            id=f"learning_update:v{version}",
+            aside="learning_aside:one",
+            conclusion=f"Take {version}",
+            version=version,
+        )
+
+    @pytest.mark.asyncio
+    async def test_a_taken_number_is_retried_a_bounded_number_of_times(self):
+        from open_notebook.domain.learning import VERSION_SAVE_ATTEMPTS
+
+        stored: list[LearningUpdate] = []
+
+        async def versions(aside_id: str) -> list[LearningUpdate]:
+            return list(stored)
+
+        async def collide(update: LearningUpdate) -> None:
+            # Another resolution stores this number first, every time.
+            stored.append(self._stored(update.version))
+            raise RuntimeError("Database index already contains it")
+
+        update = LearningUpdate(aside="learning_aside:one", conclusion="Mine")
+        with (
+            patch.object(LearningUpdate, "get_versions", new=versions),
+            patch.object(LearningUpdate, "save", new=collide),
+        ):
+            with pytest.raises(RuntimeError, match="already contains"):
+                await update.save_as_next_version()
+
+        assert [taken.version for taken in stored] == list(
+            range(1, VERSION_SAVE_ATTEMPTS + 1)
+        )
+
+    @pytest.mark.asyncio
+    async def test_another_failure_is_not_retried(self):
+        saves = AsyncMock(side_effect=RuntimeError("The connection was closed"))
+        update = LearningUpdate(aside="learning_aside:one", conclusion="Mine")
+        with (
+            patch.object(
+                LearningUpdate,
+                "get_versions",
+                new=AsyncMock(return_value=[self._stored(1)]),
+            ),
+            patch.object(LearningUpdate, "save", new=saves),
+        ):
+            with pytest.raises(RuntimeError, match="connection was closed"):
+                await update.save_as_next_version()
+
+        assert saves.await_count == 1
+        assert update.version == 2
+
+    @pytest.mark.asyncio
+    async def test_a_stored_update_is_not_stored_again(self):
+        with pytest.raises(InvalidInputError, match="already stored"):
+            await self._stored(1).save_as_next_version()

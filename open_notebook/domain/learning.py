@@ -24,6 +24,9 @@ ANCHOR_CONTENT_MAX_CHARS = 20_000
 # How far back from the limit the clip looks for a word boundary. A last word
 # longer than this (a URL, text without spaces) is cut through instead.
 _ANCHOR_WORD_BOUNDARY_WINDOW = 2_000
+# Tries at storing a resolution under the next free version number when
+# concurrent resolutions of the same aside take the number first.
+VERSION_SAVE_ATTEMPTS = 5
 
 
 def clip_anchor_content(text: str, limit: int = ANCHOR_CONTENT_MAX_CHARS) -> str:
@@ -309,6 +312,61 @@ class LearningUpdate(ObjectModel):
             "citations": self.citations,
             "applied_message_id": self.applied_message_id,
         }
+
+    async def save_as_next_version(self, attempts: int = VERSION_SAVE_ATTEMPTS) -> None:
+        """Store this update as its aside's next version.
+
+        The version is one more than the highest stored one. Two resolutions
+        of the same aside at once can pick the same number; the unique
+        (aside, version) index rejects one, and that one is stored under the
+        next free number instead, up to ``attempts`` tries in all. Any other
+        failure is raised at once.
+        """
+        if self.id:
+            raise InvalidInputError("This learning update is already stored")
+        versions = await LearningUpdate.get_versions(self.aside)
+        for attempt in range(1, attempts + 1):
+            self.version = max((stored.version for stored in versions), default=0) + 1
+            try:
+                await self.save()
+                return
+            except RuntimeError:
+                versions = await LearningUpdate.get_versions(self.aside)
+                taken = any(stored.version == self.version for stored in versions)
+                if not taken or attempt == attempts:
+                    raise
+                logger.debug(
+                    f"Version {self.version} of {self.aside} was stored "
+                    "concurrently; trying the next one"
+                )
+
+    async def set_saved_note(self, note_id: str) -> None:
+        """Record the note this version was saved as.
+
+        Only ``saved_note`` is written, so a backlink or an include_in_main
+        change made since this copy was loaded is kept. The instance is
+        refreshed from the stored record.
+        """
+        if not self.id:
+            raise InvalidInputError(
+                "Learning update must be saved before it can be changed"
+            )
+        try:
+            rows = await repo_query(
+                "UPDATE $update_id SET saved_note = $note RETURN AFTER",
+                {
+                    "update_id": ensure_record_id(self.id),
+                    "note": ensure_record_id(note_id),
+                },
+            )
+        except Exception as exc:
+            logger.exception(f"Failed to link learning update {self.id} to {note_id}")
+            raise DatabaseOperationError("Failed to update learning update") from exc
+        if not rows:
+            raise NotFoundError(f"learning_update with id {self.id} not found")
+        stored = LearningUpdate(**rows[0])
+        for name in LearningUpdate.model_fields:
+            setattr(self, name, getattr(stored, name))
 
     @classmethod
     async def get_versions(cls, aside_id: str) -> List["LearningUpdate"]:
