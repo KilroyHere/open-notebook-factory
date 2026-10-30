@@ -142,6 +142,7 @@ export function ChatColumn({ workspace, isLoading }: ChatColumnProps) {
             contextType="notebook"
             messages={chat.messages}
             isStreaming={chat.isSending}
+            isLoadingMessages={chat.isLoadingMessages}
             contextIndicators={null}
             onSendMessage={(message, modelOverride) =>
               void workspace.sendMainMessage(message, modelOverride)

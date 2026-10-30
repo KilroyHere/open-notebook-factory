@@ -46,6 +46,8 @@ const NO_ASIDES: LearningAside[] = []
 interface ChatPanelProps {
   messages: SourceChatMessage[]
   isStreaming: boolean
+  /** The messages are being read: say so instead of inviting a first question. */
+  isLoadingMessages?: boolean
   contextIndicators: SourceChatContextIndicator | null
   onSendMessage: (message: string, modelOverride?: string) => void
   modelOverride?: string
@@ -84,6 +86,7 @@ interface ChatPanelProps {
 export function ChatPanel({
   messages,
   isStreaming,
+  isLoadingMessages = false,
   contextIndicators,
   onSendMessage,
   modelOverride,
@@ -226,7 +229,15 @@ export function ChatPanel({
         >
           {/* Messages keep a readable line length and center in wide columns. */}
           <div className="mx-auto w-full max-w-[45rem] space-y-4 py-4">
-            {messages.length === 0 ? (
+            {messages.length === 0 && isLoadingMessages ? (
+              <div
+                role="status"
+                className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground"
+              >
+                <Loader2 aria-hidden className="h-4 w-4 animate-spin" />
+                {t('common.loading')}
+              </div>
+            ) : messages.length === 0 ? (
               <div className="text-center text-muted-foreground py-8">
                 <Bot className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p className="text-sm">

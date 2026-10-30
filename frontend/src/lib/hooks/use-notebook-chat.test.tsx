@@ -474,6 +474,88 @@ describe('useNotebookChat messages', () => {
       }))
     })
 
+    it("shows a session's history with a question sent before the session was first read", async () => {
+      const firstReadOfB = deferred<NotebookChatSessionWithMessages>()
+      let readsOfB = 0
+      vi.mocked(chatApi.getSession).mockImplementation(async (id: string) => {
+        if (id !== B.id) return { ...A, messages: stored[A.id] }
+        readsOfB += 1
+        return readsOfB === 1 ? firstReadOfB.promise : { ...B, messages: stored[B.id] }
+      })
+      const answer = deferred<typeof turn>()
+      vi.mocked(chatApi.sendMessage).mockReturnValue(answer.promise)
+      const { result } = renderChat()
+      await waitFor(() => expect(result.current.messages).toEqual(stored[A.id]))
+
+      act(() => result.current.switchSession(B.id))
+      // Nothing to show yet: B is being read.
+      expect(result.current.messages).toEqual([])
+      expect(result.current.isLoadingMessages).toBe(true)
+      let sending: Promise<unknown> = Promise.resolve()
+      await act(async () => {
+        sending = result.current.sendMessage('follow-up in B')
+      })
+      expect(contents(result.current.messages)).toEqual(['follow-up in B'])
+      expect(result.current.isLoadingMessages).toBe(false)
+
+      // B's read lands while the model answers: its history shows, the
+      // question after it.
+      await act(async () => {
+        firstReadOfB.resolve({ ...B, messages: stored[B.id] })
+        await firstReadOfB.promise
+      })
+      await waitFor(() =>
+        expect(contents(result.current.messages)).toEqual([
+          'question in B',
+          'answer in B',
+          'follow-up in B',
+        ])
+      )
+
+      stored[B.id] = [
+        ...stored[B.id],
+        { id: 'human:b2', type: 'human', content: 'follow-up in B' },
+        { id: 'ai:b2', type: 'ai', content: 'reply in B' },
+      ]
+      await act(async () => {
+        answer.resolve({ session_id: B.id, messages: stored[B.id] })
+        await sending
+      })
+      expect(contents(result.current.messages)).toEqual([
+        'question in B',
+        'answer in B',
+        'follow-up in B',
+        'reply in B',
+      ])
+    })
+
+    it('shows the question once when a read during its turn already has it', async () => {
+      const answer = deferred<typeof turn>()
+      vi.mocked(chatApi.sendMessage).mockReturnValue(answer.promise)
+      const { result, client } = renderChat()
+      await waitFor(() => expect(result.current.messages).toEqual(stored[A.id]))
+      let sending: Promise<unknown> = Promise.resolve()
+      await act(async () => {
+        sending = result.current.sendMessage('follow-up in A')
+      })
+
+      // The API stores the question before the model answers; a read now has it.
+      stored[A.id] = [...stored[A.id], { id: 'human:a2', type: 'human', content: 'follow-up in A' }]
+      await act(async () => {
+        await client.refetchQueries({ queryKey: QUERY_KEYS.notebookChatSession(A.id) })
+      })
+
+      expect(contents(result.current.messages)).toEqual([
+        'question in A',
+        'answer in A',
+        'follow-up in A',
+      ])
+      await act(async () => {
+        answer.resolve({ session_id: A.id, messages: [...stored[A.id], { id: 'ai:a2', type: 'ai', content: 'reply in A' }] })
+        await sending
+      })
+    })
+
     it('says a reply is on its way only in the session it was asked in', async () => {
       const answer = deferred<typeof turn>()
       vi.mocked(chatApi.sendMessage).mockReturnValue(answer.promise)

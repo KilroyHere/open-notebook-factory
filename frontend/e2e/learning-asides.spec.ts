@@ -409,3 +409,44 @@ test('switching chat session while a reply is on its way shows the session switc
     .toEqual([newer.id])
   expect(misplacedSections()).toEqual([])
 })
+
+test('a chat switched to shows loading until it is read, and a question asked meanwhile joins its history', async ({
+  page,
+  api,
+}) => {
+  const older = api.addSession('Older chat')
+  api.addMessage(older.messages, 'human', 'Question in the older chat')
+  api.addMessage(older.messages, 'ai', 'Answer in the older chat')
+  const newer = api.addSession('Newer chat')
+  api.addMessage(newer.messages, 'human', 'Question in the newer chat')
+  api.addMessage(newer.messages, 'ai', 'Answer in the newer chat')
+  await openNotebook(page)
+  await expect(chatMessage(page, 'Answer in the newer chat')).toBeVisible()
+
+  // The older chat has not been read yet, and its first read is slow; so
+  // is the model.
+  const readNow = api.hold('GET', new RegExp(`^/chat/sessions/${older.id}$`))
+  const answerNow = api.hold('POST', /^\/chat\/execute$/)
+  await switchChatSession(page, 'Newer chat', 'Older chat')
+  await expect(page.getByRole('status').filter({ hasText: /Loading/i })).toBeVisible()
+  await expect(page.getByText(/Start a conversation/i)).toHaveCount(0)
+
+  await mainComposer(page).fill('Asked before the chat was read')
+  await mainComposer(page).press('ControlOrMeta+Enter')
+  await expect(chatMessage(page, 'Asked before the chat was read')).toBeVisible()
+
+  // Once read, the chat's history shows with the question after it, while
+  // the model is still answering.
+  readNow()
+  await expect(chatMessage(page, 'Answer in the older chat')).toBeVisible()
+  await expect(page.locator('[id^="chat-message-"]')).toContainText([
+    'Question in the older chat',
+    'Answer in the older chat',
+    'Asked before the chat was read',
+  ])
+
+  answerNow()
+  await expect(
+    chatMessage(page, 'A mock answer to: Asked before the chat was read')
+  ).toBeVisible()
+})

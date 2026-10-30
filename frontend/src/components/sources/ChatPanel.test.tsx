@@ -115,6 +115,31 @@ describe('ChatPanel composer', () => {
     expect(onSendMessage).not.toHaveBeenCalled()
   })
 
+  it('says the messages are loading instead of inviting a first question', () => {
+    const { rerender } = render(
+      <ChatPanel
+        messages={[]}
+        isStreaming={false}
+        contextIndicators={null}
+        onSendMessage={vi.fn()}
+        isLoadingMessages
+      />
+    )
+
+    expect(screen.getByRole('status')).toHaveTextContent('common.loading')
+    expect(screen.queryByText('chat.startConversation')).toBeNull()
+
+    rerender(
+      <ChatPanel
+        messages={[]}
+        isStreaming={false}
+        contextIndicators={null}
+        onSendMessage={vi.fn()}
+      />
+    )
+    expect(screen.getByText('chat.startConversation')).toBeInTheDocument()
+  })
+
   it('keeps a title outside workspace mode', () => {
     render(
       <ChatPanel
