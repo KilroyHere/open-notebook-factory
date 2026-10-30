@@ -67,7 +67,7 @@ A **note** is text that belongs to a notebook. A note has a title and Markdown c
 
 Ways to create one:
 
-- **Write Note** in the notebook's Notes column.
+- **Write Note** in the **Notes** tab of the notebook's Studio panel.
 - **Save to note** under a notebook Chat answer (one click; the title is generated for you).
 - **Save to Notebooks** after an Ask answer (the question becomes the title, and you can pick several notebooks).
 

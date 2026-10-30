@@ -44,7 +44,7 @@ What each feature needs:
 1. **Create a notebook.** Sidebar **New → Notebook** (or **Notebooks → New Notebook**). Give it a name and a short description; the description is sent to the AI in notebook Chat.
 2. **Add a source.** In the notebook, **Add Source → Add Source**, then choose **Add URL**, **Upload File** or **Enter Text**. On the Process step, keep the pre-selected transformation and embedding, and click **Done**. Processing runs in the background; the card shows **Queued**, **Processing**, then **Completed**. See [Adding Sources](adding-sources.md).
 3. **Chat.** In the Chat column, type a question and press **Ctrl+Enter** (**⌘+Enter** on Mac). Click a numbered reference in the answer to open what it cites.
-4. **Keep the answer.** Click the **Save to note** icon under the answer. It appears in the Notes column.
+4. **Keep the answer.** Click the **Save to note** icon under the answer. It appears in the **Notes** tab of the notebook's Studio panel.
 5. **Ask across everything.** Open **Ask and Search**, stay on **Ask (beta)**, type a question and click **Ask**. Save the answer with **Save to Notebooks**.
 
 ---

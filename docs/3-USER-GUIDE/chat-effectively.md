@@ -6,8 +6,8 @@ Notebook chat is a conversation with an AI model about the sources and notes you
 
 ## Quick Start
 
-1. Open a notebook. The **Chat with Notebook** column is on the right (on a phone, the **Chat** tab).
-2. Check what's in context: the panel above the message box shows how many sources and notes are included and an estimated token count.
+1. Open a notebook. The chat is the center panel, between **Sources** and **Studio** (on a phone, the **Chat** tab).
+2. Check what's in context: the chip inside the message box shows how many sources and notes are included (for example **2 sources · 1 note**). Hover or focus it for the split between *Insights only* and *Full content* and the estimated token and character count.
 3. Type your question in **Ask anything about your sources...** and press **Ctrl+Enter** (**⌘+Enter** on Mac). Plain **Enter** adds a new line.
 4. Click a numbered reference in the answer to open the source, note or insight it cites.
 
@@ -27,7 +27,7 @@ Every source and note in the notebook has a context level. Chat sends the select
 | **Insights only** | Title and insights (only offered when the source has insights) | — |
 | **Full content** | Title, insights and full text | Title and content |
 
-**All at once:** the **Context** menu in each column header.
+**All at once:** the **Context** menu in the Sources panel header and in Studio's Notes tab.
 - Sources: **Include all (insights only)** (sources without insights are left out), **Include all (full content)**, **Exclude all from context**.
 - Notes: **Include all in context**, **Exclude all from context**.
 
@@ -59,13 +59,13 @@ Use an aside when an answer raises a prerequisite or tangent that you want to ex
 3. **Park** it to return later, **Discard** it if the tangent was not useful, or **Resolve aside** when you have an answer.
 4. Before resolving, edit the proposed conclusion and decide whether to use it in the main conversation, save it as a note, or both.
 
-The complete aside transcript stays isolated. Only the conclusion you approve is added to future main-chat context. A resolved aside leaves its summary under the origin message, with **View transcript** and, after the main chat uses that conclusion, **View merged response**. That same conclusion also appears on the reply that received it, including why it matters, any open questions, and citations that open the existing source, note, or insight view. **Dive in** on an open question starts a nested aside under that branch; **Park question** saves the same child without leaving the thread you are reading. The outline and map place the child under its parent, and **Back to parent dive** returns from it. The **Asides** button lists active, parked and resolved asides. On a wide screen the **Learning journey** rail's **Outline** names each part of the chat as a section. Rename a section or pin it; the name stays when you reload, and pinned sections stay at the top. Each aside still nests under the turn it came from. **Map** shows the main thread, each branch, its summary, and the merged reply. Expanding the map covers the journey surface; **Outline** brings the list back. When you return to a notebook with unfinished work, a resume prompt takes you back to it. Aside sessions do not appear in the normal **Chat Sessions** list.
+The complete aside transcript stays isolated. Only the conclusion you approve is added to future main-chat context. A resolved aside leaves its summary under the origin message, with **View transcript** and, after the main chat uses that conclusion, **View merged response**. The reply that received that conclusion carries a small **Used what you learned: …** chip above it, naming the first words of the conclusion. Click the chip to expand the full summary, with why it matters, any open questions, and citations that open the existing source, note, or insight view; click it again to fold it away. **Dive in** on an open question starts a nested aside under that branch; **Park question** saves the same child without leaving the thread you are reading. The outline and map place the child under its parent, and **Back to parent dive** returns from it. The **Asides** button lists active, parked and resolved asides. The **Journey** tab in **Studio** starts with three counts: **Learned** (resolved asides whose conclusion the main chat uses), **Open questions** (questions on the latest conclusions that no dive has picked up yet) and **Saved for later** (parked asides). Its **Outline** names each part of the chat as a section. Rename a section or pin it; the name stays when you reload, and pinned sections stay at the top. Each aside still nests under the turn it came from. **Map** shows the main thread, each branch, its summary, and the merged reply. Expanding the map covers the Journey tab; **Outline** brings the list back. When you return to a notebook with unfinished work, a resume prompt takes you back to it. Aside sessions do not appear in the normal **Chat Sessions** list.
 
 If you also save the conclusion as a note, it behaves like any other notebook
 note: sessions that include notes in their context can use it. Leave that
 option off when the finding should remain private to the current journey.
 
-On a wide screen the aside takes the center conversation, with the knowledge and journey rails still available. **Return to main thread** in the aside, or **Main thread** in the journey rail, brings the original chat back. On a narrow screen the aside is the Chat tab, and a fourth **Journey** tab shows the same outline and map. Opening a branch, the main thread, or a message from that tab returns to Chat. If several branches are unfinished, **Resume** returns to the active branch (or the most recently parked one), not simply the oldest aside.
+On a wide screen the aside takes the center conversation, with the Sources panel and Studio still available. **Return to main thread** in the aside, or **Main thread** in Studio's Journey tab, brings the original chat back. On a narrow screen the aside is the Chat tab, and the **Studio** tab has the same Journey (outline and map) and Notes tabs. Opening a branch, the main thread, or a message from Journey returns to Chat. If several branches are unfinished, **Resume** returns to the active branch (or the most recently parked one), not simply the oldest aside.
 
 ## Choosing the Model
 
@@ -78,7 +78,7 @@ The model button on the message row opens **Model Configuration**. Pick a model 
 Under each AI answer:
 
 - **Copy to clipboard** copies the answer text.
-- **Save to note** saves it as an **AI Generated** note in this notebook, with a generated title. There is no dialog; the note appears in the Notes column.
+- **Save to note** saves it as an **AI Generated** note in this notebook, with a generated title. There is no dialog; the note appears in Studio's Notes tab.
 
 **References** are the numbered links in the answer. They point to whole items (a source, note or insight), not to pages or passages. See [Citations](citations.md) for how to check them.
 
