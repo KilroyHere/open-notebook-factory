@@ -532,6 +532,7 @@ export const caES = {
     conclusionsLeftOut_one: "{{count}} conclusió queda fora de la conversa principal per cabre en el límit de context. Desmarca les que ja no necessitis per fer-hi lloc.",
     conclusionsLeftOut_other: "{{count}} conclusions queden fora de la conversa principal per cabre en el límit de context. Desmarca les que ja no necessitis per fer-hi lloc.",
     conclusionsLeftOut: "{{count}} conclusions queden fora de la conversa principal per cabre en el límit de context. Desmarca les que ja no necessitis per fer-hi lloc.",
+    leftOutOfMainChat: "Deixada fora per cabre en el límit de context",
     usedWhatYouLearned: "Ha fet servir el que has après: {{summary}}",
     deepDiveRow: "Aprofundiment · {{title}}",
     learnedRow: "Après: {{summary}}",

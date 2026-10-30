@@ -532,6 +532,7 @@ export const zhTW = {
     conclusionsLeftOut_one: "為符合上下文上限，有 {{count}} 則結論未進入主對話。取消勾選不再需要的結論即可騰出空間。",
     conclusionsLeftOut_other: "為符合上下文上限，有 {{count}} 則結論未進入主對話。取消勾選不再需要的結論即可騰出空間。",
     conclusionsLeftOut: "為符合上下文上限，有 {{count}} 則結論未進入主對話。取消勾選不再需要的結論即可騰出空間。",
+    leftOutOfMainChat: "為符合上下文上限，未包含在內",
     usedWhatYouLearned: "已使用你學到的內容：{{summary}}",
     deepDiveRow: "深入討論 · {{title}}",
     learnedRow: "已學到：{{summary}}",

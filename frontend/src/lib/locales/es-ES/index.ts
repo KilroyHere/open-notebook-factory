@@ -532,6 +532,7 @@ export const esES = {
     conclusionsLeftOut_one: "{{count}} conclusión queda fuera de la conversación principal para no superar el límite de contexto. Desmarca las que ya no necesites para hacer sitio.",
     conclusionsLeftOut_other: "{{count}} conclusiones quedan fuera de la conversación principal para no superar el límite de contexto. Desmarca las que ya no necesites para hacer sitio.",
     conclusionsLeftOut: "{{count}} conclusiones quedan fuera de la conversación principal para no superar el límite de contexto. Desmarca las que ya no necesites para hacer sitio.",
+    leftOutOfMainChat: "Omitida para no superar el límite de contexto",
     usedWhatYouLearned: "Usó lo que aprendiste: {{summary}}",
     deepDiveRow: "Profundización · {{title}}",
     learnedRow: "Aprendido: {{summary}}",

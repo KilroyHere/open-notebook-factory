@@ -530,6 +530,7 @@ export const enUS = {
     conclusionsLeftOut_one: "{{count}} conclusion is left out of main chat to fit the context limit. Uncheck ones you no longer need to make room.",
     conclusionsLeftOut_other: "{{count}} conclusions are left out of main chat to fit the context limit. Uncheck ones you no longer need to make room.",
     conclusionsLeftOut: "{{count}} conclusions are left out of main chat to fit the context limit. Uncheck ones you no longer need to make room.",
+    leftOutOfMainChat: "Left out to fit the context limit",
     usedWhatYouLearned: "Used what you learned: {{summary}}",
     deepDiveRow: "Deep dive · {{title}}",
     learnedRow: "Learned: {{summary}}",

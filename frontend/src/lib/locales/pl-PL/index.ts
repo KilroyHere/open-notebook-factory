@@ -532,6 +532,7 @@ export const plPL = {
     conclusionsLeftOut_one: "Wnioski pominięte w głównej rozmowie z powodu limitu kontekstu: {{count}}. Odznacz te, których już nie potrzebujesz, aby zrobić miejsce.",
     conclusionsLeftOut_other: "Wnioski pominięte w głównej rozmowie z powodu limitu kontekstu: {{count}}. Odznacz te, których już nie potrzebujesz, aby zrobić miejsce.",
     conclusionsLeftOut: "Wnioski pominięte w głównej rozmowie z powodu limitu kontekstu: {{count}}. Odznacz te, których już nie potrzebujesz, aby zrobić miejsce.",
+    leftOutOfMainChat: "Pominięty z powodu limitu kontekstu",
     usedWhatYouLearned: "Wykorzystano to, czego się nauczyłeś: {{summary}}",
     deepDiveRow: "Pogłębienie · {{title}}",
     learnedRow: "Nauczone: {{summary}}",

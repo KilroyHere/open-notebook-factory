@@ -532,6 +532,7 @@ export const jaJP = {
     conclusionsLeftOut_one: "コンテキストの上限に収めるため、{{count}}件の結論がメインの会話から除外されています。不要になった結論のチェックを外すと空きができます。",
     conclusionsLeftOut_other: "コンテキストの上限に収めるため、{{count}}件の結論がメインの会話から除外されています。不要になった結論のチェックを外すと空きができます。",
     conclusionsLeftOut: "コンテキストの上限に収めるため、{{count}}件の結論がメインの会話から除外されています。不要になった結論のチェックを外すと空きができます。",
+    leftOutOfMainChat: "コンテキストの上限に収めるため除外されています",
     usedWhatYouLearned: "学んだ内容を使用: {{summary}}",
     deepDiveRow: "深掘り · {{title}}",
     learnedRow: "学んだこと: {{summary}}",

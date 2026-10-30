@@ -111,6 +111,7 @@ export function StudioColumn({
           onTogglePinSection={workspace.togglePinSection}
           onSetIncludeInMain={learning.setIncludeInMain}
           omittedConclusions={chat.learningUpdatesOmitted}
+          keptConclusionIds={chat.keptLearningUpdateIds}
         />
       </TabsContent>
       <TabsContent

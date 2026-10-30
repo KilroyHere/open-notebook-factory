@@ -32,11 +32,12 @@ const aside: LearningAside = {
 
 function createWorkspace(
   asides: LearningAside[] = [],
-  shownAsideId: string | null = null
+  shownAsideId: string | null = null,
+  chat: Record<string, unknown> = {}
 ) {
   return {
     notebookId: 'notebook:1',
-    chat: { messages: [] },
+    chat: { messages: [], ...chat },
     learning: {
       asides,
       sections: [],
@@ -215,6 +216,43 @@ describe('StudioColumn', () => {
         screen.getByRole('region', { name: 'learningAsides.whatYouLearned' })
       ).getByRole('checkbox')
     ).not.toBeChecked()
+  })
+
+  it('marks the conclusions the context limit leaves out of main chat', () => {
+    const conclusion = (id: string) => ({
+      id: `learning_update:${id}`,
+      aside_id: `learning_aside:${id}`,
+      conclusion: `Conclusion ${id}.`,
+      open_questions: [],
+      citations: [],
+      include_in_main: true,
+      version: 1,
+      created: aside.created,
+      updated: aside.updated,
+    })
+    const resolved = (id: string): LearningAside => ({
+      ...aside,
+      id: `learning_aside:${id}`,
+      title: `Dive ${id}`,
+      status: 'resolved',
+      updates: [conclusion(id)],
+    })
+    render(
+      <StudioColumn
+        workspace={createWorkspace([resolved('kept'), resolved('dropped')], null, {
+          learningUpdatesOmitted: 1,
+          keptLearningUpdateIds: new Set(['learning_update:kept']),
+        })}
+        notes={notes}
+      />
+    )
+
+    const learned = screen.getByRole('region', {
+      name: 'learningAsides.whatYouLearned',
+    })
+    const [kept, dropped] = within(learned).getAllByRole('listitem')
+    expect(within(dropped).getByText('learningAsides.leftOutOfMainChat')).toBeInTheDocument()
+    expect(within(kept).queryByText('learningAsides.leftOutOfMainChat')).toBeNull()
   })
 
   it('marks the dive on screen in the outline', () => {

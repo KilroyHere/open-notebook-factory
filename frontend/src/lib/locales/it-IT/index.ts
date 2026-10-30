@@ -532,6 +532,7 @@ export const itIT = {
     conclusionsLeftOut_one: "{{count}} conclusione resta fuori dalla conversazione principale per rientrare nel limite di contesto. Deseleziona quelle che non ti servono più per fare spazio.",
     conclusionsLeftOut_other: "{{count}} conclusioni restano fuori dalla conversazione principale per rientrare nel limite di contesto. Deseleziona quelle che non ti servono più per fare spazio.",
     conclusionsLeftOut: "{{count}} conclusioni restano fuori dalla conversazione principale per rientrare nel limite di contesto. Deseleziona quelle che non ti servono più per fare spazio.",
+    leftOutOfMainChat: "Esclusa per rientrare nel limite di contesto",
     usedWhatYouLearned: "Ha usato ciò che hai imparato: {{summary}}",
     deepDiveRow: "Approfondimento · {{title}}",
     learnedRow: "Imparato: {{summary}}",

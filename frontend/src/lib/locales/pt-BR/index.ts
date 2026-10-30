@@ -532,6 +532,7 @@ export const ptBR = {
     conclusionsLeftOut_one: "{{count}} conclusão ficou fora da conversa principal para caber no limite de contexto. Desmarque as que você não precisa mais para abrir espaço.",
     conclusionsLeftOut_other: "{{count}} conclusões ficaram fora da conversa principal para caber no limite de contexto. Desmarque as que você não precisa mais para abrir espaço.",
     conclusionsLeftOut: "{{count}} conclusões ficaram fora da conversa principal para caber no limite de contexto. Desmarque as que você não precisa mais para abrir espaço.",
+    leftOutOfMainChat: "Deixada de fora para caber no limite de contexto",
     usedWhatYouLearned: "Usou o que você aprendeu: {{summary}}",
     deepDiveRow: "Aprofundamento · {{title}}",
     learnedRow: "Aprendido: {{summary}}",

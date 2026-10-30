@@ -192,6 +192,26 @@ export function learnedConclusions(asides: LearningAside[]): LearnedConclusion[]
   return learned
 }
 
+/**
+ * The conclusions main chat uses that its context limit leaves out: the
+ * checked ones the counted context (`keptIds`, the IDs in
+ * `context.learning_updates`) did not keep. None while nothing is left out
+ * or nothing is counted yet, and none while the count describes other
+ * conclusions than `learned`: right after one is switched or resolved,
+ * until the recount comes, a marker could otherwise land on the wrong one.
+ */
+export function leftOutConclusionIds(
+  learned: LearnedConclusion[],
+  keptIds: ReadonlySet<string> | undefined,
+  omitted: number
+): ReadonlySet<string> {
+  if (omitted <= 0 || !keptIds) return new Set()
+  const leftOut = learned
+    .filter(({ update }) => update.include_in_main && !keptIds.has(update.id))
+    .map(({ update }) => update.id)
+  return leftOut.length === omitted ? new Set(leftOut) : new Set()
+}
+
 /** `updates` with the `include_in_main` of `updateId` set to `include`. */
 export function withIncludeInMain(
   updates: LearningUpdate[],

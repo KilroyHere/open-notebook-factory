@@ -182,6 +182,16 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
     // Keep showing the last counts while a new selection is counted.
     placeholderData: keepPreviousData,
   })
+  // The accepted conclusions that context keeps, so the ones it leaves out
+  // can be told apart (`undefined` until a context is counted).
+  const keptLearningUpdateIds = useMemo<ReadonlySet<string> | undefined>(() => {
+    if (!context) return undefined
+    const ids = new Set<string>()
+    for (const entry of context.context.learning_updates ?? []) {
+      if (typeof entry.id === 'string') ids.add(entry.id)
+    }
+    return ids
+  }, [context])
 
   // A source or note can change without changing the selection (a source
   // finishes processing, gets an insight, a note is edited): count again.
@@ -335,6 +345,8 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
     charCount: context?.char_count ?? 0,
     /** Accepted conclusions the context limit keeps out of main chat. */
     learningUpdatesOmitted: context?.learning_updates_omitted ?? 0,
+    /** IDs of the accepted conclusions main chat's counted context keeps. */
+    keptLearningUpdateIds,
     pendingModelOverride,
 
     // Actions

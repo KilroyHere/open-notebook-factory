@@ -532,6 +532,7 @@ export const trTR = {
     conclusionsLeftOut_one: "Bağlam sınırına sığmak için {{count}} sonuç ana konuşmanın dışında kaldı. Yer açmak için artık gerekmeyenlerin işaretini kaldırın.",
     conclusionsLeftOut_other: "Bağlam sınırına sığmak için {{count}} sonuç ana konuşmanın dışında kaldı. Yer açmak için artık gerekmeyenlerin işaretini kaldırın.",
     conclusionsLeftOut: "Bağlam sınırına sığmak için {{count}} sonuç ana konuşmanın dışında kaldı. Yer açmak için artık gerekmeyenlerin işaretini kaldırın.",
+    leftOutOfMainChat: "Bağlam sınırına sığmak için dışarıda bırakıldı",
     usedWhatYouLearned: "Öğrendiklerini kullandı: {{summary}}",
     deepDiveRow: "Derin inceleme · {{title}}",
     learnedRow: "Öğrenilen: {{summary}}",

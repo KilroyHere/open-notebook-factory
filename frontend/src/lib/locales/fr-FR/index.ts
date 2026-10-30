@@ -532,6 +532,7 @@ export const frFR = {
     conclusionsLeftOut_one: "{{count}} conclusion est laissée hors de la conversation principale pour respecter la limite de contexte. Décochez celles dont vous n’avez plus besoin pour faire de la place.",
     conclusionsLeftOut_other: "{{count}} conclusions sont laissées hors de la conversation principale pour respecter la limite de contexte. Décochez celles dont vous n’avez plus besoin pour faire de la place.",
     conclusionsLeftOut: "{{count}} conclusions sont laissées hors de la conversation principale pour respecter la limite de contexte. Décochez celles dont vous n’avez plus besoin pour faire de la place.",
+    leftOutOfMainChat: "Laissée de côté pour respecter la limite de contexte",
     usedWhatYouLearned: "A utilisé ce que vous avez appris : {{summary}}",
     deepDiveRow: "Approfondissement · {{title}}",
     learnedRow: "Appris : {{summary}}",

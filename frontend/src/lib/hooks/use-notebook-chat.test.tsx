@@ -145,6 +145,45 @@ describe('useNotebookChat context', () => {
     expect(result.current.learningUpdatesOmitted).toBe(0)
   })
 
+  it('knows which accepted conclusions the counted context keeps', async () => {
+    let finish: (response: BuildContextResponse) => void = () => undefined
+    vi.mocked(chatApi.buildContext).mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve
+      })
+    )
+    const { result } = renderChat()
+    // Nothing is known before the first count.
+    expect(result.current.keptLearningUpdateIds).toBeUndefined()
+
+    finish(
+      contextResponse({
+        context: {
+          sources: [],
+          notes: [],
+          learning_updates: [
+            { id: 'learning_update:a', conclusion: 'A' },
+            { id: 'learning_update:b', conclusion: 'B' },
+          ],
+        },
+        learning_updates_omitted: 1,
+      })
+    )
+
+    await waitFor(() =>
+      expect(result.current.keptLearningUpdateIds).toEqual(
+        new Set(['learning_update:a', 'learning_update:b'])
+      )
+    )
+  })
+
+  it('keeps none when the context carries no conclusions', async () => {
+    const { result } = renderChat()
+
+    await waitFor(() => expect(result.current.tokenCount).toBe(120))
+    expect(result.current.keptLearningUpdateIds).toEqual(new Set())
+  })
+
   it('recounts when the chat context is invalidated', async () => {
     const { result, client } = renderChat()
     await waitFor(() => expect(result.current.tokenCount).toBe(120))

@@ -10,6 +10,7 @@ import {
   isPassageDive,
   journeyWithIncludeInMain,
   learnedConclusions,
+  leftOutConclusionIds,
   withAside,
   withIncludeInMain,
   createAsideTitle,
@@ -303,6 +304,49 @@ describe('journeyStats', () => {
       expect(next.asides[1]).toBe(leftOut)
       expect(journeyStats(next.asides).learned).toBe(0)
       expect(withIncludeInMain([v1], 'learning_update:other', false)).toEqual([v1])
+    })
+
+    describe('left out by the context limit', () => {
+      const conclusion = (id: string, includeInMain = true) =>
+        make({
+          id: `learning_aside:${id}`,
+          status: 'resolved',
+          updates: [
+            update({
+              id: `learning_update:${id}`,
+              aside_id: `learning_aside:${id}`,
+              include_in_main: includeInMain,
+            }),
+          ],
+        })
+      const learned = learnedConclusions([
+        conclusion('kept'),
+        conclusion('dropped'),
+        conclusion('unchecked', false),
+      ])
+
+      it('are the used conclusions the counted context did not keep', () => {
+        expect(
+          leftOutConclusionIds(learned, new Set(['learning_update:kept']), 1)
+        ).toEqual(new Set(['learning_update:dropped']))
+      })
+
+      it('are none while nothing is left out or nothing is counted yet', () => {
+        expect(leftOutConclusionIds(learned, new Set(), 0).size).toBe(0)
+        expect(leftOutConclusionIds(learned, undefined, 1).size).toBe(0)
+      })
+
+      it('are none while the count describes other conclusions than the list', () => {
+        // Just after a conclusion is switched on, or a new one is resolved,
+        // the last count has not seen it yet.
+        expect(
+          leftOutConclusionIds(
+            learnedConclusions([conclusion('kept'), conclusion('dropped'), conclusion('new')]),
+            new Set(['learning_update:kept']),
+            1
+          ).size
+        ).toBe(0)
+      })
     })
   })
 })

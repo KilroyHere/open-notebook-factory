@@ -535,6 +535,7 @@ export const deDE = {
     conclusionsLeftOut_one: "{{count}} Erkenntnis fehlt im Hauptgespräch, weil das Kontextlimit erreicht ist. Entferne das Häkchen bei denen, die du nicht mehr brauchst, um Platz zu schaffen.",
     conclusionsLeftOut_other: "{{count}} Erkenntnisse fehlen im Hauptgespräch, weil das Kontextlimit erreicht ist. Entferne das Häkchen bei denen, die du nicht mehr brauchst, um Platz zu schaffen.",
     conclusionsLeftOut: "{{count}} Erkenntnisse fehlen im Hauptgespräch, weil das Kontextlimit erreicht ist. Entferne das Häkchen bei denen, die du nicht mehr brauchst, um Platz zu schaffen.",
+    leftOutOfMainChat: "Wegen des Kontextlimits ausgelassen",
     usedWhatYouLearned: "Nutzt, was du gelernt hast: {{summary}}",
     deepDiveRow: "Vertiefung · {{title}}",
     learnedRow: "Gelernt: {{summary}}",

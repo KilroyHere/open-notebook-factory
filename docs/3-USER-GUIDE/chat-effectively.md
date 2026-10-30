@@ -75,7 +75,7 @@ On a narrow screen dives open in the **Chat** tab in the same way, and the **Stu
 
 The **Outline** in Studio's **Journey** tab starts with **What you've learned**: the conclusion of each resolved dive (the latest version when you updated it), in the order of the journey. Each has a **Use in main chat** checkbox. Uncheck a conclusion that no longer helps, and main-chat messages stop including it; check it again to bring it back. Nothing is resolved again and no new version is stored, and **Update resolution** starts from your choice. **Learned** counts only the checked conclusions, and the context size in the message box changes with them. The same checkbox sits in a resolved dive's summary. Click a conclusion to open its dive. If a change can't be saved, the checkbox goes back and a message says why.
 
-Checked conclusions share a limit of about 4,000 tokens per message. When some don't fit, a note at the top of **What you've learned** says how many are left out (the context chip in the message box says it too); uncheck the conclusions you no longer need to make room for the others.
+Checked conclusions share a limit of about 4,000 tokens per message. When some don't fit, a note at the top of **What you've learned** says how many are left out (the context chip in the message box says it too), and each conclusion that is left out says **Left out to fit the context limit** under it. Uncheck the conclusions you no longer need to make room for the others.
 
 ### Going deeper on a passage
 
