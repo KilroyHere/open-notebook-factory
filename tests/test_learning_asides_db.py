@@ -493,3 +493,146 @@ async def test_a_failed_aside_create_leaves_no_child_session():
 
     assert [str(session) for session in sessions] == [main.id]
     assert asides == 0
+
+
+# --- Delete cascades -----------------------------------------------------------
+
+
+LEARNING_TABLES = (
+    "chat_session",
+    "learning_journey",
+    "learning_aside",
+    "learning_update",
+    "learning_section",
+    "note",
+)
+
+
+async def stored_ids(db: Any) -> dict[str, set[str]]:
+    return {
+        table: {str(row) for row in await db.query(f"SELECT VALUE id FROM {table}")}
+        for table in LEARNING_TABLES
+    }
+
+
+async def learning_journey_records(
+    notebook: Notebook, main: ChatSession
+) -> dict[str, set[str]]:
+    """Give ``main`` a full journey; return the ids it created, by table.
+
+    One aside resolved twice (the second time saved as a note) with a parked
+    dive nested under it, one discarded aside that kept an accepted
+    conclusion, and two outline sections.
+    """
+    journey = await LearningJourney.get_or_create(notebook.id or "", main.id or "")
+    resolved = await add_aside(notebook, journey, "Why Jensen?")
+    nested = await add_aside(notebook, journey, "Why concave?", parent=resolved)
+    nested.change_status("parked")
+    await nested.save()
+    discarded = await add_aside(notebook, journey, "A dead end")
+    with no_transcripts():
+        await resolve(resolved, "Jensen gives a lower bound.", save_as_note=False)
+        await resolve(resolved, "log is concave, so Jensen applies.")
+        await resolve(discarded, "Not useful after all.", save_as_note=False)
+    discarded.status = "discarded"
+    await discarded.save()
+    sections = await LearningSection.ensure_for_turns(
+        journey.id or "", [("human-1", "ELBO"), ("human-2", "Priors")]
+    )
+    asides = [resolved, nested, discarded]
+    updates = [
+        update for aside in asides for update in await aside.get_updates() if update.id
+    ]
+    return {
+        "chat_session": {aside.chat_session for aside in asides},
+        "learning_journey": {journey.id or ""},
+        "learning_aside": {aside.id or "" for aside in asides},
+        "learning_update": {update.id or "" for update in updates},
+        "learning_section": {section.id or "" for section in sections},
+        "note": {update.saved_note for update in updates if update.saved_note},
+    }
+
+
+@pytest.mark.asyncio
+async def test_deleting_a_main_session_removes_its_journey_but_keeps_notes():
+    from api.routers.chat import delete_session
+
+    async with memory_database() as db:
+        notebook, main = await notebook_with_main_session()
+        doomed = await learning_journey_records(notebook, main)
+        other_main = ChatSession(title="Other main")
+        await other_main.save()
+        await other_main.relate_to_notebook(notebook.id or "")
+        kept = await learning_journey_records(notebook, other_main)
+        before = await stored_ids(db)
+
+        response = await delete_session(main.id or "")
+        after = await stored_ids(db)
+        notes_in_notebook = {
+            str(row)
+            for row in await db.query(
+                "SELECT VALUE in FROM artifact WHERE out = $notebook",
+                {"notebook": RecordID.parse(notebook.id or "")},
+            )
+        }
+        edges_of_deleted_sessions = await db.query(
+            "SELECT id FROM refers_to WHERE in INSIDE $sessions",
+            {
+                "sessions": [
+                    RecordID.parse(session)
+                    for session in doomed["chat_session"] | {main.id or ""}
+                ]
+            },
+        )
+
+    assert response.success is True
+    assert doomed["learning_update"] and doomed["note"]
+    for table in LEARNING_TABLES:
+        removed = before[table] - after[table]
+        if table == "note":
+            # A saved note is a notebook note: it stays.
+            assert removed == set()
+            continue
+        expected = doomed[table] | (
+            {main.id or ""} if table == "chat_session" else set()
+        )
+        assert removed == expected, table
+        assert kept[table] <= after[table], table
+    assert doomed["note"] <= notes_in_notebook
+    assert edges_of_deleted_sessions == []
+
+
+@pytest.mark.asyncio
+async def test_deleting_a_notebook_removes_every_journey_in_it():
+    async with memory_database() as db:
+        notebook, main = await notebook_with_main_session()
+        doomed = await learning_journey_records(notebook, main)
+        second_main = ChatSession(title="Second main")
+        await second_main.save()
+        await second_main.relate_to_notebook(notebook.id or "")
+        also_doomed = await learning_journey_records(notebook, second_main)
+        other_notebook, other_main = await notebook_with_main_session()
+        kept = await learning_journey_records(other_notebook, other_main)
+
+        counts = await notebook.delete()
+        after = await stored_ids(db)
+        notebooks = {
+            str(row) for row in await db.query("SELECT VALUE id FROM notebook")
+        }
+        dangling_edges = await db.query(
+            "SELECT id FROM refers_to WHERE out = $notebook",
+            {"notebook": RecordID.parse(notebook.id or "")},
+        )
+
+    assert notebooks == {other_notebook.id}
+    # Its two main sessions; the aside sessions go with their journeys.
+    assert counts["deleted_chat_sessions"] == 2
+    # Notes saved from asides are notebook notes and go with the notebook.
+    assert counts["deleted_notes"] == len(doomed["note"] | also_doomed["note"])
+    for table in LEARNING_TABLES:
+        gone = doomed[table] | also_doomed[table]
+        if table == "chat_session":
+            gone |= {main.id or "", second_main.id or ""}
+        assert not gone & after[table], table
+        assert kept[table] <= after[table], table
+    assert dangling_edges == []
