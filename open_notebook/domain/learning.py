@@ -222,15 +222,7 @@ class LearningAside(ObjectModel):
     async def get_updates(self) -> List["LearningUpdate"]:
         if not self.id:
             raise InvalidInputError("Aside must be saved before listing updates")
-        try:
-            rows = await repo_query(
-                "SELECT * FROM learning_update WHERE aside = $aside ORDER BY version ASC",
-                {"aside": ensure_record_id(self.id)},
-            )
-            return [LearningUpdate(**row) for row in rows]
-        except Exception as exc:
-            logger.exception(f"Failed to list updates for aside {self.id}")
-            raise DatabaseOperationError("Failed to list learning updates") from exc
+        return await LearningUpdate.get_versions(self.id)
 
 
 class LearningUpdate(ObjectModel):
@@ -275,6 +267,62 @@ class LearningUpdate(ObjectModel):
             "citations": self.citations,
             "applied_message_id": self.applied_message_id,
         }
+
+    @classmethod
+    async def get_versions(cls, aside_id: str) -> List["LearningUpdate"]:
+        """Every stored resolution of an aside, oldest version first."""
+        try:
+            rows = await repo_query(
+                "SELECT * FROM learning_update WHERE aside = $aside ORDER BY version ASC",
+                {"aside": ensure_record_id(aside_id)},
+            )
+            return [cls(**row) for row in rows]
+        except Exception as exc:
+            logger.exception(f"Failed to list updates for aside {aside_id}")
+            raise DatabaseOperationError("Failed to list learning updates") from exc
+
+    async def set_include_in_main(self, include_in_main: bool) -> None:
+        """Send this conclusion with main-chat turns, or leave it out.
+
+        The version is changed in place: no new version is stored and only
+        ``include_in_main`` is written, so a concurrent backlink is not lost.
+        Only the latest version of an aside can reach main context
+        (:func:`latest_update_versions`), so changing a superseded version is
+        rejected: it could never take effect. The instance is refreshed from the
+        stored record.
+        """
+        if not self.id:
+            raise InvalidInputError(
+                "Learning update must be saved before it can be changed"
+            )
+        versions = await LearningUpdate.get_versions(self.aside)
+        if not any(version.id == self.id for version in versions):
+            raise NotFoundError(f"learning_update with id {self.id} not found")
+        if not any(
+            version.id == self.id for version in latest_update_versions(versions)
+        ):
+            newest = max(versions, key=lambda version: version.version)
+            raise InvalidInputError(
+                f"Version {self.version} of this conclusion was replaced by "
+                f"version {newest.version}. Only the latest version of an aside's "
+                "conclusion can be included in or left out of the main chat."
+            )
+        try:
+            rows = await repo_query(
+                "UPDATE $update_id SET include_in_main = $include_in_main RETURN AFTER",
+                {
+                    "update_id": ensure_record_id(self.id),
+                    "include_in_main": include_in_main,
+                },
+            )
+        except Exception as exc:
+            logger.exception(f"Failed to change learning update {self.id}")
+            raise DatabaseOperationError("Failed to update learning update") from exc
+        if not rows:
+            raise NotFoundError(f"learning_update with id {self.id} not found")
+        stored = LearningUpdate(**rows[0])
+        for name in LearningUpdate.model_fields:
+            setattr(self, name, getattr(stored, name))
 
     @classmethod
     async def mark_applied(cls, update_ids: List[str], message_id: str) -> None:

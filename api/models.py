@@ -176,6 +176,16 @@ class ResolveLearningAsideRequest(BaseModel):
         return stripped
 
 
+class UpdateLearningUpdateRequest(BaseModel):
+    include_in_main: bool = Field(
+        ...,
+        description=(
+            "Send this conclusion with main-chat messages (true) or leave it "
+            "out (false). Only the latest version of an aside can be changed"
+        ),
+    )
+
+
 class DraftLearningResolutionRequest(BaseModel):
     model_override: Optional[str] = None
 

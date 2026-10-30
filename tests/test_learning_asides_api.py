@@ -1694,3 +1694,106 @@ def test_execute_chat_sends_and_links_only_updates_within_the_budget(client):
     assert [update.id for update in mark_applied.await_args.args[0]] == [
         "learning_update:new"
     ]
+
+
+# --- Including a conclusion in main chat, or leaving it out ------------------
+
+
+def _update_row(update_id: str, version: int, **fields):
+    row = {
+        "id": update_id,
+        "aside": "learning_aside:aside",
+        "conclusion": f"Conclusion v{version}",
+        "include_in_main": True,
+        "version": version,
+        "created": NOW,
+        "updated": NOW,
+    }
+    row.update(fields)
+    return row
+
+
+def test_patch_update_leaves_the_latest_conclusion_out_of_main_chat(client):
+    latest = LearningUpdate(**_update_row("learning_update:v2", 2))
+    versions = [
+        _update_row("learning_update:v1", 1),
+        _update_row("learning_update:v2", 2),
+    ]
+    stored = _update_row("learning_update:v2", 2, include_in_main=False)
+    with (
+        patch(
+            "api.routers.learning.LearningUpdate.get",
+            new_callable=AsyncMock,
+            return_value=latest,
+        ) as get_update,
+        patch(
+            "open_notebook.domain.learning.repo_query",
+            new_callable=AsyncMock,
+            side_effect=[versions, [stored]],
+        ) as repo_query,
+    ):
+        response = client.patch(
+            "/api/learning/updates/v2", json={"include_in_main": False}
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["id"] == "learning_update:v2"
+    assert body["include_in_main"] is False
+    assert body["superseded"] is False
+    assert body["version"] == 2
+    get_update.assert_awaited_once_with("learning_update:v2")
+    # Changed in place: one write to that record, no new version.
+    write_query, write_params = repo_query.await_args_list[-1].args
+    assert write_query.startswith("UPDATE $update_id SET include_in_main")
+    assert str(write_params["update_id"]) == "learning_update:v2"
+    assert write_params["include_in_main"] is False
+
+
+def test_patch_update_rejects_a_superseded_version(client):
+    superseded = LearningUpdate(**_update_row("learning_update:v1", 1))
+    versions = [
+        _update_row("learning_update:v1", 1),
+        _update_row("learning_update:v2", 2),
+    ]
+    with (
+        patch(
+            "api.routers.learning.LearningUpdate.get",
+            new_callable=AsyncMock,
+            return_value=superseded,
+        ),
+        patch(
+            "open_notebook.domain.learning.repo_query",
+            new_callable=AsyncMock,
+            side_effect=[versions],
+        ) as repo_query,
+    ):
+        response = client.patch(
+            "/api/learning/updates/learning_update:v1",
+            json={"include_in_main": False},
+        )
+
+    assert response.status_code == 400
+    assert "replaced by version 2" in response.json()["detail"]
+    assert "Only the latest version" in response.json()["detail"]
+    # Nothing is written.
+    assert repo_query.await_count == 1
+
+
+def test_patch_unknown_update_returns_404(client):
+    with patch(
+        "open_notebook.domain.base.repo_query",
+        new_callable=AsyncMock,
+        return_value=[],
+    ):
+        response = client.patch(
+            "/api/learning/updates/missing", json={"include_in_main": True}
+        )
+
+    assert response.status_code == 404
+
+
+def test_patch_update_requires_include_in_main(client):
+    response = client.patch("/api/learning/updates/v2", json={})
+
+    assert response.status_code == 422

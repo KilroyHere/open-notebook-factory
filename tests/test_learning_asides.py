@@ -580,3 +580,117 @@ async def test_re_resolution_excluded_from_main_drops_the_older_version_too():
         ),
     ):
         assert await journey.get_updates(include_unmerged=False) == []
+
+
+async def _two_resolutions(db: Any) -> None:
+    """One aside resolved twice: version 1 (merged earlier) and version 2."""
+    await db.query((MIGRATIONS_DIR / "26.surrealql").read_text())
+    await db.query((MIGRATIONS_DIR / "27.surrealql").read_text())
+    await db.query(
+        """
+        CREATE learning_update:v1 SET
+            aside = learning_aside:one, conclusion = 'First take',
+            include_in_main = true, version = 1,
+            applied_message_id = 'ai:first-reply';
+        CREATE learning_update:v2 SET
+            aside = learning_aside:one, conclusion = 'Revised take',
+            include_in_main = true, version = 2;
+        """
+    )
+
+
+async def _stored_update(db: Any, update_id: str) -> LearningUpdate:
+    rows = parse_record_ids(
+        await db.query("SELECT * FROM $id", {"id": RecordID.parse(update_id)})
+    )
+    return LearningUpdate(**rows[0])
+
+
+class TestIncludeInMainToggle:
+    @pytest.mark.asyncio
+    async def test_latest_version_is_changed_in_place(self):
+        async with AsyncSurreal("mem://") as db:
+            await db.use("learning_asides", "toggle_latest")
+            await _two_resolutions(db)
+            latest = await _stored_update(db, "learning_update:v2")
+            with patch(
+                "open_notebook.domain.learning.repo_query", new=_memory_repo_query(db)
+            ):
+                await latest.set_include_in_main(False)
+                left_out = await _stored_update(db, "learning_update:v2")
+                versions = await LearningUpdate.get_versions("learning_aside:one")
+                await latest.set_include_in_main(True)
+                put_back = await _stored_update(db, "learning_update:v2")
+
+        assert left_out.include_in_main is False
+        assert put_back.include_in_main is True
+        assert latest.include_in_main is True
+        # No new version, and nothing else on the record changed.
+        assert [version.version for version in versions] == [1, 2]
+        assert left_out.conclusion == "Revised take"
+        assert left_out.applied_message_id is None
+
+    @pytest.mark.asyncio
+    async def test_superseded_version_is_rejected(self):
+        async with AsyncSurreal("mem://") as db:
+            await db.use("learning_asides", "toggle_superseded")
+            await _two_resolutions(db)
+            superseded = await _stored_update(db, "learning_update:v1")
+            with patch(
+                "open_notebook.domain.learning.repo_query", new=_memory_repo_query(db)
+            ):
+                with pytest.raises(InvalidInputError, match="replaced by version 2"):
+                    await superseded.set_include_in_main(False)
+            unchanged = await _stored_update(db, "learning_update:v1")
+
+        assert unchanged.include_in_main is True
+        assert unchanged.applied_message_id == "ai:first-reply"
+
+    @pytest.mark.asyncio
+    async def test_unsaved_update_is_rejected(self):
+        update = LearningUpdate(aside="learning_aside:one", conclusion="Draft")
+        with patch(
+            "open_notebook.domain.learning.repo_query", new_callable=AsyncMock
+        ) as repo_query:
+            with pytest.raises(InvalidInputError, match="must be saved"):
+                await update.set_include_in_main(False)
+
+        repo_query.assert_not_called()
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "query_results",
+        [
+            # The aside no longer lists this version.
+            [[]],
+            # It disappeared between the check and the write.
+            [
+                [
+                    {
+                        "id": "learning_update:v1",
+                        "aside": "learning_aside:one",
+                        "conclusion": "Gone",
+                        "version": 1,
+                    }
+                ],
+                [],
+            ],
+        ],
+        ids=["not-listed", "deleted-before-write"],
+    )
+    async def test_missing_update_is_not_found(self, query_results):
+        from open_notebook.exceptions import NotFoundError
+
+        update = LearningUpdate(
+            id="learning_update:v1",
+            aside="learning_aside:one",
+            conclusion="Gone",
+            version=1,
+        )
+        with patch(
+            "open_notebook.domain.learning.repo_query",
+            new_callable=AsyncMock,
+            side_effect=query_results,
+        ):
+            with pytest.raises(NotFoundError):
+                await update.set_include_in_main(False)

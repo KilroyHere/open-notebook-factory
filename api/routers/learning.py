@@ -23,6 +23,7 @@ from api.models import (
     SyncLearningSectionsRequest,
     UpdateLearningAsideRequest,
     UpdateLearningSectionRequest,
+    UpdateLearningUpdateRequest,
 )
 from api.routers._chat_shared import (
     INTERNAL_ID_INSTRUCTION,
@@ -421,6 +422,19 @@ async def update_aside(aside_id: str, request: UpdateLearningAsideRequest):
         journey.active_session = aside.parent_session
     await journey.save()
     return await _aside_response(aside)
+
+
+@router.patch("/updates/{update_id}", response_model=LearningUpdateResponse)
+async def update_learning_update(update_id: str, request: UpdateLearningUpdateRequest):
+    """Include an accepted conclusion in the main chat, or leave it out.
+
+    The version is changed in place; no new version is stored. Only the latest
+    version of an aside reaches main context, so a superseded version is
+    rejected with 400. An unknown ID is a 404.
+    """
+    update = await LearningUpdate.get(normalize_record_id("learning_update", update_id))
+    await update.set_include_in_main(request.include_in_main)
+    return _update_response(update)
 
 
 # Bounds for the ancestry summary a nested dive receives. Only the immediate
