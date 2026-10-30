@@ -90,7 +90,7 @@ A command signals a permanent failure by raising an exception listed in its `ret
 
 ## TypeScript / frontend
 
-- `npm run lint` (ESLint over `src/`) and `npm run build` (which type-checks) must pass; CI runs both plus `npm run test`.
+- `npm run lint` (ESLint over `src/` and the `e2e/` suite) and `npm run build` (which type-checks) must pass; CI runs both plus `npm run test` and `npm run test:e2e` ([end-to-end tests](testing.md#end-to-end-tests-playwright)).
 - The rules that matter most, all in [frontend/AGENTS.md](../../frontend/AGENTS.md): every UI string through `t()` in every locale; colors through design tokens, never raw Tailwind palette classes; every request through `apiClient`; server state through TanStack Query hooks in `src/lib/hooks/`.
 - Show errors with `getApiErrorMessage()` and a toast. It shows the backend's `detail` when there is no i18n mapping, so backend errors must carry messages that are safe to show: `classify_error()` produces those for provider errors, and routers return a generic message for unexpected ones. Don't put internal details (queries, stack traces, file paths) into exception messages.
 

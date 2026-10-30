@@ -5,8 +5,9 @@ Normative rules for working on the Next.js frontend. Architecture and flow walkt
 ## Commands (run inside `frontend/`)
 
 - Dev server: `npm run dev` (port 3000; API must be up at 5055 first)
-- Lint: `npm run lint` (`eslint src/`)
+- Lint: `npm run lint` (`eslint src/ e2e/ playwright.config.ts`)
 - Tests: `npm run test` (`vitest run`) · coverage: `npm run test:coverage`
+- E2E: `npm run test:e2e` (Playwright: builds the app, serves it on port 3100 and mocks the API in the browser; see [testing.md](../docs/7-DEVELOPMENT/testing.md#end-to-end-tests-playwright))
 - Build: `npm run build`
 
 ## Hard rules

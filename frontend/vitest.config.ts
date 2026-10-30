@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config'
+import { configDefaults, defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
@@ -16,6 +16,8 @@ export default defineConfig({
     globals: true,
     css: false,
     setupFiles: ['./src/test/setup.ts'],
+    // e2e/ holds the Playwright suite (npm run test:e2e), not Vitest tests.
+    exclude: [...configDefaults.exclude, 'e2e/**'],
     alias: {
       '@': path.resolve(__dirname, './src')
     },
