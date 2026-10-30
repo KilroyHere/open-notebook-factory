@@ -21,8 +21,8 @@ Or all at once: `make start-all` (status: `make status`, stop: `make stop-all`).
 
 - Tests: `uv run pytest tests/`
 - Python lint/format/typecheck: `uv run ruff check . --fix` · `uv run ruff format .` · `uv run python -m mypy .`
-- Frontend (inside `frontend/`): `npm run lint` · `npm run test` · `npm run build`
-- CI runs `uv run ruff check .`, `uv run ruff format --check .`, mypy, pytest and, in `frontend/`, `npm run lint`, `npm run test:coverage` and `npm run build`; all must pass
+- Frontend (inside `frontend/`): `npm run lint` · `npm run test` · `npm run build` · `npm run test:e2e` (Playwright, [testing.md](docs/7-DEVELOPMENT/testing.md#end-to-end-tests-playwright))
+- CI runs `uv run ruff check .`, `uv run ruff format --check .`, mypy, pytest and, in `frontend/`, `npm run lint`, `npm run test:coverage`, `npm run build` and `npm run test:e2e`; all must pass
 - Docker release: `make docker-release` (see `.github/RELEASE_PROCESS.md`)
 
 ## Hard rules
