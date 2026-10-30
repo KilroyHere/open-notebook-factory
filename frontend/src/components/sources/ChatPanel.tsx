@@ -488,10 +488,13 @@ const ChatMessage = memo(function ChatMessage({
           </div>
         </div>
       )}
+      {/* min-w-0 lets the column shrink beside the avatar: a wide formula,
+          code block or table then scrolls inside the reply instead of
+          pushing the whole answer past the chat's right edge. */}
       <div
         className={cn(
-          'flex flex-col gap-2',
-          wide && message.type === 'ai' ? 'w-full max-w-full' : 'max-w-[80%]'
+          'flex min-w-0 flex-col gap-2',
+          wide && message.type === 'ai' ? 'flex-1' : 'max-w-[80%]'
         )}
       >
         {/* A reply that used an aside's conclusion says so, collapsed. */}
@@ -509,11 +512,10 @@ const ChatMessage = memo(function ChatMessage({
           />
         ))}
         <div
-          className={`rounded-lg px-4 py-2 border ${
-            message.type === 'human'
-              ? 'bg-muted'
-              : 'bg-card'
-          }`}
+          className={cn(
+            'min-w-0 max-w-full rounded-lg border px-4 py-2',
+            message.type === 'human' ? 'bg-muted' : 'bg-card'
+          )}
         >
           {message.type === 'ai' ? (
             <ReferencedMarkdown

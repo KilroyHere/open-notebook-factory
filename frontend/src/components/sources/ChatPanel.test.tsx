@@ -200,6 +200,39 @@ describe('ChatPanel composer', () => {
     expect(list).toHaveClass('mx-auto')
   })
 
+  it('lets an assistant reply shrink beside its avatar on narrow screens', () => {
+    render(
+      <ChatPanel
+        workspaceMode
+        messages={[
+          { id: 'ai:1', type: 'ai', content: 'The probability that a latent explains the data.' },
+        ]}
+        isStreaming={false}
+        contextIndicators={null}
+        onSendMessage={vi.fn()}
+      />
+    )
+
+    const bubble = screen
+      .getByText('The probability that a latent explains the data.')
+      .closest('.rounded-lg')!
+    const column = bubble.parentElement!
+    // A flex item without min-w-0 cannot shrink below its widest content
+    // (a formula, a code block), so the reply ran past the right edge and
+    // its text was clipped mid-word on phones.
+    expect(column.className.split(/\s+/)).toEqual(
+      expect.arrayContaining(['flex-1', 'min-w-0'])
+    )
+    expect(column).not.toHaveClass('w-full')
+    expect(bubble.className.split(/\s+/)).toEqual(
+      expect.arrayContaining(['min-w-0', 'max-w-full'])
+    )
+    // Wide display math scrolls inside the reply instead of widening it.
+    expect(bubble.querySelector('.prose')?.className).toContain(
+      '[&_.katex-display]:overflow-x-auto'
+    )
+  })
+
   it('puts the context count on a chip and the size in its details', () => {
     render(
       <ChatPanel
