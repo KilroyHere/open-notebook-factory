@@ -1,12 +1,14 @@
 """Learning journeys and isolated aside conversations."""
 
 import asyncio
+import re
 from typing import Any, Dict, List, Optional, Tuple
 from uuid import uuid4
 
 from fastapi import APIRouter, Query
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
+from loguru import logger
 
 from api.models import (
     CreateLearningAsideRequest,
@@ -27,7 +29,8 @@ from api.models import (
 )
 from api.routers._chat_shared import (
     INTERNAL_ID_INSTRUCTION,
-    model_facing_context,
+    load_main_learning_context,
+    main_chat_model_context,
     normalize_record_id,
 )
 from open_notebook.database.repository import ensure_record_id, repo_query
@@ -277,10 +280,13 @@ async def get_journey_resume(
         ),
         open_asides[-1] if open_asides else None,
     )
+    discarded = {aside.id for aside in response.asides if aside.status == "discarded"}
     accepted_findings = [
         update.conclusion
         for update in response.updates
-        if update.include_in_main and not update.superseded
+        if update.include_in_main
+        and not update.superseded
+        and update.aside_id not in discarded
     ]
     current_point: Optional[str]
     if active_aside:
@@ -376,23 +382,30 @@ async def create_aside(request: CreateLearningAsideRequest):
         kind=LEARNING_ASIDE_SESSION_KIND,
     )
     await child_session.save()
-    await child_session.relate_to_notebook(
-        normalize_record_id("notebook", request.notebook_id)
-    )
-
-    aside = LearningAside(
-        journey=journey.id or "",
-        parent_aside=parent_aside.id if parent_aside else None,
-        parent_session=parent_session_id,
-        chat_session=child_session.id or "",
-        title=title,
-        anchor=anchor,
-        context_snapshot=context_snapshot,
-    )
     try:
+        await child_session.relate_to_notebook(
+            normalize_record_id("notebook", request.notebook_id)
+        )
+        aside = LearningAside(
+            journey=journey.id or "",
+            parent_aside=parent_aside.id if parent_aside else None,
+            parent_session=parent_session_id,
+            chat_session=child_session.id or "",
+            title=title,
+            anchor=anchor,
+            context_snapshot=context_snapshot,
+        )
         await aside.save()
     except Exception:
-        await child_session.delete()
+        # No aside points at the child session yet. Remove it, so a failed
+        # create leaves no hidden session behind (one that never got its
+        # notebook relation would not even go with the notebook).
+        try:
+            await child_session.delete()
+        except Exception:
+            logger.exception(
+                f"Could not remove {child_session.id} after its aside failed"
+            )
         raise
 
     journey.active_session = child_session.id
@@ -407,12 +420,17 @@ async def get_aside(aside_id: str):
 
 @router.patch("/asides/{aside_id}", response_model=LearningAsideResponse)
 async def update_aside(aside_id: str, request: UpdateLearningAsideRequest):
+    """Rename an aside, or park, reopen or discard it.
+
+    Only active and parked asides change status here (400 otherwise): a
+    resolved aside keeps its status and a discarded one stays discarded.
+    """
     aside = await _get_aside(aside_id)
     update = request.model_dump(exclude_unset=True)
+    if "status" in update:
+        aside.change_status(update["status"])
     if "title" in update:
         aside.title = update["title"]
-    if "status" in update:
-        aside.status = update["status"]
     await aside.save()
 
     journey = await LearningJourney.get(aside.journey)
@@ -456,6 +474,23 @@ def _clip_tail(text: str, limit: int) -> str:
     """Clip from the front, keeping the end (the part nearest the branch)."""
     text = text.strip()
     return text if len(text) <= limit else "\u2026" + text[-(limit - 1) :].lstrip()
+
+
+# A document ID the model may cite (the chat prompt's citation format).
+_CITABLE_DOCUMENT_ID = re.compile(r"(?:source_insight|source|note|insight):\w+")
+
+
+def _model_visible_anchor(anchor: AsideAnchor) -> Dict[str, str]:
+    """The parts of an aside's anchor that the model may see.
+
+    ``message_id`` names a main-chat checkpoint message and ``locator`` is the
+    UI's way back to it; both are internal, and the model would cite them.
+    ``source_id`` stays only when it is a document ID the model may cite.
+    """
+    visible = {"type": anchor.type, "content": anchor.content}
+    if anchor.source_id and _CITABLE_DOCUMENT_ID.fullmatch(anchor.source_id):
+        visible["source_id"] = anchor.source_id
+    return visible
 
 
 def _format_transcript(snapshot: List[Dict[str, str]]) -> str:
@@ -540,10 +575,15 @@ async def send_aside_message(aside_id: str, request: SendLearningAsideMessageReq
     state_values["messages"] = list(state_values.get("messages", []))
 
     parent_transcript = _format_transcript(aside.context_snapshot)
-    context = model_facing_context(request.context)
+    # Accepted conclusions are loaded like main chat's: those of the journey
+    # this aside is on, from the server. The client's copy is ignored.
+    learning = await load_main_learning_context(
+        journey.main_session, notebook_id=journey.notebook
+    )
+    context = main_chat_model_context(request.context, learning)
     context["learning_aside"] = {
         "title": aside.title,
-        "anchor": aside.anchor.model_dump(),
+        "anchor": _model_visible_anchor(aside.anchor),
         "parent_conversation_at_branch": parent_transcript,
         "instruction": (
             "Answer this isolated learning aside. Preserve source citations and "
@@ -651,24 +691,51 @@ async def draft_aside_resolution(
     return LearningResolutionDraftResponse(**draft.model_dump())
 
 
+async def _save_resolution_note(
+    update: LearningUpdate, aside: LearningAside, notebook_id: str
+) -> None:
+    """Save a stored resolution's conclusion as a notebook note.
+
+    If any step fails, the note (when it was created) and ``update`` are
+    deleted again before the error is raised.
+    """
+    note = Note(
+        title=f"Learning aside: {aside.title}",
+        content=update.conclusion,
+        note_type="ai",
+    )
+    try:
+        await note.save()
+        await note.add_to_notebook(notebook_id)
+        await update.set_saved_note(note.id or "")
+    except Exception:
+        for record in (note, update):
+            if not record.id:
+                continue
+            try:
+                await record.delete()
+            except Exception:
+                logger.exception(
+                    f"Could not remove {record.id} after its resolution failed"
+                )
+        raise
+
+
 @router.post("/asides/{aside_id}/resolve", response_model=LearningAsideResponse)
 async def resolve_aside(aside_id: str, request: ResolveLearningAsideRequest):
+    """Store an approved conclusion as the aside's next version.
+
+    The version is stored first, so the unique (aside, version) index settles
+    concurrent resolutions before anything else is written. With
+    ``save_as_note`` the note follows; if it cannot be created, linked to the
+    notebook or recorded on the version, the note and the version are deleted
+    again and the error is raised. Nothing is then left behind: the aside
+    keeps its status and a retry starts clean.
+    """
     aside = await _get_aside(aside_id)
     if aside.status == "discarded":
         raise InvalidInputError("Discarded asides cannot be resolved")
     journey = await LearningJourney.get(aside.journey)
-    existing_updates = await aside.get_updates()
-
-    saved_note_id: Optional[str] = None
-    if request.save_as_note:
-        note = Note(
-            title=f"Learning aside: {aside.title}",
-            content=request.conclusion,
-            note_type="ai",
-        )
-        await note.save()
-        await note.add_to_notebook(journey.notebook)
-        saved_note_id = note.id
 
     update = LearningUpdate(
         aside=aside.id or "",
@@ -677,12 +744,16 @@ async def resolve_aside(aside_id: str, request: ResolveLearningAsideRequest):
         open_questions=request.open_questions,
         citations=request.citations,
         include_in_main=request.include_in_main,
-        saved_note=saved_note_id,
-        version=len(existing_updates) + 1,
     )
-    await update.save()
+    await update.save_as_next_version()
+    if request.save_as_note:
+        await _save_resolution_note(update, aside, journey.notebook)
+
     aside.status = "resolved"
     await aside.save()
-    journey.active_session = aside.parent_session
-    await journey.save()
+    # Back to the parent thread, unless the learner is in another aside now
+    # (an aside can be resolved from Studio while a different one is open).
+    if journey.active_session == aside.chat_session:
+        journey.active_session = aside.parent_session
+        await journey.save()
     return await _aside_response(aside)

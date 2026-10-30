@@ -17,7 +17,7 @@ npm run test:watch        # watch mode
 npm run test:coverage     # what CI runs
 ```
 
-The backend suite needs **no running SurrealDB, worker or AI provider**. CI runs it with nothing but `uv sync`. SurrealDB access, models and HTTP requests are mocked; a few tests use in-memory substitutes instead (for example an in-memory `SqliteSaver` in `tests/test_empty_model_reply.py`).
+The backend suite needs **no running SurrealDB, worker or AI provider**. CI runs it with nothing but `uv sync`. SurrealDB access, models and HTTP requests are mocked; a few tests use in-memory substitutes instead (for example an in-memory `SqliteSaver` in `tests/test_empty_model_reply.py`). Tests that need real SurrealQL semantics use the SurrealDB driver's embedded engine (`AsyncSurreal("mem://")`). `tests/test_learning_asides_db.py` points the repository's `db_connection` at one shared in-memory connection, so `ObjectModel` saves, unique indexes and deletes run for real; it runs record creates one at a time, because the embedded engine does not reliably enforce a UNIQUE index between overlapping inserts.
 
 ## Backend layout (`tests/`)
 

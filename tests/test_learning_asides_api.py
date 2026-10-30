@@ -172,6 +172,96 @@ async def test_create_aside_persists_child_session_and_journey_navigation(client
 
 
 @pytest.mark.parametrize(
+    ("failing_step", "cleanup_fails"),
+    [
+        ("api.routers.learning.ChatSession.relate_to_notebook", False),
+        ("api.routers.learning.LearningAside.save", False),
+        # The original error still surfaces when the cleanup fails too.
+        ("api.routers.learning.ChatSession.relate_to_notebook", True),
+        ("api.routers.learning.LearningAside.save", True),
+    ],
+    ids=[
+        "relate-fails",
+        "aside-save-fails",
+        "relate-and-cleanup-fail",
+        "aside-save-and-cleanup-fail",
+    ],
+)
+def test_failed_aside_create_removes_its_child_session(
+    client, failing_step, cleanup_fails
+):
+    from open_notebook.exceptions import DatabaseOperationError
+
+    async def save_session(session):
+        session.id = "chat_session:child"
+        session.created = NOW
+        session.updated = NOW
+
+    patches = {
+        "api.routers.learning.ChatSession.relate_to_notebook": AsyncMock(),
+        "api.routers.learning.LearningAside.save": AsyncMock(),
+    }
+    patches[failing_step] = AsyncMock(
+        side_effect=DatabaseOperationError("The database is unavailable")
+    )
+    delete = AsyncMock(
+        side_effect=RuntimeError("Failed to delete record") if cleanup_fails else None
+    )
+    with (
+        patch(
+            "api.routers.learning._verify_notebook_session",
+            new_callable=AsyncMock,
+            return_value=(
+                "chat_session:main",
+                SimpleNamespace(id="notebook:one"),
+                SimpleNamespace(model_override=None),
+            ),
+        ),
+        patch(
+            "api.routers.learning._snapshot_parent_context",
+            new_callable=AsyncMock,
+            return_value=[],
+        ),
+        patch(
+            "api.routers.learning.LearningAside.get_for_chat_session",
+            new_callable=AsyncMock,
+            return_value=None,
+        ),
+        patch(
+            "api.routers.learning.LearningJourney.get_or_create",
+            new_callable=AsyncMock,
+            return_value=_journey(),
+        ),
+        patch("api.routers.learning.ChatSession.save", new=save_session),
+        patch("api.routers.learning.ChatSession.delete", new=delete),
+        patch(
+            "api.routers.learning.ChatSession.relate_to_notebook",
+            new=patches["api.routers.learning.ChatSession.relate_to_notebook"],
+        ),
+        patch(
+            "api.routers.learning.LearningAside.save",
+            new=patches["api.routers.learning.LearningAside.save"],
+        ),
+        patch(
+            "api.routers.learning.LearningJourney.save", new_callable=AsyncMock
+        ) as save_journey,
+    ):
+        response = client.post(
+            "/api/learning/asides",
+            json={
+                "notebook_id": "notebook:one",
+                "parent_session_id": "chat_session:main",
+                "anchor": {"type": "message", "content": "Why Jensen?"},
+            },
+        )
+
+    assert response.status_code == 500
+    assert response.json()["detail"] == "The database is unavailable"
+    delete.assert_awaited_once()
+    save_journey.assert_not_called()
+
+
+@pytest.mark.parametrize(
     ("url", "body", "parent_patch", "relate_patch"),
     [
         (
@@ -454,6 +544,135 @@ def test_sync_sections_rejects_a_blank_title(client):
     assert response.status_code == 422
 
 
+def _patch_aside(client, aside, body, journey=None):
+    """PATCH /api/learning/asides/{id} with the database mocked out."""
+    journey = journey or _journey(active_session=aside.chat_session)
+    with (
+        patch(
+            "api.routers.learning._get_aside",
+            new_callable=AsyncMock,
+            return_value=aside,
+        ),
+        patch(
+            "api.routers.learning.LearningAside.save", new_callable=AsyncMock
+        ) as save_aside,
+        patch(
+            "api.routers.learning.LearningJourney.get",
+            new_callable=AsyncMock,
+            return_value=journey,
+        ),
+        patch(
+            "api.routers.learning.LearningJourney.save", new_callable=AsyncMock
+        ) as save_journey,
+        patch(
+            "api.routers.learning._aside_response",
+            new_callable=AsyncMock,
+            side_effect=lambda aside: _aside_response(aside),
+        ),
+    ):
+        response = client.patch(f"/api/learning/asides/{aside.id}", json=body)
+    return response, save_aside, save_journey
+
+
+@pytest.mark.parametrize(
+    ("current", "requested"),
+    [
+        ("active", "parked"),
+        ("parked", "active"),
+        ("active", "discarded"),
+        ("parked", "discarded"),
+        # Asking for the status it already has changes nothing.
+        ("active", "active"),
+        ("parked", "parked"),
+        ("discarded", "discarded"),
+    ],
+)
+def test_patch_aside_allows_learner_status_changes(client, current, requested):
+    aside = _aside(status=current)
+
+    response, save_aside, _ = _patch_aside(client, aside, {"status": requested})
+
+    assert response.status_code == 200
+    assert response.json()["status"] == requested
+    save_aside.assert_awaited_once()
+
+
+@pytest.mark.parametrize(
+    ("current", "requested", "detail"),
+    [
+        ("resolved", "active", "Resolved asides cannot be reopened"),
+        ("resolved", "parked", "Resolved asides cannot be reopened"),
+        ("resolved", "discarded", "Resolved asides cannot be reopened"),
+        ("discarded", "active", "Discarded asides cannot be reopened"),
+        ("discarded", "parked", "Discarded asides cannot be reopened"),
+    ],
+)
+def test_patch_aside_rejects_illegal_status_changes(client, current, requested, detail):
+    aside = _aside(status=current)
+
+    response, save_aside, save_journey = _patch_aside(
+        client, aside, {"status": requested, "title": "Renamed"}
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"].startswith(detail)
+    assert aside.status == current
+    assert aside.title != "Renamed"
+    save_aside.assert_not_called()
+    save_journey.assert_not_called()
+
+
+@pytest.mark.parametrize("field", ["title", "status"])
+def test_patch_aside_rejects_null_fields(client, field):
+    aside = _aside()
+
+    response, save_aside, save_journey = _patch_aside(client, aside, {field: None})
+
+    assert response.status_code == 422
+    assert response.json()["detail"][0]["loc"] == ["body", field]
+    save_aside.assert_not_called()
+    save_journey.assert_not_called()
+
+
+@pytest.mark.parametrize("field", ["title", "pinned"])
+def test_patch_section_rejects_null_fields(client, field):
+    section = LearningSection(
+        id="learning_section:one",
+        journey="learning_journey:journey",
+        title="Evidence lower bound",
+        start_message_id="human:one",
+        created=NOW,
+        updated=NOW,
+    )
+    with (
+        patch(
+            "api.routers.learning.LearningSection.get",
+            new_callable=AsyncMock,
+            return_value=section,
+        ),
+        patch(
+            "api.routers.learning.LearningSection.save", new_callable=AsyncMock
+        ) as save,
+    ):
+        response = client.patch("/api/learning/sections/one", json={field: None})
+
+    assert response.status_code == 422
+    assert response.json()["detail"][0]["loc"] == ["body", field]
+    save.assert_not_called()
+
+
+@pytest.mark.parametrize("status", ["resolved", "discarded"])
+def test_patch_aside_can_rename_a_closed_aside(client, status):
+    aside = _aside(status=status)
+
+    response, save_aside, _ = _patch_aside(client, aside, {"title": "Renamed"})
+
+    assert response.status_code == 200
+    assert response.json()["title"] == "Renamed"
+    assert response.json()["status"] == status
+    save_aside.assert_awaited_once()
+
+
 @pytest.mark.asyncio
 async def test_discarded_aside_rejects_new_messages(client):
     with patch(
@@ -474,11 +693,13 @@ async def test_discarded_aside_rejects_new_messages(client):
 async def test_resolve_aside_creates_versioned_user_approved_update(client):
     aside = _aside()
     journey = _journey(active_session="chat_session:child")
+    saved = []
 
     async def save_update(update):
         update.id = "learning_update:second"
         update.created = NOW
         update.updated = NOW
+        saved.append(update)
 
     with (
         patch(
@@ -492,7 +713,7 @@ async def test_resolve_aside_creates_versioned_user_approved_update(client):
             return_value=journey,
         ),
         patch(
-            "api.routers.learning.LearningAside.get_updates",
+            "api.routers.learning.LearningUpdate.get_versions",
             new_callable=AsyncMock,
             return_value=[
                 LearningUpdate(
@@ -528,6 +749,57 @@ async def test_resolve_aside_creates_versioned_user_approved_update(client):
     assert response.json()["status"] == "resolved"
     assert aside.status == "resolved"
     assert journey.active_session == "chat_session:main"
+    [update] = saved
+    assert update.version == 2
+    assert update.saved_note is None
+
+
+def test_resolve_leaves_the_journey_on_another_open_aside(client):
+    """Resolving a dive from Studio does not pull the learner out of another."""
+    aside = _aside()
+    journey = _journey(active_session="chat_session:other-dive")
+
+    async def save_update(update):
+        update.id = "learning_update:one"
+        update.created = NOW
+        update.updated = NOW
+
+    with (
+        patch(
+            "api.routers.learning._get_aside",
+            new_callable=AsyncMock,
+            return_value=aside,
+        ),
+        patch(
+            "api.routers.learning.LearningJourney.get",
+            new_callable=AsyncMock,
+            return_value=journey,
+        ),
+        patch(
+            "api.routers.learning.LearningUpdate.get_versions",
+            new_callable=AsyncMock,
+            return_value=[],
+        ),
+        patch("api.routers.learning.LearningUpdate.save", new=save_update),
+        patch("api.routers.learning.LearningAside.save", new_callable=AsyncMock),
+        patch(
+            "api.routers.learning.LearningJourney.save", new_callable=AsyncMock
+        ) as save_journey,
+        patch(
+            "api.routers.learning._aside_response",
+            new_callable=AsyncMock,
+            side_effect=lambda aside: _aside_response(aside),
+        ),
+    ):
+        response = client.post(
+            "/api/learning/asides/aside/resolve",
+            json={"conclusion": "Jensen's inequality gives a lower bound."},
+        )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "resolved"
+    assert journey.active_session == "chat_session:other-dive"
+    save_journey.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -642,6 +914,115 @@ def test_create_aside_rejects_empty_anchor_before_domain_work(client):
     )
 
     assert response.status_code == 422
+
+
+def test_go_deeper_on_a_long_answer_stores_a_clipped_anchor(client):
+    """Go deeper sends the whole answer; only the stored anchor is clipped."""
+    from langchain_core.messages import AIMessage, HumanMessage
+
+    from open_notebook.domain.learning import ANCHOR_CONTENT_MAX_CHARS
+
+    long_answer = "The evidence lower bound follows from Jensen's inequality. " * 600
+    long_answer = long_answer.strip()
+    assert len(long_answer) > 30_000
+    checkpoint = SimpleNamespace(
+        values={
+            "messages": [
+                HumanMessage(content="Explain the ELBO", id="human-1"),
+                AIMessage(content=long_answer, id="ai-long"),
+            ]
+        }
+    )
+    saved = {}
+
+    async def save_session(session):
+        session.id = "chat_session:child"
+        session.created = NOW
+        session.updated = NOW
+
+    async def save_aside(aside):
+        aside.id = "learning_aside:aside"
+        aside.created = NOW
+        aside.updated = NOW
+        saved["aside"] = aside
+
+    with (
+        patch(
+            "api.routers.learning._verify_notebook_session",
+            new_callable=AsyncMock,
+            return_value=(
+                "chat_session:main",
+                SimpleNamespace(id="notebook:one"),
+                SimpleNamespace(model_override=None),
+            ),
+        ),
+        patch("api.routers.learning.chat_graph.get_state", return_value=checkpoint),
+        patch(
+            "api.routers.learning.LearningAside.get_for_chat_session",
+            new_callable=AsyncMock,
+            return_value=None,
+        ),
+        patch(
+            "api.routers.learning.LearningJourney.get_or_create",
+            new_callable=AsyncMock,
+            return_value=_journey(),
+        ),
+        patch("api.routers.learning.ChatSession.save", new=save_session),
+        patch(
+            "api.routers.learning.ChatSession.relate_to_notebook",
+            new_callable=AsyncMock,
+        ),
+        patch("api.routers.learning.LearningAside.save", new=save_aside),
+        patch("api.routers.learning.LearningJourney.save", new_callable=AsyncMock),
+        patch(
+            "api.routers.learning._aside_response",
+            new_callable=AsyncMock,
+            side_effect=lambda aside: _aside_response(aside),
+        ),
+    ):
+        response = client.post(
+            "/api/learning/asides",
+            json={
+                "notebook_id": "notebook:one",
+                "parent_session_id": "chat_session:main",
+                "anchor": {
+                    "type": "message",
+                    "message_id": "ai-long",
+                    "content": long_answer,
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    stored = saved["aside"]
+    kept = stored.anchor.content
+    assert len(kept) <= ANCHOR_CONTENT_MAX_CHARS
+    assert kept.endswith("…")
+    # A prefix of the answer, cut between two words.
+    assert long_answer.startswith(kept[:-1])
+    assert long_answer[len(kept) - 1].isspace()
+    assert response.json()["anchor"]["content"] == kept
+    # The message id and the branch snapshot keep the whole answer.
+    assert stored.anchor.message_id == "ai-long"
+    assert stored.context_snapshot[-1] == {
+        "id": "ai-long",
+        "role": "ai",
+        "content": long_answer,
+    }
+
+
+def test_create_aside_rejects_an_anchor_over_the_hard_limit(client):
+    response = client.post(
+        "/api/learning/asides",
+        json={
+            "notebook_id": "notebook:one",
+            "parent_session_id": "chat_session:main",
+            "anchor": {"type": "message", "content": "x" * 200_001},
+        },
+    )
+
+    assert response.status_code == 422
+    assert "200000" in str(response.json()["detail"])
 
 
 _REPLY = {
@@ -1129,10 +1510,95 @@ async def test_resume_lists_only_current_resolutions_as_accepted(client):
     assert response.json()["accepted_findings"] == ["Revised conclusion"]
 
 
-def _send_aside_message(client, aside, journey, captured=None):
+def test_resume_leaves_out_conclusions_of_discarded_asides(client):
+    from api.routers.learning import _update_responses
+
+    journey = _journey()
+    kept = _aside(id="learning_aside:kept", status="resolved")
+    dropped = _aside(
+        id="learning_aside:dropped",
+        chat_session="chat_session:dropped",
+        status="discarded",
+    )
+    updates = _update_responses(
+        [
+            LearningUpdate(
+                id=f"learning_update:{aside.id.split(':')[1]}",
+                aside=aside.id or "",
+                conclusion=f"{aside.id} conclusion",
+                created=NOW,
+                updated=NOW,
+            )
+            for aside in (kept, dropped)
+            if aside.id
+        ]
+    )
+    journey_response = LearningJourneyResponse(
+        id=journey.id or "",
+        notebook_id=journey.notebook,
+        main_session_id=journey.main_session,
+        active_session_id=journey.active_session,
+        objective=journey.objective,
+        status="active",
+        asides=[_aside_response(kept), _aside_response(dropped)],
+        updates=updates,
+        created=str(NOW),
+        updated=str(NOW),
+    )
+    with (
+        patch(
+            "api.routers.learning._verify_notebook_session",
+            new_callable=AsyncMock,
+            return_value=("chat_session:main", SimpleNamespace(), SimpleNamespace()),
+        ),
+        patch(
+            "api.routers.learning.LearningJourney.get_for_main_session",
+            new_callable=AsyncMock,
+            return_value=journey,
+        ),
+        patch(
+            "api.routers.learning._journey_response",
+            new_callable=AsyncMock,
+            return_value=journey_response,
+        ),
+    ):
+        response = client.get(
+            "/api/learning/journeys/resume",
+            params={"notebook_id": "notebook:one", "main_session_id": "main"},
+        )
+
+    assert response.status_code == 200
+    assert response.json()["accepted_findings"] == ["learning_aside:kept conclusion"]
+
+
+# Pass as ``learning`` to run the real conclusions loader in an aside turn.
+REAL_LOADER = object()
+
+
+def _send_aside_message(
+    client, aside, journey, captured=None, context=None, learning=None
+):
+    """POST an aside message with the database and model mocked out.
+
+    ``learning`` is what the accepted-conclusions loader returns (none by
+    default); with REAL_LOADER the real loader runs, so patch the journey
+    lookups instead.
+    """
+    from api.routers._chat_shared import (
+        MainLearningContext,
+        load_main_learning_context,
+    )
+
+    loader = (
+        AsyncMock(wraps=load_main_learning_context)
+        if learning is REAL_LOADER
+        else AsyncMock(return_value=learning or MainLearningContext())
+    )
+
     def fake_invoke(graph, state, config, user_message):
         if captured is not None:
             captured["context"] = state["context"]
+            captured["state"] = dict(state)
         return {"messages": [user_message, SimpleNamespace(id="ai:r", type="ai")]}
 
     with (
@@ -1161,6 +1627,7 @@ def _send_aside_message(client, aside, journey, captured=None):
             return_value=SimpleNamespace(values={"messages": []}),
         ),
         patch("api.routers.learning.invoke_chat_turn", new=fake_invoke),
+        patch("api.routers.learning.load_main_learning_context", new=loader),
         patch(
             "api.routers.learning.LearningAside.save", new_callable=AsyncMock
         ) as save_aside,
@@ -1175,7 +1642,7 @@ def _send_aside_message(client, aside, journey, captured=None):
     ):
         response = client.post(
             f"/api/learning/asides/{aside.id.split(':')[1]}/messages",
-            json={"message": "One more question", "context": {}},
+            json={"message": "One more question", "context": context or {}},
         )
     return response, save_aside, save_journey
 
@@ -1379,6 +1846,136 @@ def test_nested_dive_message_carries_learning_path(client):
     assert "nested dive" in aside_context["instruction"]
 
 
+def test_aside_turn_gives_the_model_no_internal_ids(client):
+    """What the aside model reads names no message, aside, update or session."""
+    from ai_prompter import Prompter
+
+    anchor_message = "lc_run--0f8c3a52-1b7e-4d2a-9c1e-5b9a7d3e2f10"
+    parent = _aside(
+        id="learning_aside:parentdive",
+        chat_session="chat_session:parentdivesession",
+        title="Why Jensen?",
+        status="resolved",
+        anchor=AsideAnchor(
+            type="message",
+            message_id="lc_run--rootanswer",
+            content="Jensen's inequality gives the bound.",
+        ),
+        context_snapshot=[
+            {"id": "lc_run--rootanswer", "role": "ai", "content": "MAIN THREAD"}
+        ],
+    )
+    leaf = _aside(
+        id="learning_aside:leafdive",
+        parent_aside=parent.id,
+        parent_session=parent.chat_session,
+        chat_session="chat_session:leafdivesession",
+        anchor=AsideAnchor(
+            type="message",
+            message_id=anchor_message,
+            content="log is concave.",
+            locator="selection",
+        ),
+        context_snapshot=[
+            {"id": anchor_message, "role": "ai", "content": "PARENT DIVE ANSWER"}
+        ],
+    )
+    parent_conclusion = LearningUpdate(
+        id="learning_update:parentconclusion",
+        aside=parent.id or "",
+        conclusion="The bound follows from concavity.",
+        applied_message_id="lc_run--mergedreply",
+    )
+
+    async def parent_updates(self):
+        return [parent_conclusion]
+
+    from api.routers._chat_shared import MainLearningContext
+
+    accepted = LearningUpdate(
+        id="learning_update:mainconclusion",
+        aside="learning_aside:siblingdive",
+        conclusion="An accepted conclusion from the journey.",
+        applied_message_id="lc_run--mainreply",
+    )
+    captured: dict[str, Any] = {}
+    with (
+        patch(
+            "api.routers.learning.LearningAside.get",
+            new_callable=AsyncMock,
+            return_value=parent,
+        ),
+        patch.object(LearningAside, "get_updates", new=parent_updates),
+    ):
+        response, _, _ = _send_aside_message(
+            client,
+            leaf,
+            _journey(),
+            captured,
+            learning=MainLearningContext(updates=(accepted,)),
+        )
+
+    assert response.status_code == 200
+    state = captured["state"]
+    aside_context = state["context"]["learning_aside"]
+    # The path and the branch transcript did reach the model.
+    assert "The bound follows from concavity." in aside_context["learning_path"]
+    assert "PARENT DIVE ANSWER" in aside_context["parent_conversation_at_branch"]
+    assert aside_context["anchor"] == {"type": "message", "content": "log is concave."}
+    assert state["context"]["learning_updates"] == [
+        {"conclusion": "An accepted conclusion from the journey."}
+    ]
+    model_text = str(state["context"]) + Prompter(prompt_template="chat/system").render(
+        data=state
+    )
+    for internal_id in (
+        anchor_message,
+        "lc_run--rootanswer",
+        "lc_run--mergedreply",
+        state["messages"][-1].id,
+        leaf.id,
+        leaf.journey,
+        leaf.chat_session,
+        parent.id,
+        parent.chat_session,
+        parent.parent_session,
+        parent_conclusion.id,
+        accepted.id,
+        accepted.aside,
+        "lc_run--mainreply",
+    ):
+        assert internal_id
+        assert internal_id not in model_text
+
+
+@pytest.mark.parametrize(
+    ("source_id", "visible"),
+    [
+        ("source:paper", True),
+        ("note:summary", True),
+        ("source_insight:finding", True),
+        ("chat_session:main", False),
+        ("learning_aside:other", False),
+        ("lc_run--message", False),
+    ],
+)
+def test_aside_anchor_shows_the_model_only_a_citable_source(client, source_id, visible):
+    aside = _aside(
+        anchor=AsideAnchor(
+            type="citation", content="The cited claim.", source_id=source_id
+        )
+    )
+    captured: dict[str, Any] = {}
+
+    response, _, _ = _send_aside_message(client, aside, _journey(), captured)
+
+    assert response.status_code == 200
+    expected = {"type": "citation", "content": "The cited claim."}
+    if visible:
+        expected["source_id"] = source_id
+    assert captured["context"]["learning_aside"]["anchor"] == expected
+
+
 def _get_journey_with_asides(client, params):
     journey = _journey()
     asides = [
@@ -1521,22 +2118,51 @@ def test_budget_ranks_by_creation_time_not_list_position():
     )
 
 
-def test_budget_stops_at_the_first_update_that_does_not_fit():
+def test_budget_skips_an_update_that_does_not_fit_and_keeps_filling():
     updates = [
         _priced_update("old-short", 10, 1),
         _priced_update("long", 150, 2),
         _priced_update("newest", 100, 3),
     ]
 
-    # "long" does not fit after "newest"; the shorter, older update behind it
-    # is not used to fill the gap.
-    assert _fit(updates, 200) == (["learning_update:newest"], 2)
+    # "long" does not fit after "newest"; the older, shorter one still does.
+    assert _fit(updates, 200) == (
+        ["learning_update:old-short", "learning_update:newest"],
+        1,
+    )
 
 
-def test_budget_leaves_everything_out_when_the_newest_alone_is_too_large():
+def test_budget_skips_a_newest_update_too_large_for_the_whole_budget():
     updates = [_priced_update("small", 10, 1), _priced_update("huge", 500, 2)]
 
-    assert _fit(updates, 200) == ([], 2)
+    assert _fit(updates, 200) == (["learning_update:small"], 1)
+
+
+def test_budget_keeps_filling_past_several_updates_that_do_not_fit():
+    updates = [
+        _priced_update("a", 100, 1),
+        _priced_update("long-1", 250, 2),
+        _priced_update("b", 50, 3),
+        _priced_update("long-2", 500, 4),
+        _priced_update("c", 100, 5),
+    ]
+
+    # c (100), b (150) and a (250) fit; both long ones are skipped.
+    assert _fit(updates, 300) == (
+        ["learning_update:a", "learning_update:b", "learning_update:c"],
+        2,
+    )
+
+
+def test_budget_never_trades_a_newer_update_for_an_older_one():
+    updates = [
+        _priced_update("old-1", 60, 1),
+        _priced_update("old-2", 60, 2),
+        _priced_update("new", 150, 3),
+    ]
+
+    # The newest fits first; only the room it leaves goes to older ones.
+    assert _fit(updates, 200) == (["learning_update:new"], 2)
 
 
 def test_budget_treats_later_list_positions_as_newer_without_timestamps():
@@ -1696,6 +2322,37 @@ def test_execute_chat_sends_and_links_only_updates_within_the_budget(client):
     ]
 
 
+@pytest.mark.parametrize(
+    ("accepted", "expected"),
+    [
+        ([], None),
+        (["kept"], [{"conclusion": "kept cost=10"}]),
+    ],
+    ids=["nothing-accepted", "one-accepted"],
+)
+def test_execute_chat_with_null_learning_updates_uses_the_server_copy(
+    client, accepted, expected
+):
+    """`"learning_updates": null` once failed the turn with a 500."""
+    updates = [_priced_update(name, 10, 1) for name in accepted]
+    request_context: dict[str, Any] = {
+        "sources": [],
+        "learning_updates": None,
+        "learning_updates_instruction": None,
+    }
+    with _journey_with_updates(updates, 4_000):
+        response, model_context, load_learning, _ = _execute_main_chat(
+            client, request_context, notebook_rows=[{"out": "notebook:one"}]
+        )
+
+    assert response.status_code == 200
+    load_learning.assert_awaited_once()
+    assert model_context.get("learning_updates") == expected
+    assert model_context["sources"] == []
+    if expected is None:
+        assert "learning_updates_instruction" not in model_context
+
+
 # --- Including a conclusion in main chat, or leaving it out ------------------
 
 
@@ -1797,3 +2454,167 @@ def test_patch_update_requires_include_in_main(client):
     response = client.patch("/api/learning/updates/v2", json={})
 
     assert response.status_code == 422
+
+
+# --- Deleting chat sessions ------------------------------------------------------
+
+
+def _delete_session(client, session, aside=None, journey=None):
+    """DELETE /api/chat/sessions/{id} with the lookups mocked out."""
+    from open_notebook.domain.notebook import ChatSession
+
+    with (
+        patch(
+            "api.routers.chat.get_session_or_404",
+            new_callable=AsyncMock,
+            return_value=(session.id, session),
+        ),
+        patch.object(
+            LearningAside,
+            "get_for_chat_session",
+            new_callable=AsyncMock,
+            return_value=aside,
+        ),
+        patch.object(
+            LearningJourney,
+            "get_for_main_session",
+            new_callable=AsyncMock,
+            return_value=journey,
+        ),
+        patch.object(
+            LearningJourney, "delete_with_asides", new_callable=AsyncMock
+        ) as cascade,
+        patch.object(ChatSession, "delete", new_callable=AsyncMock) as delete,
+    ):
+        response = client.delete(f"/api/chat/sessions/{session.id}")
+    return response, cascade, delete
+
+
+@pytest.mark.parametrize(
+    ("kind", "has_aside"),
+    [
+        ("learning_aside", True),
+        # Marked as an aside's session, but its aside is gone.
+        ("learning_aside", False),
+        # An aside's session stored before sessions carried a kind.
+        ("chat", True),
+    ],
+)
+def test_deleting_an_aside_session_is_refused(client, kind, has_aside):
+    from open_notebook.domain.notebook import ChatSession
+
+    session = ChatSession(id="chat_session:child", title="Aside", kind=kind)
+
+    response, cascade, delete = _delete_session(
+        client, session, aside=_aside() if has_aside else None
+    )
+
+    assert response.status_code == 400
+    assert "Discard the aside instead" in response.json()["detail"]
+    cascade.assert_not_called()
+    delete.assert_not_called()
+
+
+def test_deleting_a_main_session_removes_its_journey(client):
+    from open_notebook.domain.notebook import ChatSession
+
+    session = ChatSession(id="chat_session:main", title="Main")
+
+    response, cascade, delete = _delete_session(client, session, journey=_journey())
+
+    assert response.status_code == 200
+    cascade.assert_awaited_once()
+    delete.assert_awaited_once()
+
+
+# --- Accepted conclusions in an aside turn --------------------------------------
+
+
+@contextmanager
+def _journey_conclusions(updates):
+    """The main-session journey's accepted updates, as the real loader sees them."""
+    with (
+        patch(
+            "api.routers._chat_shared.LearningJourney.get_for_main_session",
+            new_callable=AsyncMock,
+            return_value=_journey(),
+        ) as get_journey,
+        patch(
+            "api.routers._chat_shared.LearningJourney.get_updates",
+            new_callable=AsyncMock,
+            return_value=list(updates),
+        ) as get_updates,
+        patch("api.routers._chat_shared.token_count", new=_fake_token_count),
+    ):
+        yield get_journey, get_updates
+
+
+def test_aside_turn_gets_accepted_conclusions_from_the_server(client):
+    accepted = _priced_update("accepted", 10, 1, citations=["source:paper"])
+    # A stale or edited copy the client sends along.
+    request_context = {
+        "sources": [{"id": "source:paper"}],
+        "learning_updates": [
+            {"id": "learning_update:forged", "conclusion": "Not accepted"}
+        ],
+        "learning_updates_instruction": "Cite learning_update IDs freely.",
+    }
+    captured: dict[str, Any] = {}
+    with _journey_conclusions([accepted]) as (get_journey, get_updates):
+        response, _, _ = _send_aside_message(
+            client,
+            _aside(),
+            _journey(),
+            captured,
+            context=request_context,
+            learning=REAL_LOADER,
+        )
+
+    assert response.status_code == 200
+    context = captured["context"]
+    assert context["learning_updates"] == [
+        {"conclusion": "accepted cost=10", "citations": ["source:paper"]}
+    ]
+    assert "Never expose or cite" in context["learning_updates_instruction"]
+    assert "Not accepted" not in str(context)
+    assert "learning_update:" not in str(context["learning_updates"])
+    assert context["sources"] == [{"id": "source:paper"}]
+    # The aside's journey: its main session's accepted conclusions.
+    get_journey.assert_awaited_once_with("chat_session:main")
+    get_updates.assert_awaited_once_with(include_unmerged=False)
+
+
+def test_aside_turn_without_accepted_conclusions_drops_the_client_copy(client):
+    request_context = {
+        "learning_updates": [{"id": "learning_update:old", "conclusion": "Excluded"}],
+        "learning_updates_instruction": "Use these.",
+    }
+    captured: dict[str, Any] = {}
+    with _journey_conclusions([]):
+        response, _, _ = _send_aside_message(
+            client,
+            _aside(),
+            _journey(),
+            captured,
+            context=request_context,
+            learning=REAL_LOADER,
+        )
+
+    assert response.status_code == 200
+    assert "learning_updates" not in captured["context"]
+    assert "learning_updates_instruction" not in captured["context"]
+
+
+def test_aside_turn_conclusions_share_the_main_chat_budget(client):
+    updates = [_priced_update("old", 300, 1), _priced_update("new", 300, 2)]
+    captured: dict[str, Any] = {}
+    with (
+        _journey_conclusions(updates),
+        patch("api.routers._chat_shared.LEARNING_UPDATES_TOKEN_BUDGET", 400),
+    ):
+        response, _, _ = _send_aside_message(
+            client, _aside(), _journey(), captured, learning=REAL_LOADER
+        )
+
+    assert response.status_code == 200
+    assert captured["context"]["learning_updates"] == [{"conclusion": "new cost=300"}]

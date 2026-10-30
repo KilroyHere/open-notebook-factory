@@ -323,6 +323,61 @@ class TestLearningModels:
         assert anchor.content == "selected explanation"
         assert aside.title == "Why does this follow?"
 
+    def test_long_anchor_is_stored_clipped_at_a_word_boundary(self):
+        from open_notebook.domain.learning import ANCHOR_CONTENT_MAX_CHARS
+
+        text = "  " + "word " * 10_000 + "  "
+
+        anchor = AsideAnchor(content=text)
+
+        assert len(anchor.content) <= ANCHOR_CONTENT_MAX_CHARS
+        assert anchor.content.endswith("word…")
+        assert text.strip().startswith(anchor.content[:-1])
+
+    def test_anchor_within_the_limit_is_kept_whole(self):
+        from open_notebook.domain.learning import ANCHOR_CONTENT_MAX_CHARS
+
+        text = "a" * ANCHOR_CONTENT_MAX_CHARS
+
+        assert AsideAnchor(content=f" {text} ").content == text
+
+    @pytest.mark.parametrize(
+        ("text", "expected"),
+        [
+            # Within the limit once stripped: unchanged.
+            ("  alpha beta gamm  ", "alpha beta gamm"),
+            # The cut falls inside "gamma": the partial word is dropped.
+            ("alpha beta gamma", "alpha beta…"),
+            ("alpha beta   gamma", "alpha beta…"),
+            ("alpha\nbeta gamma", "alpha\nbeta…"),
+            # The cut falls right after "gam": it is a whole word and stays.
+            ("alpha beta gam xyz", "alpha beta gam…"),
+            # No whitespace at all: cut through.
+            ("abcdefghijklmnopq", "abcdefghijklmn…"),
+        ],
+    )
+    def test_clip_anchor_content(self, text, expected):
+        from open_notebook.domain.learning import clip_anchor_content
+
+        clipped = clip_anchor_content(text, limit=15)
+
+        assert clipped == expected
+        assert len(clipped) <= 15
+
+    def test_clip_cuts_through_a_last_word_too_long_to_drop(self):
+        from open_notebook.domain.learning import (
+            ANCHOR_CONTENT_MAX_CHARS,
+            clip_anchor_content,
+        )
+
+        # One space near the start, then a single 30,000-character token.
+        text = "start " + "x" * 30_000
+
+        clipped = clip_anchor_content(text)
+
+        assert len(clipped) == ANCHOR_CONTENT_MAX_CHARS
+        assert clipped == text[: ANCHOR_CONTENT_MAX_CHARS - 1] + "…"
+
     @pytest.mark.parametrize(
         ("factory", "message"),
         [
@@ -694,3 +749,78 @@ class TestIncludeInMainToggle:
         ):
             with pytest.raises(NotFoundError):
                 await update.set_include_in_main(False)
+
+
+class TestSaveAsNextVersion:
+    @staticmethod
+    def _stored(version: int) -> LearningUpdate:
+        return LearningUpdate(
+            id=f"learning_update:v{version}",
+            aside="learning_aside:one",
+            conclusion=f"Take {version}",
+            version=version,
+        )
+
+    @pytest.mark.asyncio
+    async def test_a_taken_number_is_retried_a_bounded_number_of_times(self):
+        from open_notebook.domain.learning import VERSION_SAVE_ATTEMPTS
+
+        stored: list[LearningUpdate] = []
+
+        async def versions(aside_id: str) -> list[LearningUpdate]:
+            return list(stored)
+
+        async def collide(update: LearningUpdate) -> None:
+            # Another resolution stores this number first, every time.
+            stored.append(self._stored(update.version))
+            raise RuntimeError("Database index already contains it")
+
+        update = LearningUpdate(aside="learning_aside:one", conclusion="Mine")
+        with (
+            patch.object(LearningUpdate, "get_versions", new=versions),
+            patch.object(LearningUpdate, "save", new=collide),
+        ):
+            with pytest.raises(RuntimeError, match="already contains"):
+                await update.save_as_next_version()
+
+        assert [taken.version for taken in stored] == list(
+            range(1, VERSION_SAVE_ATTEMPTS + 1)
+        )
+
+    @pytest.mark.asyncio
+    async def test_another_failure_is_not_retried(self):
+        saves = AsyncMock(side_effect=RuntimeError("The connection was closed"))
+        update = LearningUpdate(aside="learning_aside:one", conclusion="Mine")
+        with (
+            patch.object(
+                LearningUpdate,
+                "get_versions",
+                new=AsyncMock(return_value=[self._stored(1)]),
+            ),
+            patch.object(LearningUpdate, "save", new=saves),
+        ):
+            with pytest.raises(RuntimeError, match="connection was closed"):
+                await update.save_as_next_version()
+
+        assert saves.await_count == 1
+        assert update.version == 2
+
+    @pytest.mark.asyncio
+    async def test_a_stored_update_is_not_stored_again(self):
+        with pytest.raises(InvalidInputError, match="already stored"):
+            await self._stored(1).save_as_next_version()
+
+
+def test_an_aside_is_not_resolved_by_a_status_change():
+    aside = LearningAside(
+        journey="learning_journey:one",
+        parent_session="chat_session:main",
+        chat_session="chat_session:aside",
+        title="Aside",
+        anchor=AsideAnchor(content="anchor"),
+    )
+
+    with pytest.raises(InvalidInputError, match="Resolve an aside"):
+        aside.change_status("resolved")
+
+    assert aside.status == "active"

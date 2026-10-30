@@ -10,8 +10,9 @@ import subprocess
 import sys
 import tempfile
 import time
+from contextlib import contextmanager
 from pathlib import Path
-from typing import IO, Mapping, Optional, Protocol
+from typing import IO, Iterator, Mapping, Optional, Protocol
 from urllib.error import URLError
 from urllib.parse import urlparse
 from urllib.request import ProxyHandler, build_opener, urlopen
@@ -129,6 +130,24 @@ def wait_for_http(
     raise StartupError(
         f"Timed out waiting for {label} at {url}.\n\n{log_tail(log_path)}"
     )
+
+
+@contextmanager
+def interrupts_ignored() -> Iterator[None]:
+    """Ignore Ctrl+C and SIGTERM until the block ends, then restore handlers.
+
+    Stopping the stack waits for each service to exit. A second Ctrl+C during
+    those waits used to abort the shutdown, leaving the API and worker
+    running on their ports and the PID file and compose stack in place.
+    """
+    signals = (signal.SIGINT, signal.SIGTERM)
+    previous = {signum: signal.signal(signum, signal.SIG_IGN) for signum in signals}
+    try:
+        yield
+    finally:
+        for signum, handler in previous.items():
+            # None: the handler was not set from Python; use the default.
+            signal.signal(signum, signal.SIG_DFL if handler is None else handler)
 
 
 def stop_process(process: Optional[subprocess.Popen]) -> None:
@@ -258,20 +277,22 @@ def main() -> int:
     environment: dict[str, str] = {}
 
     def cleanup() -> None:
-        for name in ("frontend", "worker", "api"):
-            stop_process(processes.get(name))
-        for handle in log_handles:
-            handle.close()
-        if database_started:
-            subprocess.run(
-                ["docker", "compose", "down"],
-                cwd=ROOT,
-                env=environment or None,
-                check=False,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-        PID_FILE.unlink(missing_ok=True)
+        # Once stopping starts it runs to the end; see interrupts_ignored().
+        with interrupts_ignored():
+            for name in ("frontend", "worker", "api"):
+                stop_process(processes.get(name))
+            for handle in log_handles:
+                handle.close()
+            if database_started:
+                subprocess.run(
+                    ["docker", "compose", "down"],
+                    cwd=ROOT,
+                    env=environment or None,
+                    check=False,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+            PID_FILE.unlink(missing_ok=True)
 
     def handle_signal(_signum, _frame) -> None:
         raise KeyboardInterrupt

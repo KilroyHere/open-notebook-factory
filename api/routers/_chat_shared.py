@@ -71,11 +71,12 @@ _MODEL_VISIBLE_UPDATE_FIELDS = (
 # conversation itself. Each conclusion is measured as the model sees it (its
 # conclusion, relevance, open questions and citations, rendered like the rest
 # of the context dict) with token_count(), which falls back to an estimate when
-# the tokenizer is unavailable. The newest conclusions are kept first; the first
-# one that does not fit ends the selection, so it and every older one are left
-# out of the turn, and POST /chat/context reports how many as
-# learning_updates_omitted. 4,000 tokens is about 3,000 English words: roughly
-# ten to twenty typical conclusions, while the prompt stays compact (ADR-014).
+# the tokenizer is unavailable. The newest conclusions are kept first; one that
+# does not fit in what is left is skipped, and older ones still fill the rest,
+# so one long recent conclusion cannot crowd out all the others. POST
+# /chat/context reports how many were skipped as learning_updates_omitted.
+# 4,000 tokens is about 3,000 English words: roughly ten to twenty typical
+# conclusions, while the prompt stays compact (ADR-014).
 LEARNING_UPDATES_TOKEN_BUDGET = 4_000
 
 
@@ -119,7 +120,7 @@ def model_facing_context(context: Dict[str, Any]) -> Dict[str, Any]:
     return prepared
 
 
-# Context keys that only the server may fill for a main-chat turn.
+# Context keys that only the server may fill for a chat turn (main or aside).
 _SERVER_LEARNING_KEYS = ("learning_updates", "learning_updates_instruction")
 
 
@@ -133,12 +134,12 @@ def fit_learning_updates_to_budget(
     """Keep the newest accepted updates that fit in ``budget_tokens``.
 
     Updates are taken newest first, by ``created``, with the later position in
-    ``updates`` winning a tie, and kept while their running token total fits.
-    The first update that does not fit ends the selection, so what is kept is
-    always the most recent run of conclusions: an older, shorter one never takes
-    the place of a newer one. Returns the kept updates in their input order
-    (oldest first, the order the prompt lists them in) and how many were left
-    out.
+    ``updates`` winning a tie. Each one is kept if it fits in the budget that is
+    left; one that does not is skipped and the older ones are still tried, so a
+    single long conclusion does not shut out every conclusion before it. An
+    older update only ever uses room no newer one could. Returns the kept
+    updates in their input order (oldest first, the order the prompt lists
+    them in) and how many were left out.
     """
     newest_first = sorted(
         range(len(updates)),
@@ -148,9 +149,10 @@ def fit_learning_updates_to_budget(
     kept: Set[int] = set()
     used = 0
     for index in newest_first:
-        used += token_count(_model_visible_text(updates[index]))
-        if used > budget_tokens:
-            break
+        cost = token_count(_model_visible_text(updates[index]))
+        if used + cost > budget_tokens:
+            continue
+        used += cost
         kept.add(index)
     selected = tuple(update for index, update in enumerate(updates) if index in kept)
     return selected, len(updates) - len(selected)
@@ -161,7 +163,7 @@ class MainLearningContext:
     """The accepted learning updates that go with a main-chat turn."""
 
     updates: Tuple[LearningUpdate, ...] = ()
-    # Accepted updates left out because LEARNING_UPDATES_TOKEN_BUDGET was full.
+    # Accepted updates left out: they did not fit in LEARNING_UPDATES_TOKEN_BUDGET.
     omitted: int = 0
 
     def context_entries(self) -> List[Dict[str, Any]]:
@@ -178,14 +180,15 @@ async def load_main_learning_context(
 ) -> MainLearningContext:
     """Load the accepted learning updates for a main chat session.
 
-    This is the one place that decides which updates go with a main-chat turn:
-    ``POST /chat/context`` returns its result for display and
+    This is the one place that decides which updates go with a chat turn:
+    ``POST /chat/context`` returns its result for display,
     ``POST /chat/execute`` sends the same result to the model, so the two cannot
-    disagree. The updates are the latest, included version of each aside on the
-    journey whose main session is ``session_id``, cut to the newest ones that
-    fit in LEARNING_UPDATES_TOKEN_BUDGET; an aside's own session has no journey
-    and gets none. When ``notebook_id`` is given, a journey that belongs to
-    another notebook contributes nothing.
+    disagree, and an aside turn gets the result for its journey's main session.
+    The updates are the latest, included version of each aside that is not
+    discarded, on the journey whose main session is ``session_id``, the newest
+    first within LEARNING_UPDATES_TOKEN_BUDGET; an aside's own session has no
+    journey and gets none. When ``notebook_id`` is given, a journey that
+    belongs to another notebook contributes nothing.
     """
     journey = await LearningJourney.get_for_main_session(session_id)
     if journey is None:
@@ -207,13 +210,14 @@ async def load_main_learning_context(
 def main_chat_model_context(
     context: Dict[str, Any], learning: MainLearningContext
 ) -> Dict[str, Any]:
-    """Prompt-safe main-chat context carrying the server-loaded learning updates.
+    """Prompt-safe chat context carrying the server-loaded learning updates.
 
-    Clients echo the context they got from ``POST /chat/context``, learning
-    updates included. That copy is ignored: it can be stale (an aside resolved
-    or excluded since) or edited, and the model must only see conclusions the
-    learner accepted. The updates in ``learning`` take its place and then lose
-    their record IDs in :func:`model_facing_context`. The input is not mutated.
+    Used for main-chat turns and for aside turns. Clients echo the context
+    they got from ``POST /chat/context``, learning updates included. That copy
+    is ignored: it can be stale (an aside resolved or excluded since) or
+    edited, and the model must only see conclusions the learner accepted. The
+    updates in ``learning`` take its place and then lose their record IDs in
+    :func:`model_facing_context`. The input is not mutated.
     """
     prepared = dict(context)
     supplied = [key for key in _SERVER_LEARNING_KEYS if key in prepared]

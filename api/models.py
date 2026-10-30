@@ -94,9 +94,25 @@ class AskResponse(BaseModel):
 
 
 # Learning-aside models
+
+# Longest anchor text a request may send. Go deeper sends the whole answer, so
+# this is generous; the stored anchor keeps at most 20,000 characters
+# (ANCHOR_CONTENT_MAX_CHARS in open_notebook/domain/learning.py).
+ASIDE_ANCHOR_REQUEST_MAX_CHARS = 200_000
+
+
 class AsideAnchorRequest(BaseModel):
     type: Literal["message", "source", "citation", "equation"] = "message"
-    content: str = Field(..., min_length=1, max_length=20_000)
+    content: str = Field(
+        ...,
+        min_length=1,
+        max_length=ASIDE_ANCHOR_REQUEST_MAX_CHARS,
+        description=(
+            "Text the aside starts from. Up to 200,000 characters are accepted; "
+            "the aside stores the first 20,000, cut at a word boundary and "
+            "ending in an ellipsis"
+        ),
+    )
     message_id: Optional[str] = None
     source_id: Optional[str] = None
     locator: Optional[str] = Field(None, max_length=1_000)
@@ -130,9 +146,20 @@ class CreateLearningAsideRequest(BaseModel):
         return stripped
 
 
+def _reject_null(value: Any) -> Any:
+    """Refuse an explicit null for a PATCH field that may only be left out."""
+    if value is None:
+        raise ValueError("must not be null; leave the field out to keep its value")
+    return value
+
+
 class UpdateLearningAsideRequest(BaseModel):
+    """Fields to change. Leave a field out to keep it; null is rejected."""
+
     title: Optional[str] = Field(None, min_length=1, max_length=200)
     status: Optional[Literal["active", "parked", "discarded"]] = None
+
+    _no_null = field_validator("title", "status", mode="before")(_reject_null)
 
     @field_validator("title")
     @classmethod
@@ -275,8 +302,12 @@ class SyncLearningSectionsRequest(BaseModel):
 
 
 class UpdateLearningSectionRequest(BaseModel):
+    """Fields to change. Leave a field out to keep it; null is rejected."""
+
     title: Optional[str] = Field(None, max_length=200)
     pinned: Optional[bool] = None
+
+    _no_null = field_validator("title", "pinned", mode="before")(_reject_null)
 
     @field_validator("title")
     @classmethod
