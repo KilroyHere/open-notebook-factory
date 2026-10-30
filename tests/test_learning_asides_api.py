@@ -1133,6 +1133,7 @@ def _send_aside_message(client, aside, journey, captured=None):
     def fake_invoke(graph, state, config, user_message):
         if captured is not None:
             captured["context"] = state["context"]
+            captured["state"] = dict(state)
         return {"messages": [user_message, SimpleNamespace(id="ai:r", type="ai")]}
 
     with (
@@ -1377,6 +1378,116 @@ def test_nested_dive_message_carries_learning_path(client):
     assert aside_context["learning_path"] == "LEARNING PATH"
     assert "MIDDLE TRANSCRIPT" in aside_context["parent_conversation_at_branch"]
     assert "nested dive" in aside_context["instruction"]
+
+
+def test_aside_turn_gives_the_model_no_internal_ids(client):
+    """What the aside model reads names no message, aside, update or session."""
+    from ai_prompter import Prompter
+
+    anchor_message = "lc_run--0f8c3a52-1b7e-4d2a-9c1e-5b9a7d3e2f10"
+    parent = _aside(
+        id="learning_aside:parentdive",
+        chat_session="chat_session:parentdivesession",
+        title="Why Jensen?",
+        status="resolved",
+        anchor=AsideAnchor(
+            type="message",
+            message_id="lc_run--rootanswer",
+            content="Jensen's inequality gives the bound.",
+        ),
+        context_snapshot=[
+            {"id": "lc_run--rootanswer", "role": "ai", "content": "MAIN THREAD"}
+        ],
+    )
+    leaf = _aside(
+        id="learning_aside:leafdive",
+        parent_aside=parent.id,
+        parent_session=parent.chat_session,
+        chat_session="chat_session:leafdivesession",
+        anchor=AsideAnchor(
+            type="message",
+            message_id=anchor_message,
+            content="log is concave.",
+            locator="selection",
+        ),
+        context_snapshot=[
+            {"id": anchor_message, "role": "ai", "content": "PARENT DIVE ANSWER"}
+        ],
+    )
+    parent_conclusion = LearningUpdate(
+        id="learning_update:parentconclusion",
+        aside=parent.id or "",
+        conclusion="The bound follows from concavity.",
+        applied_message_id="lc_run--mergedreply",
+    )
+
+    async def parent_updates(self):
+        return [parent_conclusion]
+
+    captured: dict[str, Any] = {}
+    with (
+        patch(
+            "api.routers.learning.LearningAside.get",
+            new_callable=AsyncMock,
+            return_value=parent,
+        ),
+        patch.object(LearningAside, "get_updates", new=parent_updates),
+    ):
+        response, _, _ = _send_aside_message(client, leaf, _journey(), captured)
+
+    assert response.status_code == 200
+    state = captured["state"]
+    aside_context = state["context"]["learning_aside"]
+    # The path and the branch transcript did reach the model.
+    assert "The bound follows from concavity." in aside_context["learning_path"]
+    assert "PARENT DIVE ANSWER" in aside_context["parent_conversation_at_branch"]
+    assert aside_context["anchor"] == {"type": "message", "content": "log is concave."}
+    model_text = str(state["context"]) + Prompter(prompt_template="chat/system").render(
+        data=state
+    )
+    for internal_id in (
+        anchor_message,
+        "lc_run--rootanswer",
+        "lc_run--mergedreply",
+        state["messages"][-1].id,
+        leaf.id,
+        leaf.journey,
+        leaf.chat_session,
+        parent.id,
+        parent.chat_session,
+        parent.parent_session,
+        parent_conclusion.id,
+    ):
+        assert internal_id
+        assert internal_id not in model_text
+
+
+@pytest.mark.parametrize(
+    ("source_id", "visible"),
+    [
+        ("source:paper", True),
+        ("note:summary", True),
+        ("source_insight:finding", True),
+        ("chat_session:main", False),
+        ("learning_aside:other", False),
+        ("lc_run--message", False),
+    ],
+)
+def test_aside_anchor_shows_the_model_only_a_citable_source(client, source_id, visible):
+    aside = _aside(
+        anchor=AsideAnchor(
+            type="citation", content="The cited claim.", source_id=source_id
+        )
+    )
+    captured: dict[str, Any] = {}
+
+    response, _, _ = _send_aside_message(client, aside, _journey(), captured)
+
+    assert response.status_code == 200
+    expected = {"type": "citation", "content": "The cited claim."}
+    if visible:
+        expected["source_id"] = source_id
+    assert captured["context"]["learning_aside"]["anchor"] == expected
 
 
 def _get_journey_with_asides(client, params):

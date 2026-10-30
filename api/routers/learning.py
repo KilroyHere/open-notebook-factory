@@ -1,6 +1,7 @@
 """Learning journeys and isolated aside conversations."""
 
 import asyncio
+import re
 from typing import Any, Dict, List, Optional, Tuple
 from uuid import uuid4
 
@@ -458,6 +459,23 @@ def _clip_tail(text: str, limit: int) -> str:
     return text if len(text) <= limit else "\u2026" + text[-(limit - 1) :].lstrip()
 
 
+# A document ID the model may cite (the chat prompt's citation format).
+_CITABLE_DOCUMENT_ID = re.compile(r"(?:source_insight|source|note|insight):\w+")
+
+
+def _model_visible_anchor(anchor: AsideAnchor) -> Dict[str, str]:
+    """The parts of an aside's anchor that the model may see.
+
+    ``message_id`` names a main-chat checkpoint message and ``locator`` is the
+    UI's way back to it; both are internal, and the model would cite them.
+    ``source_id`` stays only when it is a document ID the model may cite.
+    """
+    visible = {"type": anchor.type, "content": anchor.content}
+    if anchor.source_id and _CITABLE_DOCUMENT_ID.fullmatch(anchor.source_id):
+        visible["source_id"] = anchor.source_id
+    return visible
+
+
 def _format_transcript(snapshot: List[Dict[str, str]]) -> str:
     return "\n\n".join(
         f"{item.get('role', 'unknown').upper()}: {item.get('content', '')}"
@@ -543,7 +561,7 @@ async def send_aside_message(aside_id: str, request: SendLearningAsideMessageReq
     context = model_facing_context(request.context)
     context["learning_aside"] = {
         "title": aside.title,
-        "anchor": aside.anchor.model_dump(),
+        "anchor": _model_visible_anchor(aside.anchor),
         "parent_conversation_at_branch": parent_transcript,
         "instruction": (
             "Answer this isolated learning aside. Preserve source citations and "
