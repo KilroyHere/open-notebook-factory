@@ -1,0 +1,255 @@
+import type {
+  CreateLearningAsideRequest,
+  ResolveLearningAsideRequest,
+  SendNotebookChatMessageRequest,
+  UpdateLearningUpdateRequest,
+} from '@/lib/types/api'
+import { expect, test } from './support/fixtures'
+import {
+  ANSWER,
+  CONCLUSION,
+  DIVE_ANSWER,
+  DIVE_QUESTION,
+  DRAFT,
+  NOTEBOOK,
+  PASSAGE,
+  QUESTION,
+  SOURCES,
+  seedAnsweredQuestion,
+  seedConversation,
+  seedResolvedDive,
+} from './support/notebook'
+import {
+  chatMessage,
+  diveComposer,
+  errorToast,
+  mainComposer,
+  openNotebook,
+  studio,
+  whatYouLearned,
+} from './support/notebook-page'
+
+// Deep dives ("learning asides") on the notebook page, against the mocked
+// API in ./support/mock-api.ts: no backend, database or model.
+
+test('an answer in the main chat shows numbered citations and a titled References list', async ({
+  page,
+  api,
+}) => {
+  // Ask in a conversation that is already on screen. In a brand-new session
+  // the session's first read can still be pending when the reply comes,
+  // and its empty message list then replaces the reply (an app race).
+  const { session } = seedConversation(api)
+  api.chatReplies.push(ANSWER)
+  await openNotebook(page)
+  await expect(chatMessage(page, 'Both explain the Transformer')).toBeVisible()
+
+  await mainComposer(page).fill(QUESTION)
+  await mainComposer(page).press('ControlOrMeta+Enter')
+
+  await expect(chatMessage(page, QUESTION)).toBeVisible()
+  const answer = chatMessage(page, 'Self-attention lets every token')
+  await expect(answer).toBeVisible()
+  // Citations are numbered in the order the sources are first cited...
+  await expect(answer.getByRole('button', { name: '1', exact: true })).toHaveCount(2)
+  await expect(answer.getByRole('button', { name: '2', exact: true })).toHaveCount(1)
+  // ...and the References list names each source by its title, not its ID.
+  await expect(answer.getByText(/^References:/)).toBeVisible()
+  for (const title of ['Attention Is All You Need', 'The Illustrated Transformer']) {
+    await expect(answer.getByRole('button', { name: title })).toBeVisible()
+  }
+  await expect(answer).not.toContainText('source:')
+
+  // The turn went to the open session, with both sources in its context.
+  const [turn] = api.callsTo<SendNotebookChatMessageRequest>('POST', '/chat/execute')
+  expect(turn.body).toMatchObject({ session_id: session.id, message: QUESTION })
+  expect(turn.body.context.sources).toHaveLength(SOURCES.length)
+})
+
+test('Go deeper opens a dive under the answer, and Wrap up resolves it into what was learned', async ({
+  page,
+  api,
+}) => {
+  const { session, answer: answerMessage } = seedAnsweredQuestion(api)
+  api.asideReplies.push(DIVE_ANSWER)
+  api.draft = DRAFT
+  await openNotebook(page)
+
+  const answer = chatMessage(page, 'Self-attention lets every token')
+  await answer.getByRole('button', { name: 'Go deeper' }).click()
+
+  // The dive opens inline, under the answer it came from, ready for a
+  // question; the main chat's message box stays on screen and usable.
+  const dive = answer.getByRole('button', { name: /dive\W+Self-attention lets every token/i })
+  await expect(dive).toHaveAttribute('aria-expanded', 'true')
+  await expect(diveComposer(page)).toBeFocused()
+  await mainComposer(page).click({ trial: true, timeout: 5_000 })
+  const [created] = api.callsTo<CreateLearningAsideRequest>('POST', '/learning/asides')
+  expect(created.body).toMatchObject({
+    notebook_id: NOTEBOOK.id,
+    parent_session_id: session.id,
+  })
+  expect(created.body.anchor).toEqual({
+    type: 'message',
+    message_id: answerMessage.id,
+    content: ANSWER,
+  })
+
+  // Ask in the dive.
+  await diveComposer(page).fill(DIVE_QUESTION)
+  await diveComposer(page).press('ControlOrMeta+Enter')
+  await expect(answer.getByText(DIVE_QUESTION)).toBeVisible()
+  await expect(answer.getByText(/push the softmax into regions with tiny gradients/)).toBeVisible()
+  expect(api.callsTo('POST', /^\/learning\/asides\/[^/]+\/messages$/)).toHaveLength(1)
+
+  // Wrap up prefills the AI draft, without the raw citation markers.
+  await answer.getByRole('button', { name: 'Wrap up' }).click()
+  await expect(page.getByLabel(/What did you learn/i)).toHaveValue(CONCLUSION)
+  await expect(page.getByLabel(/affect the main conversation/i)).toHaveValue(DRAFT.relevance)
+  await expect(page.getByPlaceholder(/question worth its own dive/i)).toHaveValue(
+    DRAFT.open_questions[0]
+  )
+  expect(api.callsTo('POST', /^\/learning\/asides\/[^/]+\/draft-resolution$/)).toHaveLength(1)
+
+  await page.getByRole('button', { name: 'Resolve aside' }).click()
+
+  // The dive becomes what was learned: no more questions, and Studio lists it.
+  await expect(
+    answer.getByRole('button', { name: /Learned\W+Dividing by the square root/i })
+  ).toBeVisible()
+  await expect(dive).toHaveCount(0)
+  await expect(diveComposer(page)).toHaveCount(0)
+  await expect(mainComposer(page)).toBeVisible()
+  const [resolved] = api.callsTo<ResolveLearningAsideRequest>(
+    'POST',
+    /^\/learning\/asides\/[^/]+\/resolve$/
+  )
+  expect(resolved.body).toEqual({
+    conclusion: CONCLUSION,
+    relevance: DRAFT.relevance,
+    open_questions: DRAFT.open_questions,
+    citations: DRAFT.citations,
+    include_in_main: true,
+    save_as_note: false,
+  })
+  await expect(await whatYouLearned(page)).toContainText(CONCLUSION)
+})
+
+test('"Use in main chat" in the Journey leaves a learned conclusion out of main chat', async ({
+  page,
+  api,
+}) => {
+  const { update } = seedResolvedDive(api)
+  await openNotebook(page)
+
+  const toggle = (await whatYouLearned(page)).getByRole('checkbox', {
+    name: /Use in main chat\W+Dividing by the square root/i,
+  })
+  await expect(toggle).toBeChecked()
+  await toggle.click()
+
+  await expect(toggle).not.toBeChecked()
+  const patches = () =>
+    api.callsTo<UpdateLearningUpdateRequest>('PATCH', `/learning/updates/${update.id}`)
+  await expect.poll(() => patches().map((call) => call.body)).toEqual([
+    { include_in_main: false },
+  ])
+  // The journey is read again once the change is saved; it stays unticked.
+  const journeyReadsSincePatch = () =>
+    api.calls
+      .slice(api.calls.indexOf(patches()[0]))
+      .filter((call) => call.method === 'GET' && call.path === '/learning/journeys')
+  await expect.poll(() => journeyReadsSincePatch().length).toBeGreaterThan(0)
+  await expect(toggle).not.toBeChecked()
+  expect(api.findUpdate(update.id)?.include_in_main).toBe(false)
+
+  // A fresh page load reads the saved choice back.
+  await page.reload()
+  await expect(mainComposer(page)).toBeVisible()
+  await expect(
+    (await whatYouLearned(page)).getByRole('checkbox', {
+      name: /Use in main chat\W+Dividing by the square root/i,
+    })
+  ).not.toBeChecked()
+})
+
+test('a "Use in main chat" change that fails is undone with an error message', async ({
+  page,
+  api,
+}) => {
+  const { update } = seedResolvedDive(api)
+  const { promise: failure, resolve: failNow } = Promise.withResolvers<void>()
+  api.failNext('PATCH', /^\/learning\/updates\//, {
+    status: 500,
+    detail: 'The database is not reachable',
+    until: failure,
+  })
+  await openNotebook(page)
+
+  const toggle = (await whatYouLearned(page)).getByRole('checkbox', {
+    name: /Use in main chat\W+Dividing by the square root/i,
+  })
+  await expect(toggle).toBeChecked()
+  await toggle.click()
+
+  // The box unticks at once, while the request is on its way...
+  await expect(toggle).not.toBeChecked()
+  await expect
+    .poll(() => api.callsTo('PATCH', `/learning/updates/${update.id}`).length)
+    .toBe(1)
+  // (The journey reload that follows the failure waits, so only the app's
+  // own undo can tick the box again: when the API is down, that reload
+  // fails too.)
+  const releaseJourney = api.hold('GET', /^\/learning\/journeys$/)
+  failNow()
+
+  // ...and is ticked again, with a message, when the request fails.
+  await expect(toggle).toBeChecked()
+  await expect(errorToast(page)).toContainText('The database is not reachable')
+  releaseJourney()
+  expect(api.findUpdate(update.id)?.include_in_main).toBe(true)
+})
+
+test('selecting part of an answer offers Go deeper, which opens a dive about that passage', async ({
+  page,
+  api,
+}) => {
+  const { answer: answerMessage } = seedAnsweredQuestion(api)
+  await openNotebook(page)
+
+  const answer = chatMessage(page, 'Self-attention lets every token')
+  const passage = answer.getByText(/^Multi-head attention runs several/)
+  const toolbar = page.getByRole('toolbar', { name: /Selected text/i })
+  // While the page's data loads, each re-render of the notebook page
+  // re-creates the answer's text nodes, which drops a selection inside it
+  // (and the toolbar with it). Select again until the toolbar's Go deeper
+  // is clicked; the block ends with that click, so it happens only once.
+  await expect(async () => {
+    await passage.selectText({ timeout: 2_000 })
+    await toolbar.getByRole('button', { name: 'Go deeper' }).click({ timeout: 2_000 })
+  }).toPass({ timeout: 15_000 })
+
+  // The dive is anchored to the passage, its citations written back as
+  // markers, and opens under the answer quoting it.
+  await expect
+    .poll(() => api.callsTo('POST', '/learning/asides').length)
+    .toBe(1)
+  const [created] = api.callsTo<CreateLearningAsideRequest>('POST', '/learning/asides')
+  expect(created.body.anchor).toEqual({
+    type: 'message',
+    message_id: answerMessage.id,
+    content: PASSAGE,
+    locator: 'selection',
+  })
+  expect(created.body.title).toMatch(/^Multi-head attention runs several/)
+  await expect(toolbar).toBeHidden()
+  await expect(
+    answer.getByRole('button', { name: /dive\W+Multi-head attention runs several/i })
+  ).toHaveAttribute('aria-expanded', 'true')
+  await expect(answer.getByRole('figure', { name: /On this passage/i })).toContainText(
+    'so each head can focus on a different relationship'
+  )
+  await expect(diveComposer(page)).toBeFocused()
+  // Studio's Journey now lists the dive.
+  await expect(studio(page)).toContainText('Multi-head attention runs several')
+})
