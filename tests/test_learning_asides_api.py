@@ -1481,7 +1481,30 @@ def test_resume_leaves_out_conclusions_of_discarded_asides(client):
     assert response.json()["accepted_findings"] == ["learning_aside:kept conclusion"]
 
 
-def _send_aside_message(client, aside, journey, captured=None):
+# Pass as ``learning`` to run the real conclusions loader in an aside turn.
+REAL_LOADER = object()
+
+
+def _send_aside_message(
+    client, aside, journey, captured=None, context=None, learning=None
+):
+    """POST an aside message with the database and model mocked out.
+
+    ``learning`` is what the accepted-conclusions loader returns (none by
+    default); with REAL_LOADER the real loader runs, so patch the journey
+    lookups instead.
+    """
+    from api.routers._chat_shared import (
+        MainLearningContext,
+        load_main_learning_context,
+    )
+
+    loader = (
+        AsyncMock(wraps=load_main_learning_context)
+        if learning is REAL_LOADER
+        else AsyncMock(return_value=learning or MainLearningContext())
+    )
+
     def fake_invoke(graph, state, config, user_message):
         if captured is not None:
             captured["context"] = state["context"]
@@ -1514,6 +1537,7 @@ def _send_aside_message(client, aside, journey, captured=None):
             return_value=SimpleNamespace(values={"messages": []}),
         ),
         patch("api.routers.learning.invoke_chat_turn", new=fake_invoke),
+        patch("api.routers.learning.load_main_learning_context", new=loader),
         patch(
             "api.routers.learning.LearningAside.save", new_callable=AsyncMock
         ) as save_aside,
@@ -1528,7 +1552,7 @@ def _send_aside_message(client, aside, journey, captured=None):
     ):
         response = client.post(
             f"/api/learning/asides/{aside.id.split(':')[1]}/messages",
-            json={"message": "One more question", "context": {}},
+            json={"message": "One more question", "context": context or {}},
         )
     return response, save_aside, save_journey
 
@@ -1776,6 +1800,14 @@ def test_aside_turn_gives_the_model_no_internal_ids(client):
     async def parent_updates(self):
         return [parent_conclusion]
 
+    from api.routers._chat_shared import MainLearningContext
+
+    accepted = LearningUpdate(
+        id="learning_update:mainconclusion",
+        aside="learning_aside:siblingdive",
+        conclusion="An accepted conclusion from the journey.",
+        applied_message_id="lc_run--mainreply",
+    )
     captured: dict[str, Any] = {}
     with (
         patch(
@@ -1785,7 +1817,13 @@ def test_aside_turn_gives_the_model_no_internal_ids(client):
         ),
         patch.object(LearningAside, "get_updates", new=parent_updates),
     ):
-        response, _, _ = _send_aside_message(client, leaf, _journey(), captured)
+        response, _, _ = _send_aside_message(
+            client,
+            leaf,
+            _journey(),
+            captured,
+            learning=MainLearningContext(updates=(accepted,)),
+        )
 
     assert response.status_code == 200
     state = captured["state"]
@@ -1794,6 +1832,9 @@ def test_aside_turn_gives_the_model_no_internal_ids(client):
     assert "The bound follows from concavity." in aside_context["learning_path"]
     assert "PARENT DIVE ANSWER" in aside_context["parent_conversation_at_branch"]
     assert aside_context["anchor"] == {"type": "message", "content": "log is concave."}
+    assert state["context"]["learning_updates"] == [
+        {"conclusion": "An accepted conclusion from the journey."}
+    ]
     model_text = str(state["context"]) + Prompter(prompt_template="chat/system").render(
         data=state
     )
@@ -1809,6 +1850,9 @@ def test_aside_turn_gives_the_model_no_internal_ids(client):
         parent.chat_session,
         parent.parent_session,
         parent_conclusion.id,
+        accepted.id,
+        accepted.aside,
+        "lc_run--mainreply",
     ):
         assert internal_id
         assert internal_id not in model_text
@@ -2391,3 +2435,96 @@ def test_deleting_a_main_session_removes_its_journey(client):
     assert response.status_code == 200
     cascade.assert_awaited_once()
     delete.assert_awaited_once()
+
+
+# --- Accepted conclusions in an aside turn --------------------------------------
+
+
+@contextmanager
+def _journey_conclusions(updates):
+    """The main-session journey's accepted updates, as the real loader sees them."""
+    with (
+        patch(
+            "api.routers._chat_shared.LearningJourney.get_for_main_session",
+            new_callable=AsyncMock,
+            return_value=_journey(),
+        ) as get_journey,
+        patch(
+            "api.routers._chat_shared.LearningJourney.get_updates",
+            new_callable=AsyncMock,
+            return_value=list(updates),
+        ) as get_updates,
+        patch("api.routers._chat_shared.token_count", new=_fake_token_count),
+    ):
+        yield get_journey, get_updates
+
+
+def test_aside_turn_gets_accepted_conclusions_from_the_server(client):
+    accepted = _priced_update("accepted", 10, 1, citations=["source:paper"])
+    # A stale or edited copy the client sends along.
+    request_context = {
+        "sources": [{"id": "source:paper"}],
+        "learning_updates": [
+            {"id": "learning_update:forged", "conclusion": "Not accepted"}
+        ],
+        "learning_updates_instruction": "Cite learning_update IDs freely.",
+    }
+    captured: dict[str, Any] = {}
+    with _journey_conclusions([accepted]) as (get_journey, get_updates):
+        response, _, _ = _send_aside_message(
+            client,
+            _aside(),
+            _journey(),
+            captured,
+            context=request_context,
+            learning=REAL_LOADER,
+        )
+
+    assert response.status_code == 200
+    context = captured["context"]
+    assert context["learning_updates"] == [
+        {"conclusion": "accepted cost=10", "citations": ["source:paper"]}
+    ]
+    assert "Never expose or cite" in context["learning_updates_instruction"]
+    assert "Not accepted" not in str(context)
+    assert "learning_update:" not in str(context["learning_updates"])
+    assert context["sources"] == [{"id": "source:paper"}]
+    # The aside's journey: its main session's accepted conclusions.
+    get_journey.assert_awaited_once_with("chat_session:main")
+    get_updates.assert_awaited_once_with(include_unmerged=False)
+
+
+def test_aside_turn_without_accepted_conclusions_drops_the_client_copy(client):
+    request_context = {
+        "learning_updates": [{"id": "learning_update:old", "conclusion": "Excluded"}],
+        "learning_updates_instruction": "Use these.",
+    }
+    captured: dict[str, Any] = {}
+    with _journey_conclusions([]):
+        response, _, _ = _send_aside_message(
+            client,
+            _aside(),
+            _journey(),
+            captured,
+            context=request_context,
+            learning=REAL_LOADER,
+        )
+
+    assert response.status_code == 200
+    assert "learning_updates" not in captured["context"]
+    assert "learning_updates_instruction" not in captured["context"]
+
+
+def test_aside_turn_conclusions_share_the_main_chat_budget(client):
+    updates = [_priced_update("old", 300, 1), _priced_update("new", 300, 2)]
+    captured: dict[str, Any] = {}
+    with (
+        _journey_conclusions(updates),
+        patch("api.routers._chat_shared.LEARNING_UPDATES_TOKEN_BUDGET", 400),
+    ):
+        response, _, _ = _send_aside_message(
+            client, _aside(), _journey(), captured, learning=REAL_LOADER
+        )
+
+    assert response.status_code == 200
+    assert captured["context"]["learning_updates"] == [{"conclusion": "new cost=300"}]

@@ -60,7 +60,7 @@ Use `/docs` for request and response shapes. This map shows where things are:
 
 ## Learning context in notebook chat
 
-`POST /api/chat/execute` adds the session's accepted learning conclusions (the latest included resolution of each aside that is not discarded, see [ADR-014](decisions/ADR-014-learning-aside-context.md)) to the model's context itself. Any `learning_updates` sent in its `context` are ignored. `POST /api/chat/context` with a `session_id` returns the same conclusions as `context.learning_updates`, for display and the token count.
+`POST /api/chat/execute` adds the session's accepted learning conclusions (the latest included resolution of each aside that is not discarded, see [ADR-014](decisions/ADR-014-learning-aside-context.md)) to the model's context itself. Any `learning_updates` sent in its `context` are ignored. `POST /api/chat/context` with a `session_id` returns the same conclusions as `context.learning_updates`, for display and the token count. A message to an aside (`POST /api/learning/asides/{id}/messages`) gets the same conclusions, those of its journey's main session, and ignores `learning_updates` in its `context` too.
 
 The conclusions share a budget of 4,000 tokens per turn (`LEARNING_UPDATES_TOKEN_BUDGET` in `api/routers/_chat_shared.py`). The newest are kept first. One that does not fit in what is left of the budget is left out of that turn, and older ones still fill the rest. `learning_updates_omitted` in the `POST /api/chat/context` response counts those left out.
 

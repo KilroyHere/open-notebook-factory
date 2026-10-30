@@ -29,7 +29,8 @@ from api.models import (
 )
 from api.routers._chat_shared import (
     INTERNAL_ID_INSTRUCTION,
-    model_facing_context,
+    load_main_learning_context,
+    main_chat_model_context,
     normalize_record_id,
 )
 from open_notebook.database.repository import ensure_record_id, repo_query
@@ -567,7 +568,12 @@ async def send_aside_message(aside_id: str, request: SendLearningAsideMessageReq
     state_values["messages"] = list(state_values.get("messages", []))
 
     parent_transcript = _format_transcript(aside.context_snapshot)
-    context = model_facing_context(request.context)
+    # Accepted conclusions are loaded like main chat's: those of the journey
+    # this aside is on, from the server. The client's copy is ignored.
+    learning = await load_main_learning_context(
+        journey.main_session, notebook_id=journey.notebook
+    )
+    context = main_chat_model_context(request.context, learning)
     context["learning_aside"] = {
         "title": aside.title,
         "anchor": _model_visible_anchor(aside.anchor),
