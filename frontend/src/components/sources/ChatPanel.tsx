@@ -16,7 +16,10 @@ import {
   LearningAside
 } from '@/lib/types/api'
 import { ModelSelector } from './ModelSelector'
-import { ContextIndicator } from '@/components/common/ContextIndicator'
+import {
+  ContextChip,
+  type NotebookContextStats,
+} from '@/components/common/ContextChip'
 import { SessionManager } from '@/components/sources/SessionManager'
 import { MessageActions } from '@/components/sources/MessageActions'
 import { useModalManager } from '@/lib/hooks/use-modal-manager'
@@ -35,14 +38,6 @@ import {
 import { cn } from '@/lib/utils'
 import type { ReferenceTitles } from '@/lib/utils/learning-asides'
 import { isSendShortcut, sendShortcutHint } from '@/lib/utils/composer-shortcut'
-
-interface NotebookContextStats {
-  sourcesInsights: number
-  sourcesFull: number
-  notesCount: number
-  tokenCount?: number
-  charCount?: number
-}
 
 interface ChatPanelProps {
   messages: SourceChatMessage[]
@@ -222,7 +217,8 @@ export function ChatPanel({
           viewportClassName="[&>div]:!block [&>div]:!min-w-0 [&>div]:!w-full"
           ref={scrollAreaRef}
         >
-          <div className="space-y-4 py-4">
+          {/* Messages keep a readable line length and center in wide columns. */}
+          <div className="mx-auto w-full max-w-[45rem] space-y-4 py-4">
             {messages.length === 0 ? (
               <div className="text-center text-muted-foreground py-8">
                 <Bot className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -289,19 +285,8 @@ export function ChatPanel({
             </div>
           )}
 
-          {notebookContextStats && (
-            <ContextIndicator
-              sourcesInsights={notebookContextStats.sourcesInsights}
-              sourcesFull={notebookContextStats.sourcesFull}
-              notesCount={notebookContextStats.notesCount}
-              tokenCount={notebookContextStats.tokenCount}
-              charCount={notebookContextStats.charCount}
-              className="px-3 pt-1.5"
-            />
-          )}
-
           {workspaceMode && (onOpenAsides || showSessions) && (
-            <div className="flex min-w-0 items-center gap-1 px-2 pt-1.5">
+            <div className="mx-auto flex w-full min-w-0 max-w-[45rem] items-center gap-1 px-2 pt-1.5">
               {asideControl}
               {sessionControl}
             </div>
@@ -312,6 +297,7 @@ export function ChatPanel({
             isStreaming={isStreaming}
             modelOverride={modelOverride}
             onModelChange={onModelChange}
+            contextStats={notebookContextStats}
           />
         </div>
       </CardContent>
@@ -380,13 +366,15 @@ interface ChatComposerProps {
   isStreaming: boolean
   modelOverride?: string
   onModelChange?: (model?: string) => void
+  contextStats?: NotebookContextStats
 }
 
 function ChatComposer({
   onSendMessage,
   isStreaming,
   modelOverride,
-  onModelChange
+  onModelChange,
+  contextStats
 }: ChatComposerProps) {
   const { t } = useTranslation()
   const chatInputId = useId()
@@ -409,39 +397,48 @@ function ChatComposer({
   const keyHint = sendShortcutHint()
 
   return (
-    <div className="flex flex-shrink-0 items-end gap-2 px-2 py-2">
-      <Textarea
-        id={chatInputId}
-        name="chat-message"
-        autoComplete="off"
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder={`${t('chat.sendPlaceholder')} (${t('chat.pressToSend', { key: keyHint })})`}
-        disabled={isStreaming}
-        className="min-h-9 max-h-[100px] min-w-0 flex-1 resize-none px-3 py-2"
-        rows={1}
-      />
-      {onModelChange && (
-        <ModelSelector
-          currentModel={modelOverride}
-          onModelChange={onModelChange}
+    <div className="mx-auto w-full max-w-[45rem] flex-shrink-0 px-2 py-2">
+      {/* One rounded input: the text on top, context, model and send inside. */}
+      <div className="rounded-2xl border bg-card shadow-xs transition-[box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
+        <Textarea
+          id={chatInputId}
+          name="chat-message"
+          autoComplete="off"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={`${t('chat.sendPlaceholder')} (${t('chat.pressToSend', { key: keyHint })})`}
           disabled={isStreaming}
+          className="min-h-11 max-h-[160px] w-full resize-none rounded-2xl border-0 bg-transparent px-3 pt-2.5 pb-1 shadow-none focus-visible:ring-0"
+          rows={1}
         />
-      )}
-      <Button
-        onClick={handleSend}
-        disabled={!input.trim() || isStreaming}
-        size="icon"
-        aria-label={t('chat.sendPlaceholder')}
-        className="h-9 w-9 flex-shrink-0"
-      >
-        {isStreaming ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <Send className="h-4 w-4" />
-        )}
-      </Button>
+        <div className="flex min-w-0 items-center gap-1.5 px-2 pb-2">
+          {contextStats && <ContextChip stats={contextStats} />}
+          <div className="ml-auto flex min-w-0 items-center gap-1.5">
+            {onModelChange && (
+              <ModelSelector
+                currentModel={modelOverride}
+                onModelChange={onModelChange}
+                disabled={isStreaming}
+                className="rounded-full"
+              />
+            )}
+            <Button
+              onClick={handleSend}
+              disabled={!input.trim() || isStreaming}
+              size="icon"
+              aria-label={t('chat.sendPlaceholder')}
+              className="h-8 w-8 flex-shrink-0 rounded-full"
+            >
+              {isStreaming ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

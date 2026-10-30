@@ -180,4 +180,60 @@ describe('ChatPanel composer', () => {
     expect(bubble).not.toHaveClass('break-all')
     expect(bubble).toHaveClass('break-words')
   })
+
+  it('keeps messages at a readable width, centered in a wide column', () => {
+    render(
+      <ChatPanel
+        workspaceMode
+        messages={[{ id: 'h1', type: 'human', content: 'Hello' }]}
+        isStreaming={false}
+        contextIndicators={null}
+        onSendMessage={vi.fn()}
+      />
+    )
+
+    const list = screen.getByText('Hello').closest('.max-w-\\[45rem\\]')
+    expect(list).not.toBeNull()
+    expect(list).toHaveClass('mx-auto')
+  })
+
+  it('puts the context count on a chip and the size in its details', () => {
+    render(
+      <ChatPanel
+        workspaceMode
+        messages={[]}
+        isStreaming={false}
+        contextIndicators={null}
+        notebookContextStats={{
+          sourcesInsights: 1,
+          sourcesFull: 1,
+          notesCount: 1,
+          tokenCount: 1500,
+          charCount: 6000,
+        }}
+        onSendMessage={vi.fn()}
+      />
+    )
+
+    const chip = screen.getByTestId('context-chip')
+    expect(chip).toHaveTextContent('chat.contextSources · chat.contextNotes')
+    // The size is no longer an always-visible line under the composer.
+    expect(chip).toHaveTextContent('chat.contextSize')
+    expect(chip).toHaveTextContent('chat.contextInsightsOnly')
+  })
+
+  it('says when nothing is in context', () => {
+    render(
+      <ChatPanel
+        workspaceMode
+        messages={[]}
+        isStreaming={false}
+        contextIndicators={null}
+        notebookContextStats={{ sourcesInsights: 0, sourcesFull: 0, notesCount: 0 }}
+        onSendMessage={vi.fn()}
+      />
+    )
+
+    expect(screen.getByTestId('context-chip')).toHaveTextContent('chat.contextNone')
+  })
 })
