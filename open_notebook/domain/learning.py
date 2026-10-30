@@ -184,7 +184,13 @@ class LearningJourney(ObjectModel):
     async def get_updates(
         self, include_unmerged: bool = True
     ) -> List["LearningUpdate"]:
-        asides = await self.get_asides(include_discarded=True)
+        """The journey's learning updates, oldest first.
+
+        ``include_unmerged=False`` keeps only what may enter main chat: the
+        latest version of each aside that is not discarded, if it is included
+        in main. Otherwise every stored version of every aside is listed.
+        """
+        asides = await self.get_asides(include_discarded=include_unmerged)
         aside_ids = [ensure_record_id(aside.id) for aside in asides if aside.id]
         if not aside_ids:
             return []

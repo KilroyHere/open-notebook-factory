@@ -1333,6 +1333,67 @@ async def test_resume_lists_only_current_resolutions_as_accepted(client):
     assert response.json()["accepted_findings"] == ["Revised conclusion"]
 
 
+def test_resume_leaves_out_conclusions_of_discarded_asides(client):
+    from api.routers.learning import _update_responses
+
+    journey = _journey()
+    kept = _aside(id="learning_aside:kept", status="resolved")
+    dropped = _aside(
+        id="learning_aside:dropped",
+        chat_session="chat_session:dropped",
+        status="discarded",
+    )
+    updates = _update_responses(
+        [
+            LearningUpdate(
+                id=f"learning_update:{aside.id.split(':')[1]}",
+                aside=aside.id or "",
+                conclusion=f"{aside.id} conclusion",
+                created=NOW,
+                updated=NOW,
+            )
+            for aside in (kept, dropped)
+            if aside.id
+        ]
+    )
+    journey_response = LearningJourneyResponse(
+        id=journey.id or "",
+        notebook_id=journey.notebook,
+        main_session_id=journey.main_session,
+        active_session_id=journey.active_session,
+        objective=journey.objective,
+        status="active",
+        asides=[_aside_response(kept), _aside_response(dropped)],
+        updates=updates,
+        created=str(NOW),
+        updated=str(NOW),
+    )
+    with (
+        patch(
+            "api.routers.learning._verify_notebook_session",
+            new_callable=AsyncMock,
+            return_value=("chat_session:main", SimpleNamespace(), SimpleNamespace()),
+        ),
+        patch(
+            "api.routers.learning.LearningJourney.get_for_main_session",
+            new_callable=AsyncMock,
+            return_value=journey,
+        ),
+        patch(
+            "api.routers.learning._journey_response",
+            new_callable=AsyncMock,
+            return_value=journey_response,
+        ),
+    ):
+        response = client.get(
+            "/api/learning/journeys/resume",
+            params={"notebook_id": "notebook:one", "main_session_id": "main"},
+        )
+
+    assert response.status_code == 200
+    assert response.json()["accepted_findings"] == ["learning_aside:kept conclusion"]
+
+
 def _send_aside_message(client, aside, journey, captured=None):
     def fake_invoke(graph, state, config, user_message):
         if captured is not None:

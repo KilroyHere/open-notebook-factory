@@ -279,10 +279,13 @@ async def get_journey_resume(
         ),
         open_asides[-1] if open_asides else None,
     )
+    discarded = {aside.id for aside in response.asides if aside.status == "discarded"}
     accepted_findings = [
         update.conclusion
         for update in response.updates
-        if update.include_in_main and not update.superseded
+        if update.include_in_main
+        and not update.superseded
+        and update.aside_id not in discarded
     ]
     current_point: Optional[str]
     if active_aside:

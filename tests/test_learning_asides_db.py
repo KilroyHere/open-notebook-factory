@@ -12,7 +12,7 @@ from typing import Any, AsyncIterator, Awaitable, Callable, TypeVar
 from unittest.mock import patch
 
 import pytest
-from surrealdb import AsyncSurreal
+from surrealdb import AsyncSurreal, RecordID
 
 from open_notebook.domain.learning import (
     AsideAnchor,
@@ -289,18 +289,22 @@ async def test_first_dive_and_section_sync_together_both_succeed():
 # --- Resolving an aside -------------------------------------------------------
 
 
-async def journey_with_aside() -> tuple[Notebook, LearningJourney, LearningAside]:
-    """A notebook whose main session has a journey with one active aside."""
-    notebook, main = await notebook_with_main_session()
-    journey = await LearningJourney.get_or_create(notebook.id or "", main.id or "")
-    child = ChatSession(title="Why Jensen?", kind=LEARNING_ASIDE_SESSION_KIND)
+async def add_aside(
+    notebook: Notebook,
+    journey: LearningJourney,
+    title: str = "Why Jensen?",
+    parent: LearningAside | None = None,
+) -> LearningAside:
+    """An active aside on ``journey``, branched from main or from ``parent``."""
+    child = ChatSession(title=title, kind=LEARNING_ASIDE_SESSION_KIND)
     await child.save()
     await child.relate_to_notebook(notebook.id or "")
     aside = LearningAside(
         journey=journey.id or "",
-        parent_session=main.id or "",
+        parent_aside=parent.id if parent else None,
+        parent_session=parent.chat_session if parent else journey.main_session,
         chat_session=child.id or "",
-        title="Why Jensen?",
+        title=title,
         anchor=AsideAnchor(
             type="message", message_id="ai-1", content="The ELBO follows from Jensen."
         ),
@@ -308,7 +312,14 @@ async def journey_with_aside() -> tuple[Notebook, LearningJourney, LearningAside
     await aside.save()
     journey.active_session = child.id
     await journey.save()
-    return notebook, journey, aside
+    return aside
+
+
+async def journey_with_aside() -> tuple[Notebook, LearningJourney, LearningAside]:
+    """A notebook whose main session has a journey with one active aside."""
+    notebook, main = await notebook_with_main_session()
+    journey = await LearningJourney.get_or_create(notebook.id or "", main.id or "")
+    return notebook, journey, await add_aside(notebook, journey)
 
 
 async def resolve(aside: LearningAside, conclusion: str, save_as_note: bool = True):
@@ -408,3 +419,38 @@ async def test_resolve_numbers_the_version_after_the_highest_stored_one():
     assert versions == [1, 3, 4]
     assert [update.version for update in response.updates] == [1, 3, 4]
     assert [update.superseded for update in response.updates] == [True, True, False]
+
+
+# --- Discarded asides ----------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_a_discarded_asides_conclusion_stays_out_of_main_chat():
+    from api.routers._chat_shared import load_main_learning_context
+
+    async with memory_database() as db:
+        notebook, journey, kept = await journey_with_aside()
+        dropped = await add_aside(notebook, journey, "Why a Gaussian prior?")
+        with no_transcripts():
+            await resolve(kept, "Kept conclusion", save_as_note=False)
+            await resolve(dropped, "Dropped conclusion", save_as_note=False)
+        # Resolved asides could be discarded before their status was guarded,
+        # so stored data can hold a discarded aside with an accepted update.
+        await db.query(
+            "UPDATE $aside SET status = 'discarded'",
+            {"aside": RecordID.parse(dropped.id or "")},
+        )
+        merged = await journey.get_updates(include_unmerged=False)
+        everything = await journey.get_updates()
+        with patch("api.routers._chat_shared.token_count", new=len):
+            learning = await load_main_learning_context(
+                journey.main_session, notebook_id=notebook.id
+            )
+
+    assert [update.conclusion for update in merged] == ["Kept conclusion"]
+    assert [update.conclusion for update in learning.updates] == ["Kept conclusion"]
+    # Still stored and listed for the journey view.
+    assert sorted(update.conclusion for update in everything) == [
+        "Dropped conclusion",
+        "Kept conclusion",
+    ]
