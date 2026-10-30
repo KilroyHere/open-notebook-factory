@@ -38,7 +38,12 @@ from open_notebook.domain.learning import (
     LearningUpdate,
     latest_update_versions,
 )
-from open_notebook.domain.notebook import ChatSession, Note, Notebook
+from open_notebook.domain.notebook import (
+    LEARNING_ASIDE_SESSION_KIND,
+    ChatSession,
+    Note,
+    Notebook,
+)
 from open_notebook.exceptions import InvalidInputError, NotFoundError
 from open_notebook.graphs.chat import graph as chat_graph
 from open_notebook.graphs.learning_resolution import draft_learning_resolution
@@ -366,6 +371,8 @@ async def create_aside(request: CreateLearningAsideRequest):
             if request.model_override is not None
             else parent_session.model_override
         ),
+        # Keeps the aside's session out of the notebook's session list.
+        kind=LEARNING_ASIDE_SESSION_KIND,
     )
     await child_session.save()
     await child_session.relate_to_notebook(

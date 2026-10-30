@@ -55,7 +55,7 @@ class TestMigration26:
 
         manager = AsyncMigrationManager()
 
-        assert len(manager.up_migrations) == 28
+        assert len(manager.up_migrations) == 29
         assert len(manager.up_migrations) == len(manager.down_migrations)
         assert "learning_journey" in manager.up_migrations[25].sql
         assert "applied_message_id" in manager.up_migrations[26].sql
@@ -63,6 +63,118 @@ class TestMigration26:
         assert (
             "REMOVE TABLE IF EXISTS learning_section" in manager.down_migrations[27].sql
         )
+
+
+class TestMigration29:
+    def test_session_kind_field_backfill_and_index_are_registered(self):
+        from open_notebook.database.async_migrate import AsyncMigrationManager
+
+        manager = AsyncMigrationManager()
+        up = manager.up_migrations[28].sql
+        down = manager.down_migrations[28].sql
+
+        assert 'kind ON TABLE chat_session TYPE string DEFAULT "chat"' in up
+        assert "SELECT VALUE chat_session FROM learning_aside" in up
+        assert "idx_chat_session_kind" in up
+        # The field definition must go before UNSET, or TYPE string rejects it.
+        assert down.index("REMOVE FIELD IF EXISTS kind") < down.index("UNSET kind")
+        assert "REMOVE INDEX IF EXISTS idx_chat_session_kind" in down
+
+    @pytest.mark.asyncio
+    async def test_backfill_marks_aside_sessions_and_the_list_hides_them(self):
+        from open_notebook.database.async_migrate import AsyncMigrationManager
+
+        manager = AsyncMigrationManager()
+        async with AsyncSurreal("mem://") as db:
+            await db.use("learning_asides", "session_kind")
+            for number in (1, 3, 8, 26):
+                await db.query((MIGRATIONS_DIR / f"{number}.surrealql").read_text())
+            # Data from before migration 29: no session has a kind yet.
+            await db.query(
+                """
+                CREATE notebook:one SET name = 'One', description = '';
+                CREATE notebook:two SET name = 'Two', description = '';
+                CREATE source:paper SET title = 'Paper';
+                CREATE chat_session:older SET title = 'Older',
+                    updated = d'2026-10-01T00:00:00Z';
+                CREATE chat_session:newer SET title = 'Newer',
+                    updated = d'2026-10-03T00:00:00Z';
+                CREATE chat_session:aside SET title = 'Aside',
+                    updated = d'2026-10-04T00:00:00Z';
+                CREATE chat_session:elsewhere SET title = 'Elsewhere',
+                    updated = d'2026-10-05T00:00:00Z';
+                CREATE chat_session:source_chat SET title = 'Source chat',
+                    updated = d'2026-10-06T00:00:00Z';
+                RELATE chat_session:older->refers_to->notebook:one;
+                RELATE chat_session:newer->refers_to->notebook:one;
+                RELATE chat_session:aside->refers_to->notebook:one;
+                RELATE chat_session:elsewhere->refers_to->notebook:two;
+                RELATE chat_session:source_chat->refers_to->source:paper;
+                CREATE learning_aside:one SET
+                    journey = learning_journey:one,
+                    parent_session = chat_session:newer,
+                    chat_session = chat_session:aside,
+                    title = 'Aside',
+                    status = 'active',
+                    anchor = { type: 'message', content: 'Anchor' },
+                    context_snapshot = [];
+                CREATE learning_aside:dangling SET
+                    journey = learning_journey:one,
+                    parent_session = chat_session:newer,
+                    chat_session = chat_session:deleted,
+                    title = 'Dangling',
+                    status = 'discarded',
+                    anchor = { type: 'message', content: 'Anchor' },
+                    context_snapshot = [];
+                """
+            )
+
+            await db.query(manager.up_migrations[28].sql)
+            kinds = await db.query("SELECT id, kind FROM chat_session")
+            notebook = Notebook(id="notebook:one", name="One", description="")
+            with patch(
+                "open_notebook.domain.notebook.repo_query",
+                new=_memory_repo_query(db),
+            ):
+                visible = await notebook.get_chat_sessions()
+                everything = await notebook.get_chat_sessions(
+                    include_learning_asides=True
+                )
+
+            await db.query(manager.down_migrations[28].sql)
+            rolled_back = await db.query("SELECT * FROM chat_session")
+            table_info = await db.query("INFO FOR TABLE chat_session")
+
+        assert isinstance(kinds, list)
+        assert {
+            str(row["id"]): row["kind"] for row in kinds if isinstance(row, dict)
+        } == {
+            "chat_session:older": "chat",
+            "chat_session:newer": "chat",
+            "chat_session:aside": "learning_aside",
+            "chat_session:elsewhere": "chat",
+            "chat_session:source_chat": "chat",
+        }
+        # Newest first, aside hidden, other notebooks and sources not listed.
+        assert [session.id for session in visible] == [
+            "chat_session:newer",
+            "chat_session:older",
+        ]
+        assert [session.kind for session in visible] == ["chat", "chat"]
+        assert [session.id for session in everything] == [
+            "chat_session:aside",
+            "chat_session:newer",
+            "chat_session:older",
+        ]
+        assert everything[0].kind == "learning_aside"
+        assert isinstance(rolled_back, list)
+        assert len(rolled_back) == 5
+        assert all(isinstance(row, dict) and "kind" not in row for row in rolled_back)
+        assert isinstance(table_info, dict)
+        fields, indexes = table_info["fields"], table_info["indexes"]
+        assert isinstance(fields, dict) and isinstance(indexes, dict)
+        assert "kind" not in fields
+        assert "idx_chat_session_kind" not in indexes
 
 
 @pytest.mark.asyncio
@@ -346,10 +458,44 @@ async def test_notebook_chat_sessions_hide_learning_asides_by_default():
         assert await notebook.get_chat_sessions() == []
 
     assert repo_query.await_args is not None
-    assert (
-        "select value chat_session from learning_aside"
-        in (repo_query.await_args.args[0])
-    )
+    query, params = repo_query.await_args.args
+    # The session's own marker, not a scan of the learning_aside table.
+    assert "kind != $aside_kind" in query
+    assert "from learning_aside" not in query.lower()
+    assert params["aside_kind"] == "learning_aside"
+    assert params["include_learning_asides"] is False
+    assert str(params["id"]) == "notebook:one"
+
+
+@pytest.mark.asyncio
+async def test_notebook_chat_sessions_can_include_learning_asides():
+    notebook = Notebook(id="notebook:one", name="One", description="")
+    row = {
+        "id": "chat_session:aside",
+        "title": "Aside",
+        "kind": "learning_aside",
+    }
+    with patch(
+        "open_notebook.domain.notebook.repo_query",
+        new_callable=AsyncMock,
+        return_value=[row],
+    ) as repo_query:
+        sessions = await notebook.get_chat_sessions(include_learning_asides=True)
+
+    assert [session.kind for session in sessions] == ["learning_aside"]
+    assert repo_query.await_args is not None
+    assert repo_query.await_args.args[1]["include_learning_asides"] is True
+
+
+def test_chat_sessions_default_to_the_visible_kind():
+    from open_notebook.domain.notebook import ChatSession
+
+    session = ChatSession(title="Main")
+
+    assert session.kind == "chat"
+    assert session._prepare_save_data()["kind"] == "chat"
+    # Rows from before migration 29 have no kind and read as normal sessions.
+    assert ChatSession(id="chat_session:old", title="Old").kind == "chat"
 
 
 def _journey_with_asides(*aside_ids: str):

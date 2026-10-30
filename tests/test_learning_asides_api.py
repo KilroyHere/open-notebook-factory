@@ -87,11 +87,13 @@ def _aside_response(aside=None):
 async def test_create_aside_persists_child_session_and_journey_navigation(client):
     journey = _journey()
     parent_session = SimpleNamespace(model_override="model:parent")
+    saved = {}
 
     async def save_session(session):
         session.id = "chat_session:child"
         session.created = NOW
         session.updated = NOW
+        saved["session"] = session
 
     async def save_aside(aside):
         aside.id = "learning_aside:aside"
@@ -162,8 +164,51 @@ async def test_create_aside_persists_child_session_and_journey_navigation(client
     assert response.json()["chat_session_id"] == "chat_session:child"
     assert response.json()["status"] == "active"
     assert journey.active_session == "chat_session:child"
+    # The child session is marked so the notebook's session list hides it.
+    assert saved["session"].kind == "learning_aside"
+    assert saved["session"].model_override == "model:parent"
     relate.assert_awaited_once_with("notebook:one")
     save_journey.assert_awaited_once()
+
+
+@pytest.mark.parametrize(
+    ("url", "body", "parent_patch", "relate_patch"),
+    [
+        (
+            "/api/chat/sessions",
+            {"notebook_id": "notebook:one", "title": "Main"},
+            "api.routers.chat.Notebook.get",
+            "api.routers.chat.ChatSession.relate_to_notebook",
+        ),
+        (
+            "/api/sources/paper/chat/sessions",
+            {"source_id": "source:paper", "title": "Source chat"},
+            "api.routers._chat_shared.Source.get",
+            "api.routers.source_chat.ChatSession.relate",
+        ),
+    ],
+    ids=["notebook-chat", "source-chat"],
+)
+def test_other_chat_sessions_stay_visible(
+    client, url, body, parent_patch, relate_patch
+):
+    saved = {}
+
+    async def save_session(session):
+        session.id = "chat_session:new"
+        session.created = NOW
+        session.updated = NOW
+        saved["session"] = session
+
+    with (
+        patch(parent_patch, new_callable=AsyncMock, return_value=SimpleNamespace()),
+        patch("open_notebook.domain.notebook.ChatSession.save", new=save_session),
+        patch(relate_patch, new_callable=AsyncMock),
+    ):
+        response = client.post(url, json=body)
+
+    assert response.status_code == 200
+    assert saved["session"].kind == "chat"
 
 
 @pytest.mark.asyncio

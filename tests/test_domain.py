@@ -239,7 +239,10 @@ class TestNotebookDomain:
         async def fake_get_notes(self, include_content=False):
             return []
 
-        async def fake_get_chat_sessions(self):
+        listed_with = {}
+
+        async def fake_get_chat_sessions(self, include_learning_asides=False):
+            listed_with["include_learning_asides"] = include_learning_asides
             return [chat_session_one, chat_session_two]
 
         with (
@@ -263,6 +266,8 @@ class TestNotebookDomain:
         chat_session_one.delete.assert_awaited_once()
         chat_session_two.delete.assert_awaited_once()
         assert result["deleted_chat_sessions"] == 2
+        # Aside sessions left without a journey are swept up too.
+        assert listed_with["include_learning_asides"] is True
 
 
 # ============================================================================
