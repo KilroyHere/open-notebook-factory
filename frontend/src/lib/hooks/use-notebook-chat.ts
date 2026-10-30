@@ -172,12 +172,14 @@ export function useNotebookChat({ notebookId, sources, notes, contextSelections 
       sessionId: string
       data: UpdateNotebookChatSessionRequest
     }) => chatApi.updateSession(sessionId, data),
-    onSuccess: () => {
+    // Refresh the session that was updated, which is no longer the selected
+    // one if the learner switched while the change was being saved.
+    onSuccess: (_, { sessionId }) => {
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.notebookChatSessions(notebookId)
       })
       queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.notebookChatSession(currentSessionId!)
+        queryKey: QUERY_KEYS.notebookChatSession(sessionId)
       })
       toast.success(t('chat.sessionUpdated'))
     },

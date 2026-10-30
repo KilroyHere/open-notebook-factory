@@ -8,6 +8,7 @@ import { QUERY_KEYS } from '@/lib/api/query-client'
 import type {
   BuildContextResponse,
   NotebookChatMessage,
+  NotebookChatSession,
   NotebookChatSessionWithMessages,
   NoteResponse,
   SourceListResponse,
@@ -70,9 +71,15 @@ interface Props {
   selections: ContextSelections
 }
 
-function renderChat(initial: Partial<Props> = {}) {
+function renderChat(
+  initial: Partial<Props> = {},
+  queries: { staleTime?: number } = {}
+) {
   const client = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    defaultOptions: {
+      queries: { retry: false, ...queries },
+      mutations: { retry: false },
+    },
   })
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>{children}</QueryClientProvider>
@@ -693,6 +700,35 @@ describe('useNotebookChat messages', () => {
       expect(result.current.messages).toEqual(stored[A.id])
       act(() => result.current.switchSession(B.id))
       await waitFor(() => expect(result.current.messages).toEqual(stored[B.id]))
+    })
+
+    it('shows the model a session was changed to after switching away before the change was saved', async () => {
+      let modelOfA: string | null = null
+      vi.mocked(chatApi.getSession).mockImplementation(async (id: string) =>
+        id === A.id
+          ? { ...A, model_override: modelOfA, messages: stored[A.id] }
+          : { ...B, messages: stored[B.id] }
+      )
+      const saving = deferred<NotebookChatSession>()
+      vi.mocked(chatApi.updateSession).mockReturnValue(saving.promise)
+      // As in the app, a session read is fresh for minutes, so only an
+      // invalidation reads it again.
+      const { result } = renderChat({}, { staleTime: 5 * 60 * 1000 })
+      await waitFor(() => expect(result.current.messages).toEqual(stored[A.id]))
+
+      act(() => result.current.setModelOverride('model:fast'))
+      act(() => result.current.switchSession(B.id))
+      await waitFor(() => expect(result.current.messages).toEqual(stored[B.id]))
+      modelOfA = 'model:fast'
+      await act(async () => {
+        saving.resolve({ ...A, model_override: 'model:fast' })
+        await saving.promise
+      })
+
+      act(() => result.current.switchSession(A.id))
+      await waitFor(() =>
+        expect(result.current.currentSession?.model_override).toBe('model:fast')
+      )
     })
   })
 
