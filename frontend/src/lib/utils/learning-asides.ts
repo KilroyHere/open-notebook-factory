@@ -1,5 +1,7 @@
 import {
   LearningAside,
+  LearningJourney,
+  LearningUpdate,
   NoteResponse,
   SourceListResponse,
 } from '@/lib/types/api'
@@ -140,8 +142,67 @@ export function stripCitationMarkers(text: string): string {
     .trim()
 }
 
+/**
+ * The conclusion an aside stands on: its latest resolution, unless a newer
+ * one replaced it. Only this version can reach main chat.
+ */
+export function currentConclusion(
+  aside: Pick<LearningAside, 'updates'>
+): LearningUpdate | undefined {
+  const latest = aside.updates.at(-1)
+  return latest && !latest.superseded ? latest : undefined
+}
+
+export interface LearnedConclusion {
+  aside: LearningAside
+  update: LearningUpdate
+}
+
+/**
+ * What the journey's resolved asides concluded, in journey order: each
+ * one's current conclusion, used in main chat or not. Open and discarded
+ * asides have none.
+ */
+export function learnedConclusions(asides: LearningAside[]): LearnedConclusion[] {
+  const learned: LearnedConclusion[] = []
+  for (const aside of asides) {
+    if (aside.status !== 'resolved') continue
+    const update = currentConclusion(aside)
+    if (update) learned.push({ aside, update })
+  }
+  return learned
+}
+
+/** `updates` with the `include_in_main` of `updateId` set to `include`. */
+export function withIncludeInMain(
+  updates: LearningUpdate[],
+  updateId: string,
+  include: boolean
+): LearningUpdate[] {
+  return updates.map((update) =>
+    update.id === updateId ? { ...update, include_in_main: include } : update
+  )
+}
+
+/** `journey` with one conclusion used in main chat or left out, wherever it lists it. */
+export function journeyWithIncludeInMain(
+  journey: LearningJourney,
+  updateId: string,
+  include: boolean
+): LearningJourney {
+  return {
+    ...journey,
+    asides: journey.asides.map((aside) =>
+      aside.updates.some((update) => update.id === updateId)
+        ? { ...aside, updates: withIncludeInMain(aside.updates, updateId, include) }
+        : aside
+    ),
+    updates: withIncludeInMain(journey.updates, updateId, include),
+  }
+}
+
 export interface JourneyStats {
-  /** Resolved asides whose latest conclusion is in the main chat context. */
+  /** Resolved asides whose current conclusion is used in main chat. */
   learned: number
   /** Open questions on latest conclusions that no dive has picked up yet. */
   openQuestions: number
@@ -155,8 +216,10 @@ export function journeyStats(asides: LearningAside[]): JourneyStats {
   for (const aside of asides) {
     if (aside.status === 'discarded') continue
     if (aside.status === 'parked') stats.savedForLater++
-    const latest = aside.updates.at(-1)
-    if (!latest || latest.superseded) continue
+    const latest = currentConclusion(aside)
+    if (!latest) continue
+    // The same conclusions "What you've learned" lists (learnedConclusions),
+    // counted when main chat uses them.
     if (aside.status === 'resolved' && latest.include_in_main) stats.learned++
     stats.openQuestions += normalizeOpenQuestions(latest.open_questions).filter(
       (question) => !childDiveForQuestion(asides, aside.id, question)

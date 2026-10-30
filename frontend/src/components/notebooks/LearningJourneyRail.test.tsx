@@ -120,7 +120,45 @@ describe('LearningJourneyRail', () => {
     expect(root.classList.contains('w-72')).toBe(false)
     // Studio owns the collapse control and the panel title.
     expect(screen.queryByRole('button', { name: /^Collapse / })).toBeNull()
-    expect(screen.queryByRole('heading')).toBeNull()
+    expect(
+      screen.queryAllByRole('heading').map((heading) => heading.textContent)
+    ).toEqual(['learningAsides.whatYouLearned'])
+  })
+
+  it('starts the outline with what the learner concluded, switchable for main chat', () => {
+    const onOpenAside = vi.fn()
+    const onSetIncludeInMain = vi.fn()
+    render(
+      <LearningJourneyRail
+        messages={messages}
+        asides={[aside]}
+        activeAsideId={null}
+        onShowMain={vi.fn()}
+        onOpenAside={onOpenAside}
+        onNavigateToMessage={vi.fn()}
+        onSetIncludeInMain={onSetIncludeInMain}
+      />
+    )
+
+    const outline = screen.getByRole('tabpanel', {
+      name: 'learningAsides.outline',
+    })
+    const text = outline.textContent ?? ''
+    expect(text.indexOf('learningAsides.whatYouLearned')).toBeLessThan(
+      text.indexOf('learningAsides.chatOutline')
+    )
+    const learned = within(outline).getByRole('region', {
+      name: 'learningAsides.whatYouLearned',
+    })
+
+    fireEvent.click(within(learned).getByRole('checkbox'))
+    expect(onSetIncludeInMain).toHaveBeenCalledWith(aside.updates[0], false)
+    fireEvent.click(
+      within(learned).getByRole('button', {
+        name: 'Concavity produces the lower bound.',
+      })
+    )
+    expect(onOpenAside).toHaveBeenCalledWith(aside.id)
   })
 
   it('nests parked asides and lists open questions under the resolved aside', () => {

@@ -99,6 +99,7 @@ const spies = {
   onUpdateStatus: vi.fn(),
   onOpenFullHeight: vi.fn(),
   onAttended: vi.fn(),
+  onSetIncludeInMain: vi.fn(),
 }
 
 // A controller with real expand/collapse state, as the workspace keeps it.
@@ -387,6 +388,18 @@ describe('InlineDiveThread', () => {
     expect(spies.onDraftResolution).not.toHaveBeenCalled()
   })
 
+  it('switches a resolved dive\'s conclusion in or out of main chat from its summary', () => {
+    render(<Harness asides={[resolved]} initialExpanded={resolved.id} />)
+
+    const toggle = screen.getByRole('checkbox', {
+      name: 'learningAsides.useInMainChatFor:Jensen gives a lower bound because the logarithm is concave everywhere.',
+    })
+    expect(toggle).toBeChecked()
+    fireEvent.click(toggle)
+
+    expect(spies.onSetIncludeInMain).toHaveBeenCalledWith(resolved.updates[0], false)
+  })
+
   it('nests a dive from an open question and opens deeper ones full height', () => {
     const child: LearningAside = {
       ...dive,
@@ -546,6 +559,72 @@ describe('InlineDiveThread', () => {
 
     expect(row(/Above/)).toHaveAttribute('aria-expanded', 'false')
     expect(scrollTop).toBe(500 - 320)
+  })
+
+  it('brings the reply into view in the chat when the learner waited for it', () => {
+    const question = 'Why concave?'
+    const reply = 'Its second derivative is negative.'
+    const geometry = vi
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockImplementation(function (this: HTMLElement) {
+        const text = this.textContent?.trim()
+        const { top, bottom } = this.matches('[data-slot="scroll-area-viewport"]')
+          ? { top: 0, bottom: 600 }
+          : this.hasAttribute('data-dive-transcript')
+            ? { top: 100, bottom: 610 }
+            : text === question
+              ? { top: 480, bottom: 540 }
+              : text === reply
+                ? { top: 556, bottom: 900 }
+                : { top: 0, bottom: 0 }
+        return { top, bottom, height: bottom - top } as DOMRect
+      })
+    try {
+      const details = { [dive.id]: { ...dive, messages: transcript } }
+      const { container, rerender } = render(
+        <Harness asides={[dive]} details={details} initialExpanded={dive.id} />
+      )
+      const scroller = container.querySelector<HTMLElement>(
+        '[data-slot="scroll-area-viewport"]'
+      )!
+      scroller.scrollTo = vi.fn()
+
+      fireEvent.change(screen.getByLabelText('learningAsides.askPlaceholder'), {
+        target: { value: question },
+      })
+      fireEvent.click(screen.getByRole('button', { name: 'learningAsides.send' }))
+      expect(spies.onSendMessage).toHaveBeenCalledWith(dive.id, question)
+      rerender(
+        <Harness
+          asides={[dive]}
+          details={details}
+          overrides={{ sendingAsideId: dive.id, pendingMessage: question }}
+        />
+      )
+      rerender(
+        <Harness
+          asides={[dive]}
+          details={{
+            [dive.id]: {
+              ...dive,
+              messages: [
+                ...transcript,
+                { id: 'human:2', type: 'human', content: question },
+                { id: 'ai:2', type: 'ai', content: reply },
+              ],
+            },
+          }}
+        />
+      )
+
+      // Only the chat's scroller moves, to the start of the reply.
+      expect(scroller.scrollTo).toHaveBeenLastCalledWith({
+        top: 324,
+        behavior: 'smooth',
+      })
+    } finally {
+      geometry.mockRestore()
+    }
   })
 
   it('opens the dive by its row outside the notebook chat', () => {

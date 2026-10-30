@@ -231,3 +231,138 @@ def test_surrealdb_is_reachable_checks_health_endpoint():
         probe.bind(("127.0.0.1", 0))
         free_port = probe.getsockname()[1]
     assert start_all.surrealdb_is_reachable("127.0.0.1", free_port) is False
+
+
+def test_a_second_ctrl_c_does_not_cut_the_shutdown_short(tmp_path, monkeypatch):
+    """Ctrl+C again while the stack stops must still stop all of it."""
+    import os
+    import signal
+    import subprocess
+
+    real_popen = subprocess.Popen
+    real_sleep = start_all.time.sleep
+    services: dict[str, subprocess.Popen] = {}
+    compose_calls: list[list[str]] = []
+    state = {"interrupted": False}
+
+    def service(name: str) -> subprocess.Popen:
+        services[name] = real_popen(["sleep", "30"], start_new_session=True)
+        return services[name]
+
+    def start_logged_process(command, log_path, environment, cwd=None):
+        name = "api" if "run_api.py" in command else "worker"
+        return service(name), (tmp_path / f"{name}.log").open("w")
+
+    def start_frontend(*args, **kwargs):
+        frontend = service("frontend")
+        real_wait = frontend.wait
+
+        def wait(timeout=None):
+            # The impatient second Ctrl+C, while cleanup waits on the frontend.
+            os.kill(os.getpid(), signal.SIGINT)
+            return real_wait(timeout=timeout)
+
+        frontend.wait = wait  # type: ignore[method-assign]
+        return frontend
+
+    def sleep(seconds):
+        if "frontend" not in services:
+            return  # The worker's startup window.
+        if not state["interrupted"]:
+            state["interrupted"] = True
+            os.kill(os.getpid(), signal.SIGINT)  # The first Ctrl+C.
+            return
+        real_sleep(seconds)
+
+    pid_file = tmp_path / "start-all.pid"
+    monkeypatch.setattr(start_all, "PID_FILE", pid_file)
+    monkeypatch.setattr(
+        start_all,
+        "load_environment",
+        lambda: {
+            "SURREAL_URL": "ws://localhost:8000/rpc",
+            "OPEN_NOTEBOOK_ENCRYPTION_KEY": "local-test-key",
+        },
+    )
+    monkeypatch.setattr(start_all, "ensure_port_available", lambda *args: None)
+    monkeypatch.setattr(start_all, "start_database", lambda *args: True)
+    monkeypatch.setattr(start_all, "wait_for_port", lambda *args, **kwargs: None)
+    monkeypatch.setattr(start_all, "wait_for_http", lambda *args, **kwargs: None)
+    monkeypatch.setattr(start_all, "start_logged_process", start_logged_process)
+    monkeypatch.setattr(start_all.subprocess, "Popen", start_frontend)
+    monkeypatch.setattr(
+        start_all.subprocess,
+        "run",
+        lambda command, **kwargs: compose_calls.append(command),
+    )
+    monkeypatch.setattr(start_all.time, "sleep", sleep)
+
+    handlers = {
+        signum: signal.getsignal(signum) for signum in (signal.SIGINT, signal.SIGTERM)
+    }
+    try:
+        try:
+            exit_code = start_all.main()
+        except KeyboardInterrupt:
+            pytest.fail("the second Ctrl+C interrupted the shutdown")
+        still_running = [
+            name for name, process in services.items() if process.poll() is None
+        ]
+    finally:
+        for signum, handler in handlers.items():
+            signal.signal(signum, handler)
+        for process in services.values():
+            if process.poll() is None:
+                process.kill()
+                process.wait()
+
+    assert exit_code == 0
+    assert sorted(services) == ["api", "frontend", "worker"]
+    assert still_running == []
+    assert compose_calls == [["docker", "compose", "down"]]
+    assert not pid_file.exists()
+
+
+def test_interrupts_are_ignored_only_while_stopping():
+    import os
+    import signal
+
+    received = []
+    previous = {
+        signum: signal.signal(signum, lambda signum, frame: received.append(signum))
+        for signum in (signal.SIGINT, signal.SIGTERM)
+    }
+    try:
+        with start_all.interrupts_ignored():
+            os.kill(os.getpid(), signal.SIGINT)
+            os.kill(os.getpid(), signal.SIGTERM)
+            assert signal.getsignal(signal.SIGINT) is signal.SIG_IGN
+        assert received == []
+        os.kill(os.getpid(), signal.SIGTERM)
+        assert received == [signal.SIGTERM]
+    finally:
+        for signum, handler in previous.items():
+            signal.signal(signum, handler)
+
+
+def test_stopping_the_database_gives_up_after_a_timeout(monkeypatch, capsys):
+    """A hung Docker daemon must not hang the shutdown.
+
+    Interrupts are ignored while the stack stops, and `docker compose down`
+    inherits that, so only a timeout can end a compose that never returns.
+    """
+    import subprocess
+
+    calls: list[dict] = []
+
+    def hung_compose(command, **kwargs):
+        calls.append({"command": command, **kwargs})
+        raise subprocess.TimeoutExpired(command, kwargs["timeout"])
+
+    monkeypatch.setattr(start_all.subprocess, "run", hung_compose)
+
+    start_all.stop_database({"SURREAL_URL": "ws://localhost:8000/rpc"})
+
+    assert calls[0]["command"] == ["docker", "compose", "down"]
+    assert calls[0]["timeout"] == start_all.COMPOSE_DOWN_TIMEOUT_SECONDS
+    assert "docker compose down" in capsys.readouterr().err

@@ -79,7 +79,10 @@ SurrealDB, the API health endpoint, the worker's initial database connection
 and the frontend port instead of relying on fixed sleeps. If the API or worker
 exits, it prints the relevant log tail; complete logs are at
 `/tmp/open-notebook-api.log` and `/tmp/open-notebook-worker.log`. Pressing
-**Ctrl+C** stops all four services, including the database container.
+**Ctrl+C** stops all four services, including the database container. Once
+stopping has started, further Ctrl+C presses (and SIGTERM) are ignored until
+every service is down, so an impatient second Ctrl+C cannot leave the API or
+worker running.
 
 If a SurrealDB already answers at the `SURREAL_URL` host and port (its
 `/health` endpoint), `make start-all` reuses it and leaves it running on

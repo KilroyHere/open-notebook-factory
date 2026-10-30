@@ -11,6 +11,8 @@ export interface NotebookContextStats {
   notesCount: number
   tokenCount?: number
   charCount?: number
+  /** Accepted learning conclusions the context limit keeps out of main chat. */
+  learningUpdatesOmitted?: number
 }
 
 // Format large numbers with K/M suffixes
@@ -50,6 +52,10 @@ export function ContextChip({
     details.push(t('chat.contextFullContent', { count: stats.sourcesFull }))
   }
   if (notes > 0) details.push(t('chat.contextNotesIncluded', { count: notes }))
+  const omitted = stats.learningUpdatesOmitted ?? 0
+  if (omitted > 0) {
+    details.push(t('chat.contextConclusionsLeftOut', { count: omitted }))
+  }
   const tokens = stats.tokenCount ?? 0
   const chars = stats.charCount ?? 0
   if (tokens > 0 || chars > 0) {

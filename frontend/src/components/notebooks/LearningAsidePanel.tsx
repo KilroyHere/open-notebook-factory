@@ -25,6 +25,7 @@ import { AsideResolveForm } from './AsideResolveForm'
 import { AsideStatusActions } from './AsideStatusActions'
 import { AsideSummary } from './AsideSummary'
 import { AsideTranscript } from './AsideTranscript'
+import type { SetIncludeInMain } from './IncludeInMainToggle'
 
 interface LearningAsidePanelProps {
   open: boolean
@@ -53,6 +54,8 @@ interface LearningAsidePanelProps {
   onReferenceClick?: (type: string, id: string) => void
   onDiveIntoQuestion?: (parent: LearningAside, question: string) => void
   onParkQuestion?: (parent: LearningAside, question: string) => void
+  /** "Use in main chat" on a resolved dive's summary. */
+  onSetIncludeInMain?: SetIncludeInMain
   /** Source and note titles for the evidence buttons. */
   referenceTitles?: ReferenceTitles
 }
@@ -81,6 +84,7 @@ export function LearningAsidePanel({
   onReferenceClick,
   onDiveIntoQuestion,
   onParkQuestion,
+  onSetIncludeInMain,
   referenceTitles,
 }: LearningAsidePanelProps) {
   const { t } = useTranslation()
@@ -301,6 +305,7 @@ export function LearningAsidePanel({
                     onDiveIntoQuestion={onDiveIntoQuestion}
                     onParkQuestion={onParkQuestion}
                     onReferenceClick={onReferenceClick}
+                    onSetIncludeInMain={onSetIncludeInMain}
                     referenceTitles={referenceTitles}
                   >
                     <Button

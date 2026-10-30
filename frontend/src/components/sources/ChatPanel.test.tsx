@@ -299,6 +299,39 @@ describe('ChatPanel composer', () => {
     expect(chip).toHaveTextContent('chat.contextInsightsOnly')
   })
 
+  it('says in the chip details how many conclusions the limit left out', () => {
+    const renderChip = (learningUpdatesOmitted: number) =>
+      render(
+        <ChatPanel
+          workspaceMode
+          messages={[]}
+          isStreaming={false}
+          contextIndicators={null}
+          notebookContextStats={{
+            sourcesInsights: 0,
+            sourcesFull: 1,
+            notesCount: 0,
+            tokenCount: 3900,
+            charCount: 15000,
+            learningUpdatesOmitted,
+          }}
+          onSendMessage={vi.fn()}
+        />
+      )
+
+    const { unmount } = renderChip(2)
+    // Screen readers get it from the chip; sighted users from its tooltip.
+    expect(screen.getByTestId('context-chip')).toHaveTextContent(
+      'chat.contextConclusionsLeftOut'
+    )
+    unmount()
+
+    renderChip(0)
+    expect(screen.getByTestId('context-chip')).not.toHaveTextContent(
+      'chat.contextConclusionsLeftOut'
+    )
+  })
+
   it('says when nothing is in context', () => {
     render(
       <ChatPanel

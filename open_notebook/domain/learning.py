@@ -17,20 +17,63 @@ AsideStatus = Literal["active", "parked", "resolved", "discarded"]
 JourneyStatus = Literal["active", "archived"]
 AnchorType = Literal["message", "source", "citation", "equation"]
 
+# Characters of anchor text an aside stores. Longer anchors are accepted (Go
+# deeper sends the whole answer) and clipped to this; the anchor's message_id
+# and the aside's context_snapshot still lead to the full text.
+ANCHOR_CONTENT_MAX_CHARS = 20_000
+# How far back from the limit the clip looks for a word boundary. A last word
+# longer than this (a URL, text without spaces) is cut through instead.
+_ANCHOR_WORD_BOUNDARY_WINDOW = 2_000
+# Tries at storing a resolution under the next free version number when
+# concurrent resolutions of the same aside take the number first.
+VERSION_SAVE_ATTEMPTS = 5
+
+
+def clip_anchor_content(text: str, limit: int = ANCHOR_CONTENT_MAX_CHARS) -> str:
+    """Strip ``text`` and, if it is longer than ``limit``, clip it with "…".
+
+    The result is at most ``limit`` characters. The cut ends at a word
+    boundary, so no word is split, unless the word at the cut is longer than
+    ``_ANCHOR_WORD_BOUNDARY_WINDOW``.
+    """
+    text = text.strip()
+    if len(text) <= limit:
+        return text
+    head = text[: limit - 1]
+    if not text[limit - 1].isspace():
+        # The cut falls inside a word: end at the whitespace before it.
+        floor = max(0, len(head) - _ANCHOR_WORD_BOUNDARY_WINDOW)
+        for index in range(len(head) - 1, floor - 1, -1):
+            if head[index].isspace():
+                head = head[:index]
+                break
+    return head.rstrip() + "…"
+
 
 class AsideAnchor(BaseModel):
     """Stable origin for an aside.
 
     ``content`` is a snapshot so an aside remains understandable when its
-    originating message or source changes. The optional locator fields provide
-    a route back to the live object when it still exists.
+    originating message or source changes. Text over ANCHOR_CONTENT_MAX_CHARS
+    is clipped (:func:`clip_anchor_content`). The optional locator fields
+    provide a route back to the live object when it still exists.
     """
 
     type: AnchorType = "message"
-    content: str = Field(min_length=1, max_length=20_000)
+    content: str = Field(min_length=1, max_length=ANCHOR_CONTENT_MAX_CHARS)
     message_id: Optional[str] = None
     source_id: Optional[str] = None
     locator: Optional[str] = Field(default=None, max_length=1_000)
+
+    @field_validator("content", mode="before")
+    @classmethod
+    def clip_long_content(cls, value: Any) -> Any:
+        if isinstance(value, str) and len(value) > ANCHOR_CONTENT_MAX_CHARS:
+            clipped = clip_anchor_content(value)
+            if not clipped:
+                raise InvalidInputError("Aside anchor content cannot be empty")
+            return clipped
+        return value
 
     @field_validator("content")
     @classmethod
@@ -96,29 +139,31 @@ class LearningJourney(ObjectModel):
         main_session_id: str,
         objective: Optional[str] = None,
     ) -> "LearningJourney":
-        existing = await cls.get_for_main_session(main_session_id)
-        if existing:
-            if objective is not None and objective != existing.objective:
-                existing.objective = objective
-                await existing.save()
-            return existing
-
-        journey = cls(
-            notebook=notebook_id,
-            main_session=main_session_id,
-            active_session=main_session_id,
-            objective=objective,
-        )
-        try:
+        journey = await cls.get_for_main_session(main_session_id)
+        if journey is None:
+            journey = cls(
+                notebook=notebook_id,
+                main_session=main_session_id,
+                active_session=main_session_id,
+                objective=objective,
+            )
+            try:
+                await journey.save()
+                return journey
+            except (DatabaseOperationError, RuntimeError):
+                # Two requests (two asides, or an aside and a section sync) can
+                # both find no journey and both create one. The unique
+                # main-session index rejects the second; repo_create reports
+                # that, like a transaction conflict, as RuntimeError. Use the
+                # journey that won instead of failing.
+                winner = await cls.get_for_main_session(main_session_id)
+                if winner is None:
+                    raise
+                journey = winner
+        if objective is not None and objective != journey.objective:
+            journey.objective = objective
             await journey.save()
-            return journey
-        except DatabaseOperationError:
-            # The unique main-session index can race when two asides are opened
-            # together. Resolve the winner instead of surfacing a false failure.
-            existing = await cls.get_for_main_session(main_session_id)
-            if existing:
-                return existing
-            raise
+        return journey
 
     async def get_asides(
         self, include_discarded: bool = False
@@ -139,7 +184,18 @@ class LearningJourney(ObjectModel):
     async def get_updates(
         self, include_unmerged: bool = True
     ) -> List["LearningUpdate"]:
-        asides = await self.get_asides(include_discarded=True)
+        """The journey's learning updates, oldest first.
+
+        ``include_unmerged=False`` keeps only what may enter main chat: the
+        latest version of each resolved aside, if it is included in main. Only
+        a resolved aside's conclusion is listed and switchable in the UI, so no
+        other aside's update reaches main chat (stored data can hold an
+        accepted update on an aside that was later reopened, parked or
+        discarded). Otherwise every stored version of every aside is listed.
+        """
+        asides = await self.get_asides(include_discarded=include_unmerged)
+        if not include_unmerged:
+            asides = [aside for aside in asides if aside.status == "resolved"]
         aside_ids = [ensure_record_id(aside.id) for aside in asides if aside.id]
         if not aside_ids:
             return []
@@ -207,6 +263,28 @@ class LearningAside(ObjectModel):
                 data[field] = ensure_record_id(data[field])
         return data
 
+    def change_status(self, status: AsideStatus) -> None:
+        """Apply a status change the learner asked for.
+
+        Active and parked asides switch between those two or are discarded.
+        An aside becomes resolved only through resolution and then keeps that
+        status (resolving again replaces its conclusion), and a discarded
+        aside stays discarded. Asking for the current status changes nothing;
+        anything else raises InvalidInputError and leaves the aside as it was.
+        """
+        if status == self.status:
+            return
+        if self.status == "resolved":
+            raise InvalidInputError(
+                "Resolved asides cannot be reopened, parked or discarded. "
+                "Resolve the aside again to change its conclusion."
+            )
+        if self.status == "discarded":
+            raise InvalidInputError("Discarded asides cannot be reopened or parked")
+        if status == "resolved":
+            raise InvalidInputError("Resolve an aside to mark it resolved")
+        self.status = status
+
     @classmethod
     async def get_for_chat_session(cls, session_id: str) -> Optional["LearningAside"]:
         try:
@@ -267,6 +345,61 @@ class LearningUpdate(ObjectModel):
             "citations": self.citations,
             "applied_message_id": self.applied_message_id,
         }
+
+    async def save_as_next_version(self, attempts: int = VERSION_SAVE_ATTEMPTS) -> None:
+        """Store this update as its aside's next version.
+
+        The version is one more than the highest stored one. Two resolutions
+        of the same aside at once can pick the same number; the unique
+        (aside, version) index rejects one, and that one is stored under the
+        next free number instead, up to ``attempts`` tries in all. Any other
+        failure is raised at once.
+        """
+        if self.id:
+            raise InvalidInputError("This learning update is already stored")
+        versions = await LearningUpdate.get_versions(self.aside)
+        for attempt in range(1, attempts + 1):
+            self.version = max((stored.version for stored in versions), default=0) + 1
+            try:
+                await self.save()
+                return
+            except RuntimeError:
+                versions = await LearningUpdate.get_versions(self.aside)
+                taken = any(stored.version == self.version for stored in versions)
+                if not taken or attempt == attempts:
+                    raise
+                logger.debug(
+                    f"Version {self.version} of {self.aside} was stored "
+                    "concurrently; trying the next one"
+                )
+
+    async def set_saved_note(self, note_id: str) -> None:
+        """Record the note this version was saved as.
+
+        Only ``saved_note`` is written, so a backlink or an include_in_main
+        change made since this copy was loaded is kept. The instance is
+        refreshed from the stored record.
+        """
+        if not self.id:
+            raise InvalidInputError(
+                "Learning update must be saved before it can be changed"
+            )
+        try:
+            rows = await repo_query(
+                "UPDATE $update_id SET saved_note = $note RETURN AFTER",
+                {
+                    "update_id": ensure_record_id(self.id),
+                    "note": ensure_record_id(note_id),
+                },
+            )
+        except Exception as exc:
+            logger.exception(f"Failed to link learning update {self.id} to {note_id}")
+            raise DatabaseOperationError("Failed to update learning update") from exc
+        if not rows:
+            raise NotFoundError(f"learning_update with id {self.id} not found")
+        stored = LearningUpdate(**rows[0])
+        for name in LearningUpdate.model_fields:
+            setattr(self, name, getattr(stored, name))
 
     @classmethod
     async def get_versions(cls, aside_id: str) -> List["LearningUpdate"]:
@@ -430,7 +563,18 @@ class LearningSection(ObjectModel):
             )
             try:
                 await section.save()
-            except DatabaseOperationError:
-                logger.exception(f"Failed to create section for message {message_id}")
+            except (DatabaseOperationError, RuntimeError):
+                # A concurrent sync can create the same section first: the
+                # unique (journey, start_message_id) index or a transaction
+                # conflict rejects this one, as RuntimeError from repo_create.
+                # Keep the section that won; fail if there is none.
+                created = {
+                    stored.start_message_id
+                    for stored in await cls.get_for_journey(journey_id)
+                }
+                if message_id not in created:
+                    raise
+                logger.debug(f"Section for {message_id} was created concurrently")
+                known.update(created)
             known.add(message_id)
         return await cls.get_for_journey(journey_id)

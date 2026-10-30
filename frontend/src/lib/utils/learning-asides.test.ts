@@ -1,12 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { LearningAside, LearningUpdate } from '@/lib/types/api'
+import { LearningAside, LearningJourney, LearningUpdate } from '@/lib/types/api'
 import {
   canOpenInline,
   childDiveForQuestion,
   childDives,
+  currentConclusion,
   diveLineage,
   isPassageDive,
+  journeyWithIncludeInMain,
+  learnedConclusions,
   withAside,
+  withIncludeInMain,
   createAsideTitle,
   createLearningUpdateDraft,
   documentCitations,
@@ -193,6 +197,93 @@ describe('journeyStats', () => {
       learned: 0,
       openQuestions: 0,
       savedForLater: 0,
+    })
+  })
+
+  describe('what was learned', () => {
+    const v1 = update({
+      id: 'learning_update:a1',
+      aside_id: 'learning_aside:a',
+      version: 1,
+      superseded: true,
+      conclusion: 'First take.',
+    })
+    const v2 = update({
+      id: 'learning_update:a2',
+      aside_id: 'learning_aside:a',
+      version: 2,
+      conclusion: 'Second take.',
+    })
+    const resolved = make({
+      id: 'learning_aside:a',
+      status: 'resolved',
+      updates: [v1, v2],
+    })
+    const leftOut = make({
+      id: 'learning_aside:b',
+      status: 'resolved',
+      updates: [
+        update({
+          id: 'learning_update:b1',
+          aside_id: 'learning_aside:b',
+          include_in_main: false,
+        }),
+      ],
+    })
+    const asides = [
+      resolved,
+      leftOut,
+      make({ id: 'learning_aside:open', status: 'active' }),
+      make({
+        id: 'learning_aside:gone',
+        status: 'discarded',
+        updates: [update({ id: 'learning_update:gone', aside_id: 'learning_aside:gone' })],
+      }),
+    ]
+
+    it('takes an aside\'s latest version unless a newer one replaced it', () => {
+      expect(currentConclusion(resolved)).toBe(v2)
+      expect(currentConclusion(make({ updates: [v1] }))).toBeUndefined()
+      expect(currentConclusion(make({}))).toBeUndefined()
+    })
+
+    it('lists the current conclusion of each resolved aside, in journey order', () => {
+      expect(learnedConclusions(asides)).toEqual([
+        { aside: resolved, update: v2 },
+        { aside: leftOut, update: leftOut.updates[0] },
+      ])
+    })
+
+    it('counts as learned exactly the listed conclusions main chat uses', () => {
+      const included = learnedConclusions(asides).filter(
+        ({ update }) => update.include_in_main
+      )
+      expect(journeyStats(asides).learned).toBe(included.length)
+      expect(included).toHaveLength(1)
+    })
+
+    it('switches one conclusion everywhere a journey lists it', () => {
+      const journey: LearningJourney = {
+        id: 'learning_journey:one',
+        notebook_id: 'notebook:1',
+        main_session_id: 'chat_session:main',
+        status: 'active',
+        asides,
+        updates: [v1, v2, leftOut.updates[0]],
+        created: '2026-10-29T00:00:00Z',
+        updated: '2026-10-29T00:00:00Z',
+      }
+
+      const next = journeyWithIncludeInMain(journey, v2.id, false)
+
+      const included = (updates: LearningUpdate[]) =>
+        updates.map((item) => item.include_in_main)
+      expect(included(next.asides[0].updates)).toEqual([true, false])
+      expect(included(next.updates)).toEqual([true, false, false])
+      // Asides without that conclusion keep their identity.
+      expect(next.asides[1]).toBe(leftOut)
+      expect(journeyStats(next.asides).learned).toBe(0)
+      expect(withIncludeInMain([v1], 'learning_update:other', false)).toEqual([v1])
     })
   })
 })

@@ -240,6 +240,23 @@ describe('useNotebookWorkspace dives', () => {
     expect(learning.closeAside).toHaveBeenCalled()
   })
 
+  it('passes on how many conclusions the context limit left out', () => {
+    vi.mocked(useNotebookChat).mockReturnValue({
+      messages: [],
+      currentSessionId: 'chat_session:main',
+      buildContext: vi.fn(),
+      tokenCount: 3900,
+      charCount: 15000,
+      learningUpdatesOmitted: 3,
+    } as unknown as ReturnType<typeof useNotebookChat>)
+
+    const { result } = renderWorkspace()
+
+    expect(result.current.contextStats).toEqual(
+      expect.objectContaining({ tokenCount: 3900, learningUpdatesOmitted: 3 })
+    )
+  })
+
   it('leaves full height to go back to a message', () => {
     vi.useFakeTimers()
     try {
@@ -256,4 +273,43 @@ describe('useNotebookWorkspace dives', () => {
       vi.useRealTimers()
     }
   })
+})
+
+describe('useNotebookWorkspace parkQuestion', () => {
+  beforeEach(() => {
+    vi.mocked(useNotebookChat).mockReturnValue({
+      messages: [{ id: 'human:1', type: 'human', content: 'Explain the ELBO.' }, answer],
+      currentSessionId: 'chat_session:main',
+      buildContext: vi.fn(),
+      tokenCount: 0,
+      charCount: 0,
+    } as unknown as ReturnType<typeof useNotebookChat>)
+  })
+
+  it('parks an active child dive for the question', () => {
+    const { result, learning } = renderWorkspace()
+
+    act(() => result.current.parkQuestion(root, 'Why a Gaussian prior?'))
+
+    expect(learning.updateStatus).toHaveBeenCalledWith({
+      asideId: child.id,
+      status: 'parked',
+    })
+    expect(learning.createAside).not.toHaveBeenCalled()
+  })
+
+  it.each(['parked', 'resolved'] as const)(
+    'leaves a %s child dive as it is',
+    (status) => {
+      const settled = { ...child, status }
+      const { result, learning } = renderWorkspace(
+        learningMock({ asides: [root, settled, grandchild] })
+      )
+
+      act(() => result.current.parkQuestion(root, 'Why a Gaussian prior?'))
+
+      expect(learning.updateStatus).not.toHaveBeenCalled()
+      expect(learning.createAside).not.toHaveBeenCalled()
+    }
+  )
 })

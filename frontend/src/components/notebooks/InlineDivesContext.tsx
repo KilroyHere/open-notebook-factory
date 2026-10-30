@@ -9,6 +9,7 @@ import type {
 } from '@/lib/types/api'
 import type { CreatingDive } from '@/lib/hooks/use-learning-asides'
 import type { DiveAttention } from '@/lib/hooks/use-notebook-workspace'
+import type { SetIncludeInMain } from './IncludeInMainToggle'
 
 /**
  * What the main chat needs to show dives as threads under their messages:
@@ -46,6 +47,8 @@ export interface InlineDivesController {
     asideId: string,
     status: Exclude<LearningAsideStatus, 'resolved'>
   ) => Promise<unknown>
+  /** "Use in main chat" on a resolved dive's summary. */
+  onSetIncludeInMain?: SetIncludeInMain
 }
 
 const InlineDivesContext = createContext<InlineDivesController | null>(null)

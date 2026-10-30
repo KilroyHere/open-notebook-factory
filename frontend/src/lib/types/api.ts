@@ -249,6 +249,11 @@ export interface BuildContextResponse {
   }
   token_count: number
   char_count: number
+  /**
+   * Accepted learning conclusions left out of `context.learning_updates`
+   * (and of the model's context) because their token budget was full.
+   */
+  learning_updates_omitted: number
 }
 
 export type LearningAsideStatus = 'active' | 'parked' | 'resolved' | 'discarded'
@@ -354,6 +359,11 @@ export interface ResolveLearningAsideRequest {
   citations?: string[]
   include_in_main: boolean
   save_as_note: boolean
+}
+
+/** `PATCH /learning/updates/{id}`: send a conclusion with main chat, or not. */
+export interface UpdateLearningUpdateRequest {
+  include_in_main: boolean
 }
 
 export interface DraftLearningResolutionRequest {

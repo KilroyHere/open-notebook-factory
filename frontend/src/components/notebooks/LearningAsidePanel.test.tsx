@@ -363,6 +363,54 @@ describe('LearningAsidePanel', () => {
     expect(onDraftResolution).not.toHaveBeenCalled()
   })
 
+  it('updates a resolution main chat leaves out without putting it back', async () => {
+    const onResolve = vi.fn().mockResolvedValue(undefined)
+    const leftOut: LearningAside = {
+      ...aside,
+      status: 'resolved',
+      updates: [
+        {
+          id: 'learning_update:one',
+          aside_id: aside.id,
+          conclusion: 'Approved conclusion.',
+          open_questions: [],
+          citations: [],
+          include_in_main: false,
+          version: 1,
+          created: aside.created,
+          updated: aside.updated,
+        },
+      ],
+    }
+    const { rerender } = render(
+      <LearningAsidePanel {...baseProps} onResolve={onResolve} activeAside={leftOut} />
+    )
+    const useInMain = () =>
+      screen.getByRole('checkbox', { name: 'learningAsides.includeInMain' })
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'learningAsides.resolveAgain' })
+    )
+    expect(useInMain()).not.toBeChecked()
+    fireEvent.click(
+      screen.getAllByRole('button', { name: 'learningAsides.resolve' }).at(-1)!
+    )
+    await waitFor(() =>
+      expect(onResolve).toHaveBeenCalledWith(
+        aside.id,
+        expect.objectContaining({ include_in_main: false })
+      )
+    )
+
+    // A first wrap-up of another dive starts included again.
+    const other: LearningAside = { ...aside, id: 'learning_aside:other' }
+    rerender(
+      <LearningAsidePanel {...baseProps} onResolve={onResolve} activeAside={other} />
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'learningAsides.wrapUp' }))
+    expect(useInMain()).toBeChecked()
+  })
+
   it('keeps an approved resolution\'s evidence without showing its IDs', async () => {
     const onResolve = vi.fn().mockResolvedValue(undefined)
     render(
@@ -572,6 +620,49 @@ describe('LearningAsidePanel', () => {
     expect(
       screen.getByText('Why does that inequality apply here?')
     ).toBeInTheDocument()
+  })
+
+  it('switches the resolved conclusion in or out of main chat', () => {
+    const onSetIncludeInMain = vi.fn()
+    const update = {
+      id: 'learning_update:one',
+      aside_id: aside.id,
+      conclusion: 'Jensen gives a lower bound because log is concave.',
+      open_questions: [],
+      citations: [],
+      include_in_main: false,
+      version: 1,
+      created: aside.created,
+      updated: aside.updated,
+    }
+    const { rerender } = render(
+      <LearningAsidePanel
+        {...baseProps}
+        activeAside={{ ...aside, status: 'resolved', updates: [update] }}
+        onSetIncludeInMain={onSetIncludeInMain}
+      />
+    )
+
+    const toggle = screen.getByRole('checkbox', {
+      name: 'learningAsides.useInMainChatFor',
+    })
+    expect(toggle).not.toBeChecked()
+    fireEvent.click(toggle)
+    expect(onSetIncludeInMain).toHaveBeenCalledWith(update, true)
+
+    // A version a newer resolution replaced can never reach main chat.
+    rerender(
+      <LearningAsidePanel
+        {...baseProps}
+        activeAside={{
+          ...aside,
+          status: 'resolved',
+          updates: [{ ...update, superseded: true }],
+        }}
+        onSetIncludeInMain={onSetIncludeInMain}
+      />
+    )
+    expect(screen.queryByRole('checkbox')).toBeNull()
   })
 
   it('opens source, note, and insight citations from the resolved summary', () => {
@@ -821,6 +912,67 @@ describe('LearningAsidePanel', () => {
     // A failed send gives the question back to retry.
     fail(new Error('502'))
     await waitFor(() => expect(input).toHaveValue('Why concave?'))
+  })
+
+  it('brings a new reply into view in its own scroller', () => {
+    const question = 'Why concave?'
+    const reply = 'Its second derivative is negative.'
+    const geometry = vi
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockImplementation(function (this: HTMLElement) {
+        const text = this.textContent?.trim()
+        // The learner was at the end: the question was added just below it.
+        const { top, bottom } = this.matches('[data-slot="scroll-area-viewport"]')
+          ? { top: 60, bottom: 600 }
+          : this.hasAttribute('data-dive-transcript')
+            ? { top: 80, bottom: 640 }
+            : text === question
+              ? { top: 590, bottom: 630 }
+              : text === reply
+                ? { top: 646, bottom: 1400 }
+                : { top: 0, bottom: 0 }
+        return { top, bottom, height: bottom - top } as DOMRect
+      })
+    try {
+      const { container, rerender } = render(
+        <LearningAsidePanel {...baseProps} activeAside={aside} />
+      )
+      const viewport = container.querySelector<HTMLElement>(
+        '[data-slot="scroll-area-viewport"]'
+      )!
+      viewport.scrollTo = vi.fn()
+
+      rerender(
+        <LearningAsidePanel
+          {...baseProps}
+          activeAside={aside}
+          isSending
+          pendingMessage={question}
+        />
+      )
+      rerender(
+        <LearningAsidePanel
+          {...baseProps}
+          activeAside={{
+            ...aside,
+            messages: [
+              ...aside.messages,
+              { id: 'human:two', type: 'human', content: question },
+              { id: 'ai:two', type: 'ai', content: reply },
+            ],
+          }}
+        />
+      )
+
+      // A reply taller than the view: its start goes near the top, and the
+      // view shows as much of it as fits from there.
+      expect(viewport.scrollTo).toHaveBeenLastCalledWith({
+        top: 646 - 60 - 24,
+        behavior: 'smooth',
+      })
+    } finally {
+      geometry.mockRestore()
+    }
   })
 
   it('takes the cursor along when it opens over the chat', () => {

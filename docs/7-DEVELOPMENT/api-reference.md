@@ -60,11 +60,23 @@ Use `/docs` for request and response shapes. This map shows where things are:
 
 ## Learning context in notebook chat
 
-`POST /api/chat/execute` adds the session's accepted learning conclusions (the latest included resolution of each aside, see [ADR-014](decisions/ADR-014-learning-aside-context.md)) to the model's context itself. Any `learning_updates` sent in its `context` are ignored. `POST /api/chat/context` with a `session_id` returns the same conclusions as `context.learning_updates`, for display and the token count.
+`POST /api/chat/execute` adds the session's accepted learning conclusions (the latest included resolution of each resolved aside, see [ADR-014](decisions/ADR-014-learning-aside-context.md)) to the model's context itself. Any `learning_updates` sent in its `context` are ignored. `POST /api/chat/context` with a `session_id` returns the same conclusions as `context.learning_updates`, for display and the token count. A message to an aside (`POST /api/learning/asides/{id}/messages`) gets the same conclusions, those of its journey's main session, and ignores `learning_updates` in its `context` too.
 
-The conclusions share a budget of 4,000 tokens per turn (`LEARNING_UPDATES_TOKEN_BUDGET` in `api/routers/_chat_shared.py`). The newest are kept first; once one does not fit, it and all older ones are left out of that turn. `learning_updates_omitted` in the `POST /api/chat/context` response counts them.
+The conclusions share a budget of 4,000 tokens per turn (`LEARNING_UPDATES_TOKEN_BUDGET` in `api/routers/_chat_shared.py`). The newest are kept first. One that does not fit in what is left of the budget is left out of that turn, and older ones still fill the rest. `learning_updates_omitted` in the `POST /api/chat/context` response counts those left out.
 
 To leave one conclusion out of main chat without re-resolving its aside, send `PATCH /api/learning/updates/{id}` with `{"include_in_main": false}`; `true` puts it back. It changes that version in place (no new version) and returns it. Only the latest version of an aside can be changed: a superseded version returns 400, an unknown ID 404.
+
+## Learning asides
+
+`POST /api/learning/asides` accepts anchor text (`anchor.content`) up to 200,000 characters, since **Go deeper** sends the whole answer; longer requests return 422. The aside stores the first 20,000 characters, cut at a word boundary and ending in "…" (`ANCHOR_CONTENT_MAX_CHARS` in `open_notebook/domain/learning.py`). The anchor's `message_id` and the aside's branch snapshot still lead to the full answer.
+
+`POST /api/learning/asides/{id}/resolve` stores the conclusion as the aside's next version, one more than the highest stored one; resolutions sent at the same time each get their own version. With `save_as_note: true` the note is created after the version. If the note cannot be created or linked, neither is kept and the request fails (404 when the notebook no longer exists, otherwise 500), so it can simply be retried. Resolving moves the journey's `active_session_id` back to the aside's parent thread only when the journey was on that aside.
+
+`PATCH /api/learning/asides/{id}` renames an aside or changes its status: active and parked switch between each other, and either can be discarded. A resolved aside keeps its status (resolve it again to change its conclusion) and a discarded one stays discarded; asking for any other change returns 400, and asking for the current status changes nothing.
+
+In `PATCH /api/learning/asides/{id}` and `PATCH /api/learning/sections/{id}`, leave a field out to keep its value. An explicit `null` (for `title`, `status` or `pinned`) returns 422.
+
+`DELETE /api/chat/sessions/{id}` on a main session also deletes its learning journey: every aside, conclusion, outline section and aside session. Notes saved from asides stay in the notebook. On a learning aside's own session it returns 400; discard the aside instead.
 
 ## Async operations
 

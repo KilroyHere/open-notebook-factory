@@ -233,7 +233,9 @@ export function useNotebookWorkspace({
   const parkQuestion = (parent: LearningAside, question: string) => {
     const existing = childDiveForQuestion(knownAsides, parent.id, question)
     if (existing) {
-      if (existing.status !== 'parked') {
+      // Only an active dive can be parked: a parked one already is, and the
+      // API refuses to change a resolved one.
+      if (existing.status === 'active') {
         void updateStatus({ asideId: existing.id, status: 'parked' }).catch(
           () => undefined
         )
@@ -337,8 +339,16 @@ export function useNotebookWorkspace({
       notesCount,
       tokenCount: chat.tokenCount,
       charCount: chat.charCount,
+      learningUpdatesOmitted: chat.learningUpdatesOmitted,
     }
-  }, [sources, notes, contextSelections, chat.tokenCount, chat.charCount])
+  }, [
+    sources,
+    notes,
+    contextSelections,
+    chat.tokenCount,
+    chat.charCount,
+    chat.learningUpdatesOmitted,
+  ])
 
   return {
     notebookId,
