@@ -9,6 +9,7 @@ import { Archive, ArchiveRestore, ArrowLeft, Trash2 } from 'lucide-react'
 import { useUpdateNotebook } from '@/lib/hooks/use-notebooks'
 import { NotebookDeleteDialog } from './NotebookDeleteDialog'
 import { InlineEdit } from '@/components/common/InlineEdit'
+import { MobileNavMenu } from '@/components/layout/MobileNavMenu'
 import { useTranslation } from '@/lib/hooks/use-translation'
 
 interface NotebookHeaderProps {
@@ -52,6 +53,8 @@ export function NotebookHeader({ notebook }: NotebookHeaderProps) {
         <div className="space-y-1">
           <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 flex-1 items-center gap-2">
+              {/* The icon rail is hidden below lg; the app menu lives here. */}
+              <MobileNavMenu className="lg:hidden" />
               <Button
                 asChild
                 variant="ghost"

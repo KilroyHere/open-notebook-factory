@@ -213,6 +213,7 @@ export const caES = {
     settings: "Configuració",
     advanced: "Avançat",
     nav: "Navegació",
+    openMenu: "Obre el menú",
     language: "Canvia l'idioma",
     theme: "Tema",
     ask: "Pregunta",

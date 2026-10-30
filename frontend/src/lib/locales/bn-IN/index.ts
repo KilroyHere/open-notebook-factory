@@ -213,6 +213,7 @@ export const bnIN = {
     settings: "সেটিংস",
     advanced: "উন্নত",
     nav: "নেভিগেশন",
+    openMenu: "মেনু খুলুন",
     language: "ভাষা টগল",
     theme: "থিম",
     ask: "জিজ্ঞাসা",

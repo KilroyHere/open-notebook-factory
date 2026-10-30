@@ -63,7 +63,7 @@ Opening a notebook shows its header, then three panels: **Sources** on the left,
 └───┴──────────────────┴────────────────────────────┴────────────────────┘
 ```
 
-On small screens the workspace becomes three tabs, **Sources**, **Chat** and **Studio**, with Chat selected first. Studio has the same **Journey** and **Notes** tabs as on a wide screen. Opening a branch, the main thread or a message from Journey switches back to Chat.
+On small screens (narrower than 1024 px) the workspace becomes three tabs, **Sources**, **Chat** and **Studio**, with Chat selected first, and the icon rail is hidden so the notebook gets the whole width. The **menu** button at the start of the notebook header opens the app navigation in a drawer; choosing a page closes it. Studio has the same **Journey** and **Notes** tabs as on a wide screen. Opening a branch, the main thread or a message from Journey switches back to Chat.
 
 ### Sources column
 

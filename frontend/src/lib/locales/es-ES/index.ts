@@ -213,6 +213,7 @@ export const esES = {
     settings: "Configuración",
     advanced: "Avanzado",
     nav: "Navegación",
+    openMenu: "Abrir menú",
     language: "Cambiar idioma",
     theme: "Tema",
     ask: "Preguntar",

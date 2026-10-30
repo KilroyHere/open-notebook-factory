@@ -213,6 +213,7 @@ export const itIT = {
     settings: "Impostazioni",
     advanced: "Avanzate",
     nav: "Navigazione",
+    openMenu: "Apri il menu",
     language: "Cambia lingua",
     theme: "Tema",
     ask: "Chiedi",

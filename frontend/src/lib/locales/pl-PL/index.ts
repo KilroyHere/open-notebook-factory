@@ -213,6 +213,7 @@ export const plPL = {
     settings: "Ustawienia",
     advanced: "Zaawansowane",
     nav: "Nawigacja",
+    openMenu: "Otwórz menu",
     language: "Przełącz język",
     theme: "Motyw",
     ask: "Pytaj",

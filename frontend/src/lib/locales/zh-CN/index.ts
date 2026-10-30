@@ -213,6 +213,7 @@ export const zhCN = {
     settings: "设置",
     advanced: "高级",
     nav: "导航",
+    openMenu: "打开菜单",
     language: "切换语言",
     theme: "主题",
     ask: "提问",

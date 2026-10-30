@@ -211,6 +211,7 @@ export const enUS = {
     settings: "Settings",
     advanced: "Advanced",
     nav: "Navigation",
+    openMenu: "Open menu",
     language: "Toggle language",
     theme: "Theme",
     ask: "Ask",

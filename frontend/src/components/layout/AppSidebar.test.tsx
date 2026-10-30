@@ -114,4 +114,23 @@ describe('AppSidebar', () => {
     expect(screen.queryByTestId('sidebar-toggle')).toBeNull()
     expect(toggleCollapse).not.toHaveBeenCalled()
   })
+
+  it('stays expanded in the mobile menu drawer and reports navigation', () => {
+    vi.mocked(useSidebarStore).mockReturnValue({
+      isCollapsed: true,
+      toggleCollapse: vi.fn(),
+    } as any)
+    vi.mocked(useMediaQuery).mockReturnValue(true)
+    const onNavigate = vi.fn()
+
+    const { container } = render(<AppSidebar inDrawer onNavigate={onNavigate} />)
+
+    // Narrow and collapsed, yet the drawer shows labels and no toggle.
+    expect(screen.getByText('common.appName')).toBeInTheDocument()
+    expect(screen.queryByTestId('sidebar-toggle')).toBeNull()
+    expect(container.querySelector('.app-sidebar')?.className).not.toContain('w-16')
+
+    fireEvent.click(screen.getByText('navigation.podcasts'))
+    expect(onNavigate).toHaveBeenCalledTimes(1)
+  })
 })

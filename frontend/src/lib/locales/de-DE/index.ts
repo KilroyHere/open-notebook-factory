@@ -216,6 +216,7 @@ export const deDE = {
     settings: "Einstellungen",
     advanced: "Erweitert",
     nav: "Navigation",
+    openMenu: "Menü öffnen",
     language: "Sprache wechseln",
     theme: "Design",
     ask: "Fragen",

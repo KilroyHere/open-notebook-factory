@@ -213,6 +213,7 @@ export const jaJP = {
     settings: "設定",
     advanced: "詳細設定",
     nav: "ナビゲーション",
+    openMenu: "メニューを開く",
     language: "言語を切り替え",
     theme: "テーマ",
     ask: "質問",

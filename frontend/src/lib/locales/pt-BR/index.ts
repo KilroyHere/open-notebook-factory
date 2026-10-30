@@ -213,6 +213,7 @@ export const ptBR = {
     settings: "Configurações",
     advanced: "Avançado",
     nav: "Navegação",
+    openMenu: "Abrir menu",
     language: "Alternar idioma",
     theme: "Tema",
     ask: "Perguntar",

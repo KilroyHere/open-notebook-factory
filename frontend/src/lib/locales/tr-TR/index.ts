@@ -213,6 +213,7 @@ export const trTR = {
     settings: "Ayarlar",
     advanced: "Gelişmiş",
     nav: "Gezinme",
+    openMenu: "Menüyü aç",
     language: "Dili değiştir",
     theme: "Tema",
     ask: "Sor",

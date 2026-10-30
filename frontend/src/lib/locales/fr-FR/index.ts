@@ -213,6 +213,7 @@ export const frFR = {
     settings: "Paramètres",
     advanced: "Avancé",
     nav: "Navigation",
+    openMenu: "Ouvrir le menu",
     language: "Changer de langue",
     theme: "Thème",
     ask: "Demander",

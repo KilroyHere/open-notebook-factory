@@ -213,6 +213,7 @@ export const ruRU = {
     settings: "Настройки",
     advanced: "Дополнительно",
     nav: "Навигация",
+    openMenu: "Открыть меню",
     language: "Переключить язык",
     theme: "Тема",
     ask: "Запрос",
