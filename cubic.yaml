@@ -46,7 +46,7 @@ reviews:
           schema, auth, or data scoping) — see PDR-001.
         - Capabilities that only work on one AI provider without a PDR justifying the
           exclusivity — the core is provider-agnostic by default (PDR-002).
-        - Features that conflict with the "What Open Notebook IS NOT" list.
+        - Features that conflict with the "What Open Notebook Factory IS NOT" list.
         - Structural/architectural decisions introduced without a decision record in
           docs/7-DEVELOPMENT/decisions/ (half a page, same PR).
       file_paths:

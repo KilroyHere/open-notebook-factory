@@ -1,6 +1,6 @@
 # From Source Installation
 
-Clone the repository and run each part yourself. **For developers and contributors.** To just use Open Notebook, [Docker Compose](docker-compose.md) is simpler.
+Clone the repository and run each part yourself. **For developers and contributors.** To just use Open Notebook Factory, [Docker Compose](docker-compose.md) is simpler.
 
 A source install runs four processes, each in its own terminal:
 
@@ -23,16 +23,16 @@ A source install runs four processes, each in its own terminal:
 ## 1. Clone the repository
 
 ```bash
-git clone https://github.com/lfnovo/open-notebook.git
-cd open-notebook
+git clone https://github.com/KilroyHere/open-notebook-factory.git
+cd open-notebook-factory
 ```
 
 If you plan to contribute, clone your fork instead and add `upstream`:
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/open-notebook.git
-cd open-notebook
-git remote add upstream https://github.com/lfnovo/open-notebook.git
+git clone https://github.com/YOUR_USERNAME/open-notebook-factory.git
+cd open-notebook-factory
+git remote add upstream https://github.com/KilroyHere/open-notebook-factory.git
 ```
 
 ## 2. Install Python dependencies
@@ -156,4 +156,4 @@ The development workflow is described in the [Development Setup](../7-DEVELOPMEN
 - [Architecture](../7-DEVELOPMENT/architecture.md)
 - [Contributing](../7-DEVELOPMENT/contributing.md)
 
-**Need help?** [Discord](https://discord.gg/37XJPXfz2w) · [GitHub Issues](https://github.com/lfnovo/open-notebook/issues)
+**Need help?** [GitHub Issues](https://github.com/KilroyHere/open-notebook-factory/issues)

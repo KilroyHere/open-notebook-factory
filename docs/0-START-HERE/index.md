@@ -1,10 +1,10 @@
-# Open Notebook - Start Here
+# Open Notebook Factory - Start Here
 
-**Open Notebook** is a self-hosted, privacy-focused AI research assistant. Add documents, web pages, audio and video, chat with an AI about them with citations, take notes, and turn your research into podcasts, using the AI providers you choose.
+**Open Notebook Factory** is a self-hosted, privacy-focused AI research assistant. Add documents, web pages, audio and video, chat with an AI about them with citations, take notes, and turn your research into podcasts, using the AI providers you choose.
 
 ## Choose your path
 
-Each quick start installs Open Notebook with Docker Compose and ends with a working chat.
+Each quick start installs Open Notebook Factory with Docker Compose and ends with a working chat.
 
 ### I have an API key for a cloud AI provider
 OpenAI, Anthropic, Google, Mistral, Groq, OpenRouter and more.
@@ -12,7 +12,7 @@ OpenAI, Anthropic, Google, Mistral, Groq, OpenRouter and more.
 → [Cloud Providers Quick Start](quick-start-cloud.md) (about 5 minutes)
 
 ### I want to run everything locally
-Ollama in Docker next to Open Notebook. No API keys; nothing leaves your machine.
+Ollama in Docker next to Open Notebook Factory. No API keys; nothing leaves your machine.
 
 → [Local Quick Start](quick-start-local.md) (about 10 minutes, plus model downloads)
 
@@ -27,14 +27,15 @@ Running from source, Windows without Docker, or a hosting platform → [Installa
 
 - **Add content**: PDFs, Office and OpenDocument files, web pages, YouTube, audio, video, plain text
 - **Chat**: ask questions about the sources in a notebook, with citations, and choose what each source shares with the AI
+- **Go deeper**: follow a tangent from an answer in a [deep dive](../3-USER-GUIDE/deep-dives.md) without losing your place, then carry what you learned back into the chat
 - **Ask and search**: full-text and semantic search across everything
 - **Transform**: run summaries and extraction prompts on sources to produce insights
 - **Take notes**: write your own or save AI answers as notes
 - **Create podcasts**: 1 to 4 speakers with configurable profiles
 
-## Open Notebook and Google Notebook LM
+## Open Notebook Factory and Google Notebook LM
 
-| | Open Notebook | Google Notebook LM |
+| | Open Notebook Factory | Google Notebook LM |
 |---|---|---|
 | **Where it runs** | Your machine or server | Google's cloud |
 | **AI models** | 20+ providers, cloud or local | Google's models |
@@ -49,4 +50,4 @@ Running from source, Windows without Docker, or a hosting platform → [Installa
 
 ---
 
-**Need help?** Join our [Discord community](https://discord.gg/37XJPXfz2w) or see the [full documentation](../index.md).
+**Need help?** See the [full documentation](../index.md), or ask in [GitHub Issues](https://github.com/KilroyHere/open-notebook-factory/issues).

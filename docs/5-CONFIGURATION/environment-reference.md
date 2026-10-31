@@ -1,6 +1,6 @@
 # Environment Variable Reference
 
-The complete list of environment variables Open Notebook and its libraries read. Other pages link here instead of keeping their own lists. AI provider keys are not configured here: add them in **Manage → Models** (see [AI Providers](ai-providers.md)).
+The complete list of environment variables Open Notebook Factory and its libraries read. Other pages link here instead of keeping their own lists. AI provider keys are not configured here: add them in **Manage → Models** (see [AI Providers](ai-providers.md)).
 
 ---
 
@@ -89,7 +89,7 @@ With Docker Compose, `SURREAL_USER` and `SURREAL_PASSWORD` are the two values yo
 | `HTTPS_PROXY` | none | API + Worker | Proxy for outbound HTTPS |
 | `NO_PROXY` | none | API + Worker | Hosts that bypass the proxy. Must include the SurrealDB host |
 
-`NO_PROXY` must list the internal database hosts (`surrealdb`, `host.docker.internal`, `localhost`). The SurrealDB client connects over a websocket, and `websockets` 15+ sends even `ws://` connections through a configured proxy, which then rejects the internal host with HTTP 403 and the API and worker fail to start. Open Notebook adds `host.docker.internal,surrealdb,localhost,127.0.0.1` and the host from `SURREAL_URL` to `NO_PROXY` at startup as a safety net, but set them explicitly too.
+`NO_PROXY` must list the internal database hosts (`surrealdb`, `host.docker.internal`, `localhost`). The SurrealDB client connects over a websocket, and `websockets` 15+ sends even `ws://` connections through a configured proxy, which then rejects the internal host with HTTP 403 and the API and worker fail to start. Open Notebook Factory adds `host.docker.internal,surrealdb,localhost,127.0.0.1` and the host from `SURREAL_URL` to `NO_PROXY` at startup as a safety net, but set them explicitly too.
 
 ```bash
 HTTP_PROXY=http://user:password@proxy.corp.com:8080
@@ -103,10 +103,10 @@ NO_PROXY=localhost,127.0.0.1,host.docker.internal,surrealdb,.local
 
 | Variable | Default | Read by | Description |
 |----------|---------|---------|-------------|
-| `ESPERANTO_LLM_TIMEOUT` | `180` | API + Worker | Seconds each language-model call may take: chat, Ask, transformations, insights, podcast outline and transcript. Applies to every provider, Ollama included. Open Notebook sets 180 when unset (the library default is 60). Keep it below 600 so the call fails with a clear error before the web UI gives up |
+| `ESPERANTO_LLM_TIMEOUT` | `180` | API + Worker | Seconds each language-model call may take: chat, Ask, transformations, insights, podcast outline and transcript. Applies to every provider, Ollama included. Open Notebook Factory sets 180 when unset (the library default is 60). Keep it below 600 so the call fails with a clear error before the web UI gives up |
 | `NEXT_PUBLIC_API_TIMEOUT_MS` | `600000` | Frontend build | How long the web UI waits for an API response, in milliseconds. `0` disables it. Compiled into the frontend, so the published images always wait 10 minutes |
 | `ESPERANTO_EMBEDDING_TIMEOUT` | `60` | API + Worker | Seconds per embedding request |
-| `ESPERANTO_RERANKER_TIMEOUT` | `60` | API + Worker | Seconds per reranker request (library setting; Open Notebook does not use rerankers today) |
+| `ESPERANTO_RERANKER_TIMEOUT` | `60` | API + Worker | Seconds per reranker request (library setting; Open Notebook Factory does not use rerankers today) |
 | `ESPERANTO_TTS_TIMEOUT` | `300` | Worker | Seconds per text-to-speech request during podcast generation. Raise it for slow self-hosted TTS |
 | `ESPERANTO_STT_TIMEOUT` | `300` | API + Worker | Seconds per speech-to-text request made directly through Esperanto. Source transcription uses `CCORE_STT_TIMEOUT` instead |
 | `CCORE_STT_TIMEOUT` | `3600` | Worker | Seconds per speech-to-text request when transcribing audio and video sources |
@@ -137,7 +137,7 @@ NO_PROXY=localhost,127.0.0.1,host.docker.internal,surrealdb,.local
 | `SURREAL_COMMANDS_RETRY_WAIT_MULTIPLIER` | `2` | Worker | Global policy: exponential backoff multiplier |
 | `SURREAL_COMMANDS_RETRY_LOG_LEVEL` | `info` | Worker | Global policy: log level for retry messages (`debug`, `info`, `warning`, `error`, `none`) |
 
-> **The `SURREAL_COMMANDS_RETRY_*` variables rarely change anything.** Each Open Notebook job declares its own retry policy, and a job's own policy overrides the global one: source processing retries up to 15 times, embeddings, insights and transformations up to 5, and podcast generation runs once. Only jobs without a policy of their own (today, the "rebuild embeddings" coordinator) follow the global settings. Errors that can't succeed on retry, such as a failed extraction or a missing model, are never retried.
+> **The `SURREAL_COMMANDS_RETRY_*` variables rarely change anything.** Each Open Notebook Factory job declares its own retry policy, and a job's own policy overrides the global one: source processing retries up to 15 times, embeddings, insights and transformations up to 5, and podcast generation runs once. Only jobs without a policy of their own (today, the "rebuild embeddings" coordinator) follow the global settings. Errors that can't succeed on retry, such as a failed extraction or a missing model, are never retried.
 
 ---
 
@@ -156,7 +156,7 @@ Changing chunk settings affects new embeddings only. Rebuild existing embeddings
 
 ## Content extraction
 
-Open Notebook passes these to the content-core library, which runs extraction in the worker. Which engine is used is chosen in **Settings → Content Processing** (see [Content Processing Engines](../3-USER-GUIDE/content-processing-engines.md)).
+Open Notebook Factory passes these to the content-core library, which runs extraction in the worker. Which engine is used is chosen in **Settings → Content Processing** (see [Content Processing Engines](../3-USER-GUIDE/content-processing-engines.md)).
 
 | Variable | Default | Read by | Description |
 |----------|---------|---------|-------------|
@@ -172,7 +172,7 @@ Open Notebook passes these to the content-core library, which runs extraction in
 | `CCORE_AUDIO_SEGMENT_MINUTES` | `10` | Worker | Long audio and video is split into segments of this many minutes before transcription. `0` sends the file whole (for self-hosted speech-to-text without an upload limit) |
 | `CCORE_AUDIO_CONCURRENCY` | `3` | Worker | Segments transcribed in parallel (1 to 10) |
 
-The speech-to-text model, the URL and document engines and the preferred YouTube transcript languages come from Open Notebook's settings, so the matching `CCORE_*` variables (`CCORE_AUDIO_MODEL`, `CCORE_URL_ENGINE`, `CCORE_YOUTUBE_LANGUAGES` and so on) are overridden and have no effect.
+The speech-to-text model, the URL and document engines and the preferred YouTube transcript languages come from Open Notebook Factory's settings, so the matching `CCORE_*` variables (`CCORE_AUDIO_MODEL`, `CCORE_URL_ENGINE`, `CCORE_YOUTUBE_LANGUAGES` and so on) are overridden and have no effect.
 
 YouTube cookies with Docker Compose:
 
@@ -225,7 +225,7 @@ SurrealDB's own log level is the `--log` argument in the `surrealdb` service's `
 
 ## Legacy: AI provider variables (deprecated)
 
-> **Deprecated.** Configure providers in **Manage → Models**. These variables still work as a fallback (the database is read first, then the environment), but there is no guarantee they keep working, and new automation should not be built on them. A declarative provisioning contract for headless deployments is being discussed in [#765](https://github.com/lfnovo/open-notebook/discussions/765).
+> **Deprecated.** Configure providers in **Manage → Models**. These variables still work as a fallback (the database is read first, then the environment), but there is no guarantee they keep working, and new automation should not be built on them.
 
 If you have them set, **Manage → Models** shows **Environment Variables Detected** with a **Migrate to Database** button. Migration creates a credential named "Default (Migrated from env)" per provider. It copies only the variables marked "yes" below; the others keep working only as an environment fallback and must be re-entered by hand if you remove them.
 
@@ -267,7 +267,7 @@ If you have them set, **Manage → Models** shows **Environment Variables Detect
 
 ## Variables that do nothing
 
-These appear in older guides, examples or forum posts. Nothing in Open Notebook or its libraries reads them:
+These appear in older guides, examples or forum posts. Nothing in Open Notebook Factory or its libraries reads them:
 
 | Variable | Use instead |
 |----------|-------------|

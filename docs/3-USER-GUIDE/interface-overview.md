@@ -6,7 +6,7 @@ The workspace pages have a sidebar on the left (it can be collapsed to icons). T
 
 ```
 ┌──────────────────────┐
-│ Open Notebook        │
+│ Open Notebook Factory│
 │ [+ New]              │  → Source, Notebook, Podcast
 │                      │
 │ COLLECT              │
@@ -74,14 +74,14 @@ On small screens (narrower than 1024 px) the workspace becomes three tabs, **Sou
 
 ### Studio
 
-Studio has two tabs. It opens on **Journey** once the current chat has an aside, and on **Notes** before that; after you pick a tab it stays on your choice.
+Studio has two tabs. It opens on **Journey** once the current chat has a deep dive, and on **Notes** before that; after you pick a tab it stays on your choice.
 
-- **Journey** starts with three counts for the current chat: **Learned** (resolved asides whose conclusion is used in the main chat), **Open questions** (questions on the latest conclusions that no dive has picked up yet) and **Saved for later** (parked asides). Below them, **Outline** starts with **What you've learned**, the conclusion of each resolved dive with a **Use in main chat** checkbox (uncheck it to leave that conclusion out of main-chat messages; one the context limit leaves out says **Left out to fit the context limit**), then lists the chat's sections with each aside nested under the turn it came from. **Map** shows the main thread, each branch, its summary and the merged reply. Clicking an aside or a conclusion scrolls the chat to its dive and opens it there. See [Chat Effectively](chat-effectively.md#learning-asides).
+- **Journey** starts with three counts for the current chat: **Learned** (resolved dives whose conclusion is used in the main chat), **Open questions** (questions on the latest conclusions that no dive has picked up yet) and **Saved for later** (parked dives). Below them, **Outline** starts with **What you've learned**, the conclusion of each resolved dive with a **Use in main chat** checkbox (uncheck it to leave that conclusion out of main-chat messages; one the context limit leaves out says **Left out to fit the context limit**), then lists the chat's sections with each dive nested under the answer it came from. **Map** shows the main thread, each branch, its summary and the merged reply. Clicking a dive or a conclusion scrolls the chat to its dive and opens it there. See [Deep Dives](deep-dives.md#the-journey-tab).
 - **Notes**: **Write Note** creates a note. **Context** has **Include all in context** and **Exclude all from context**. Each **note card** shows the title, an **AI Generated** or **Human** badge and a context icon (on or off). Click a card to edit the note. See [Working with Notes](working-with-notes.md).
 
 ### Chat column
 
-Notebook chat with the sources and notes in context. **Go deeper** under an answer opens a deep dive right below it, as a thread you can fold to one row (**Deep dive · title**, or **✓ Learned: …** once resolved) and unfold again; **Open full height** shows a long dive over the chat instead ([Learning Asides](chat-effectively.md#learning-asides)). Selecting part of an answer shows **Go deeper** and **Save to note** for just that passage; in a dive's answer, Go deeper opens a dive nested under that dive ([Going deeper on a passage](chat-effectively.md#going-deeper-on-a-passage)). The button labeled with the current session title opens **Chat Sessions**. The message box is one rounded field: under the text sit a chip with what's in context (for example **2 sources · 1 note**), the model button, which picks a model for the session, and the send button. Hover or focus the chip to see how many sources are at *Insights only* and *Full content*, the estimated size in tokens and characters and, when the context limit leaves learned conclusions out, how many. Send with **Ctrl+Enter** (**⌘+Enter** on Mac). See [Chat Effectively](chat-effectively.md).
+Notebook chat with the sources and notes in context. **Go deeper** under an answer opens a deep dive right below it, as a thread you can fold to one row (**Deep dive · title**, or **✓ Learned: …** once resolved) and unfold again; **Open full height** shows a long dive over the chat instead ([Deep Dives](deep-dives.md)). Selecting part of an answer shows **Go deeper** and **Save to note** for just that passage; in a dive's answer, Go deeper opens a dive nested under that dive ([Going deeper on a passage](deep-dives.md#going-deeper-on-a-passage)). Above the message box, **Asides** lists the conversation's dives, and the button labeled with the current session title opens **Chat Sessions**. The message box is one rounded field: under the text sit a chip with what's in context (for example **2 sources · 1 note**), the model button, which picks a model for the session, and the send button. Hover or focus the chip to see how many sources are at *Insights only* and *Full content*, the estimated size in tokens and characters and, when the context limit leaves learned conclusions out, how many. Send with **Ctrl+Enter** (**⌘+Enter** on Mac). See [Chat Effectively](chat-effectively.md).
 
 ---
 

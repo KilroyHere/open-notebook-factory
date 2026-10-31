@@ -1,12 +1,12 @@
 # Reverse Proxy Configuration
 
-Run Open Notebook behind nginx, Caddy, Traefik or a hosting platform, with your own domain and HTTPS.
+Run Open Notebook Factory behind nginx, Caddy, Traefik or a hosting platform, with your own domain and HTTPS.
 
 ---
 
 ## How It Works
 
-The `lfnovo/open_notebook` image runs three processes in one container: the Next.js frontend on port 8502, the API on port 5055 and the background worker. The Next.js server forwards every `/api/*` request it receives to the API (`INTERNAL_API_URL`, default `http://localhost:5055`).
+The `ghcr.io/kilroyhere/open-notebook-factory` image runs three processes in one container: the Next.js frontend on port 8502, the API on port 5055 and the background worker. The Next.js server forwards every `/api/*` request it receives to the API (`INTERNAL_API_URL`, default `http://localhost:5055`).
 
 So a reverse proxy only needs to reach **port 8502**:
 
@@ -78,12 +78,12 @@ server {
 
 ### Compose example with nginx
 
-Add an `nginx` service next to the `surrealdb` and `open_notebook` services of the [shipped docker-compose.yml](https://github.com/lfnovo/open-notebook/blob/main/docker-compose.yml), and stop publishing the app ports to the outside:
+Add an `nginx` service next to the `surrealdb` and `open_notebook` services of the [shipped docker-compose.yml](https://github.com/KilroyHere/open-notebook-factory/blob/main/docker-compose.yml), and stop publishing the app ports to the outside:
 
 ```yaml
 services:
   open_notebook:
-    image: lfnovo/open_notebook:v1-latest
+    image: ghcr.io/kilroyhere/open-notebook-factory:v1-latest
     environment:
       - API_URL=https://notebook.example.com
       - OPEN_NOTEBOOK_ENCRYPTION_KEY=<generated-key>
@@ -135,7 +135,7 @@ Caddy obtains and renews certificates automatically.
 ```yaml
 services:
   open_notebook:
-    image: lfnovo/open_notebook:v1-latest
+    image: ghcr.io/kilroyhere/open-notebook-factory:v1-latest
     environment:
       - API_URL=https://notebook.example.com
       # plus the variables from the shipped docker-compose.yml
@@ -231,7 +231,7 @@ Three limits apply to uploads from the UI, and the smallest wins:
 | Next.js proxy for `/api/*` | 100 MB | Fixed in the frontend build |
 | API | 100 MB | `OPEN_NOTEBOOK_MAX_UPLOAD_SIZE_MB` |
 
-When the proxy rejects a file, the response doesn't come from Open Notebook, so it has no CORS headers and the browser reports a CORS error with status 413. When the API rejects it, the message is `Request body exceeds the maximum allowed upload size`. To upload files larger than 100 MB, raise `OPEN_NOTEBOOK_MAX_UPLOAD_SIZE_MB` and send them to the API directly (port 5055, or a `/api/` location routed to 5055 as above).
+When the proxy rejects a file, the response doesn't come from Open Notebook Factory, so it has no CORS headers and the browser reports a CORS error with status 413. When the API rejects it, the message is `Request body exceeds the maximum allowed upload size`. To upload files larger than 100 MB, raise `OPEN_NOTEBOOK_MAX_UPLOAD_SIZE_MB` and send them to the API directly (port 5055, or a `/api/` location routed to 5055 as above).
 
 Traefik example (dynamic file configuration):
 

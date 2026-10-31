@@ -1,6 +1,6 @@
 # Database - SurrealDB Configuration
 
-Open Notebook stores everything except uploaded files and podcast audio in [SurrealDB](https://surrealdb.com). The API and the background worker both connect to it with the same five variables. Schema migrations run automatically when the API starts.
+Open Notebook Factory stores everything except uploaded files and podcast audio in [SurrealDB](https://surrealdb.com). The API and the background worker both connect to it with the same five variables. Schema migrations run automatically when the API starts.
 
 ---
 
@@ -24,7 +24,7 @@ Set all five explicitly. The API and the job queue fall back to different defaul
 
 The host in `SURREAL_URL` is the database as seen **from wherever the API and worker run**.
 
-| Open Notebook | SurrealDB | `SURREAL_URL` |
+| Open Notebook Factory | SurrealDB | `SURREAL_URL` |
 |---------------|-----------|---------------|
 | Docker Compose (shipped file) | `surrealdb` service in the same compose file | `ws://surrealdb:8000/rpc` |
 | Docker | On the host machine | `ws://host.docker.internal:8000/rpc` (on Linux, add `extra_hosts: ["host.docker.internal:host-gateway"]` to the service) |
@@ -55,7 +55,7 @@ The compose file passes them to both the `surrealdb` command and the `open_noteb
 
 ## Several instances on one SurrealDB
 
-A SurrealDB server can hold many namespaces, and each namespace many databases. To run several independent Open Notebook instances against one server, give each instance its own `SURREAL_NAMESPACE` or `SURREAL_DATABASE`.
+A SurrealDB server can hold many namespaces, and each namespace many databases. To run several independent Open Notebook Factory instances against one server, give each instance its own `SURREAL_NAMESPACE` or `SURREAL_DATABASE`.
 
 ---
 

@@ -6,9 +6,11 @@ Questions that aren't about an error message. For errors, see the [Troubleshooti
 
 ## General
 
-### What is Open Notebook?
+### What is Open Notebook Factory?
 
 An open-source, self-hosted research assistant in the spirit of Google's NotebookLM: you collect sources into notebooks, chat with them, search them, run transformations that extract insights, and generate podcasts. You choose the AI providers, including fully local ones.
+
+It is a fork of [Open Notebook](https://github.com/lfnovo/open-notebook) by Luis Novo. It adds deep dives, which let you follow a tangent from an answer, wrap it up into a conclusion and use that conclusion in the main chat.
 
 ### How is it different from Google NotebookLM?
 
@@ -48,7 +50,7 @@ Yes. Every model role is assigned separately under **Manage → Models → Defau
 
 ### What happens if I change the embedding model?
 
-Existing embeddings were made by the old model and won't match new searches. Open Notebook warns you and offers to go to the **Advanced** page to rebuild them. Rebuild before relying on search or Ask.
+Existing embeddings were made by the old model and won't match new searches. Open Notebook Factory warns you and offers to go to the **Advanced** page to rebuild them. Rebuild before relying on search or Ask.
 
 ---
 
@@ -101,11 +103,10 @@ Back up, then `docker compose pull && docker compose up -d`. Database migrations
 
 ## Getting help
 
-- **Discord:** https://discord.gg/37XJPXfz2w
-- **GitHub Discussions:** questions and ideas, https://github.com/lfnovo/open-notebook/discussions
-- **GitHub Issues:** reproducible bugs, https://github.com/lfnovo/open-notebook/issues
+- **GitHub Issues:** bugs, questions and ideas, https://github.com/KilroyHere/open-notebook-factory/issues
+- **Security vulnerabilities:** report them privately, https://github.com/KilroyHere/open-notebook-factory/security/advisories/new
 
-When reporting a bug, include the exact error message, steps to reproduce, relevant logs (without keys or passwords), your version and how you run Open Notebook.
+When reporting a bug, include the exact error message, steps to reproduce, relevant logs (without keys or passwords), your version and how you run Open Notebook Factory.
 
 ---
 

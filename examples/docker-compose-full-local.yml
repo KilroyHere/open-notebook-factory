@@ -3,7 +3,7 @@
 # This is the complete privacy-focused setup with NO external APIs needed:
 # - Ollama: Local LLM and embeddings (mistral, llama, nomic-embed, etc.)
 # - Speaches: Local TTS (text-to-speech) and STT (speech-to-text)
-# - Open Notebook: Your research assistant
+# - Open Notebook Factory: Your research assistant
 # - SurrealDB: Local database
 #
 # Perfect for:
@@ -21,9 +21,9 @@
 #   5. Configure providers in UI
 #
 # Full documentation:
-# - Ollama setup: https://github.com/lfnovo/open-notebook/blob/main/examples/README.md
-# - TTS setup: https://github.com/lfnovo/open-notebook/blob/main/docs/5-CONFIGURATION/local-tts.md
-# - STT setup: https://github.com/lfnovo/open-notebook/blob/main/docs/5-CONFIGURATION/local-stt.md
+# - Ollama setup: https://github.com/KilroyHere/open-notebook-factory/blob/main/examples/README.md
+# - TTS setup: https://github.com/KilroyHere/open-notebook-factory/blob/main/docs/5-CONFIGURATION/local-tts.md
+# - STT setup: https://github.com/KilroyHere/open-notebook-factory/blob/main/docs/5-CONFIGURATION/local-stt.md
 
 services:
   surrealdb:
@@ -70,7 +70,7 @@ services:
     # and add GPU device mapping (see docs)
 
   open_notebook:
-    image: lfnovo/open_notebook:v1-latest
+    image: ghcr.io/kilroyhere/open-notebook-factory:v1-latest
     ports:
       - "8502:8502"
       - "5055:5055"
@@ -120,7 +120,7 @@ volumes:
 #   docker compose exec speaches uv tool run speaches-cli model download Systran/faster-whisper-small
 #
 # ==========================================
-# CONFIGURATION IN OPEN NOTEBOOK
+# CONFIGURATION IN OPEN NOTEBOOK FACTORY
 # ==========================================
 #
 # 1. Configure Ollama:

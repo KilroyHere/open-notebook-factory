@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-Open Notebook is an actively developed project. Security fixes are applied to the
+Open Notebook Factory is an actively developed project. Security fixes are applied to the
 **latest released version** only; there are no long-term support branches.
 
 | Version | Supported          |
@@ -15,16 +15,15 @@ reporting an issue — the problem may already be fixed.
 
 ## Reporting a Vulnerability
 
-**Please do not report security vulnerabilities through public GitHub issues,
-discussions, or pull requests.**
+**Please do not report security vulnerabilities through public GitHub issues or
+pull requests.**
 
 Instead, report them privately through GitHub's built-in **private vulnerability
 reporting**:
 
-1. Go to the [Security tab](https://github.com/lfnovo/open-notebook/security) of
-   the repository.
-2. Click **"Report a vulnerability"**.
-3. Fill out the form with as much detail as you can.
+1. Open a [new private vulnerability report](https://github.com/KilroyHere/open-notebook-factory/security/advisories/new)
+   (the repository's **Security** tab → **Report a vulnerability**).
+2. Fill out the form with as much detail as you can.
 
 This keeps the report private between you and the maintainers until a fix is
 available.
@@ -34,7 +33,7 @@ When reporting, please include where relevant:
 - A description of the vulnerability and its impact.
 - Steps to reproduce (a proof of concept, affected endpoint/component, or sample
   configuration).
-- The Open Notebook version and how you are running it (Docker Compose,
+- The Open Notebook Factory version and how you are running it (Docker Compose,
   single-container, from source).
 - Any suggested remediation, if you have one.
 
@@ -49,7 +48,7 @@ When reporting, please include where relevant:
 
 ## Scope
 
-Open Notebook is **self-hosted**: you run the API, frontend, and SurrealDB
+Open Notebook Factory is **self-hosted**: you run the API, frontend, and SurrealDB
 yourself, and you control the AI provider credentials. Please keep in mind:
 
 - The built-in password middleware (`OPEN_NOTEBOOK_PASSWORD`) is a basic access
@@ -62,4 +61,4 @@ yourself, and you control the AI provider credentials. Please keep in mind:
   in the project — though we welcome reports where the defaults or docs actively
   steer users toward an insecure setup.
 
-Thank you for helping keep Open Notebook and its users safe.
+Thank you for helping keep Open Notebook Factory and its users safe.

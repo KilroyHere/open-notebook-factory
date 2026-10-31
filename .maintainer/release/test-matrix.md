@@ -23,7 +23,7 @@ with investment) follows the table.
 | Real podcast | podcast, TTS or prompt changes | one episode on a dense notebook | audio plays, transcript in the selected language | TTS credential | owner / paid | pre-GO | yes |
 | UX tour | any UI change | ~10 min walk of every changed screen, light and dark | nothing broken or off-theme | dev stack | owner / free | pre-GO | yes |
 | Pushed image | every release | `make release-stack TAG=<ver> [DUMP=…]` on the registry artifact | core flows work; credentials decrypt; opt-in runtimes gated | images pushed, dev-data copy | owner / free | post-trigger, pre-promotion | yes |
-| Manifests | every release | `docker manifest inspect` per registry × variant | `['amd64','arm64']` for all four, then for `v1-latest*` | images pushed | agent / free | post-trigger | yes |
+| Manifests | every release | `docker manifest inspect` per variant on GHCR | `['amd64','arm64']` for both, then for `v1-latest*` | images pushed | agent / free | post-trigger | yes |
 
 ## Probe library (extend per release)
 

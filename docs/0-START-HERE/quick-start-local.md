@@ -1,6 +1,6 @@
 # Quick Start - Local & Private (10 minutes)
 
-Run Open Notebook and **Ollama** together in Docker. No cloud API keys: your content is processed by models on your machine, not sent to an AI provider. To keep the app itself private, make sure other devices can't reach it (see the note in Step 1).
+Run Open Notebook Factory and **Ollama** together in Docker. No cloud API keys: your content is processed by models on your machine, not sent to an AI provider. To keep the app itself private, make sure other devices can't reach it (see the note in Step 1).
 
 **Already have Ollama installed on this computer?** Use the [External Ollama guide](quick-start-external-ollama.md) instead.
 
@@ -15,7 +15,7 @@ Run Open Notebook and **Ollama** together in Docker. No cloud API keys: your con
 ```bash
 mkdir open-notebook
 cd open-notebook
-curl -o docker-compose.yml https://raw.githubusercontent.com/lfnovo/open-notebook/main/docker-compose.yml
+curl -o docker-compose.yml https://raw.githubusercontent.com/KilroyHere/open-notebook-factory/main/docker-compose.yml
 ```
 
 (On Windows PowerShell, use `curl.exe`.)
@@ -47,7 +47,7 @@ docker compose up -d
 
 ## Step 4: Download models (2-5 min)
 
-Open Notebook needs a **chat model** and an **embedding model**. Nothing downloads them automatically:
+Open Notebook Factory needs a **chat model** and an **embedding model**. Nothing downloads them automatically:
 
 ```bash
 docker compose exec ollama ollama pull qwen3
@@ -82,7 +82,7 @@ The last step of that page creates a notebook, adds a text source and sends a ch
 
 ## Troubleshooting
 
-**Test shows a red cross.** The base URL must be `http://ollama:11434` (the service name), not `localhost`: inside the Open Notebook container, `localhost` is the container itself. Also check that you pulled at least one model; the test uses one.
+**Test shows a red cross.** The base URL must be `http://ollama:11434` (the service name), not `localhost`: inside the Open Notebook Factory container, `localhost` is the container itself. Also check that you pulled at least one model; the test uses one.
 
 **Responses are very slow or time out.** Small models on CPU are slow. Try a smaller model, enable GPU access, or set `OPEN_NOTEBOOK_WORKER_MAX_TASKS=1` so background jobs don't compete with chat. Timeouts are covered in the [Ollama guide](../5-CONFIGURATION/ollama.md).
 
@@ -118,4 +118,4 @@ More in [OpenAI-Compatible Providers](../5-CONFIGURATION/openai-compatible.md).
 - [Docker Compose guide](../1-INSTALLATION/docker-compose.md): settings, backups, updates
 - [User Guide](../3-USER-GUIDE/index.md)
 
-**Need help?** Join our [Discord community](https://discord.gg/37XJPXfz2w).
+**Need help?** See [Quick Fixes](../6-TROUBLESHOOTING/quick-fixes.md), or ask in [GitHub Issues](https://github.com/KilroyHere/open-notebook-factory/issues).

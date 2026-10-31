@@ -40,7 +40,7 @@ KEY=$(grep '^OPEN_NOTEBOOK_ENCRYPTION_KEY' "$REPO/.env" 2>/dev/null | cut -d= -f
 DB=$(grep '^SURREAL_DATABASE' "$REPO/.env" 2>/dev/null | cut -d= -f2- | tr -d '"' || true)
 
 compose() {
-  APP_IMAGE="lfnovo/open_notebook:$TAG" DATA_DIR="$RC_DATA" \
+  APP_IMAGE="ghcr.io/kilroyhere/open-notebook-factory:$TAG" DATA_DIR="$RC_DATA" \
   API_PORT=15055 FE_PORT=18502 PROXY_PORT=18080 \
   RC_API_URL="http://localhost:15055" \
   RC_ENCRYPTION_KEY="${KEY:-release-test-key}" RC_SURREAL_DB="${DB:-open_notebook}" \
@@ -57,8 +57,8 @@ case "$1" in
   up)
     # Pull the pushed image so a same-named local build can't shadow the
     # registry artifact we mean to verify (non-fatal for local-only tags).
-    docker pull "lfnovo/open_notebook:$TAG" || \
-      echo "WARNING: could not pull lfnovo/open_notebook:$TAG — using the local image if present."
+    docker pull "ghcr.io/kilroyhere/open-notebook-factory:$TAG" || \
+      echo "WARNING: could not pull ghcr.io/kilroyhere/open-notebook-factory:$TAG — using the local image if present."
     [ -n "$WITH_RUNTIMES" ] && echo "Opt-in runtimes ENABLED (Docling + Crawl4AI) — first boot will be slow."
     compose down -v >/dev/null 2>&1 || true
     rm -rf "$RC_DATA"; mkdir -p "$RC_DATA/surreal" "$RC_DATA/notebook"
@@ -83,7 +83,7 @@ case "$1" in
       sleep 5
     done
     NB=$(curl -s http://localhost:15055/api/notebooks | python3 -c "import json,sys; print(len(json.load(sys.stdin)))" 2>/dev/null || echo "?")
-    echo "RC stack up — image lfnovo/open_notebook:$TAG"
+    echo "RC stack up — image ghcr.io/kilroyhere/open-notebook-factory:$TAG"
     echo "  UI:        http://localhost:18502"
     echo "  via nginx: http://localhost:18080"
     echo "  API:       http://localhost:15055"

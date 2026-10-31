@@ -1,6 +1,6 @@
 # Connection Issues - UI, API & Database
 
-When the pieces of Open Notebook can't reach each other. There are three hops:
+When the pieces of Open Notebook Factory can't reach each other. There are three hops:
 
 ```
 Browser ──> Web UI (8502) ──> API (5055) ──> SurrealDB (8000)
@@ -30,7 +30,7 @@ The first start after enabling `OPEN_NOTEBOOK_ENABLE_DOCLING` or `OPEN_NOTEBOOK_
 
 ## "Unable to Connect to API Server"
 
-Full overlay text: **Unable to Connect to API Server** — "The Open Notebook API server could not be reached". On the login page the same problem reads "Unable to connect to server. Please check if the API is running."
+Full overlay text: **Unable to Connect to API Server** — "The Open Notebook Factory API server could not be reached". On the login page the same problem reads "Unable to connect to server. Please check if the API is running."
 
 The UI loaded, but the browser can't reach the API. Click **Show Technical Details** in the overlay: **Attempted URL** is the API address the browser used.
 
@@ -117,7 +117,7 @@ See [Security](../5-CONFIGURATION/security.md#password-protection).
 
 ## Provider connections (Test Connection)
 
-"Cannot connect to server. Check the URL is correct." and "Cannot connect to Ollama. Check if Ollama server is running." come from the **Test** button in Manage → Models. They are about the AI provider's address, not about Open Notebook's own API. See [AI & Chat Issues → Test fails](ai-chat-issues.md#test-fails).
+"Cannot connect to server. Check the URL is correct." and "Cannot connect to Ollama. Check if Ollama server is running." come from the **Test** button in Manage → Models. They are about the AI provider's address, not about Open Notebook Factory's own API. See [AI & Chat Issues → Test fails](ai-chat-issues.md#test-fails).
 
 ### SSL errors with a provider
 

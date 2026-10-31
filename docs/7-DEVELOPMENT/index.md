@@ -1,11 +1,11 @@
 # Development
 
-Documentation for people (and coding agents) working on the Open Notebook codebase.
+Documentation for people (and coding agents) working on the Open Notebook Factory codebase.
 
 ## Start here
 
 1. **[Development Setup](development-setup.md)**: install, configure and run the stack from source.
-2. **[Contributing](contributing.md)**: the Discussions → Issues → PRs workflow, commit and CHANGELOG conventions, and the checks CI runs.
+2. **[Contributing](contributing.md)**: the Issues → PRs workflow, commit and CHANGELOG conventions, and the checks CI runs.
 3. **[Change Playbooks](change-playbooks.md)**: step-by-step recipes for common changes (new field, endpoint, provider, migration, command, language).
 
 The normative rules for coding agents (and humans in a hurry) are in the `AGENTS.md` files: [root](../../AGENTS.md), [backend](../../open_notebook/AGENTS.md) (also covers `api/`, `commands/`, `prompts/`) and [frontend](../../frontend/AGENTS.md).
@@ -28,14 +28,16 @@ The normative rules for coding agents (and humans in a hurry) are in the `AGENTS
 | [Decision Records](decisions/README.md) | ADRs and PDRs: why things are the way they are |
 | [VISION.md](../../VISION.md) | Product identity, current posture and priorities |
 | [Maintainer Guide](maintainer-guide.md) | Triage, reviews, labels |
+| [Syncing with Upstream](syncing-upstream.md) | Merging Open Notebook's `main` into the fork, migration numbers, where conflicts are expected |
 
 ## Getting help
 
-- **GitHub Discussions**: questions, ideas, product direction, design and architecture
-- **GitHub Issues**: reproducible bugs and approved work items
-- **Discord**: [join the server](https://discord.gg/37XJPXfz2w) for real-time help
+- **[GitHub Issues](https://github.com/KilroyHere/open-notebook-factory/issues)**: bugs, questions, ideas, design proposals and approved work items
+- **Security vulnerabilities**: report them privately through a [security advisory](https://github.com/KilroyHere/open-notebook-factory/security/advisories/new)
 
-## Libraries we maintain
+## Libraries it depends on
+
+Luis Novo, the author of Open Notebook, maintains these. A bug whose cause is in one of them is fixed there first.
 
 - [Esperanto](https://github.com/lfnovo/esperanto): one interface over the AI providers
 - [Content Core](https://github.com/lfnovo/content-core): content extraction

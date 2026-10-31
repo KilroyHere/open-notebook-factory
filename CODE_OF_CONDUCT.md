@@ -59,9 +59,8 @@ representative at an online or offline event.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the community leaders responsible for enforcement through the
-contact form at **[open-notebook.ai](https://www.open-notebook.ai)** or via our
-**[Discord community](https://discord.gg/37XJPXfz2w)**.
+reported to the community leaders responsible for enforcement by contacting
+the maintainer, **[KilroyHere](https://github.com/KilroyHere)**, on GitHub.
 
 All complaints will be reviewed and investigated promptly and fairly.
 

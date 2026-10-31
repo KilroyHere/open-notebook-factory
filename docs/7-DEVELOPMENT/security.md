@@ -1,13 +1,10 @@
 # Security Guidelines
 
-This document outlines security practices for Open Notebook development. It is informed by real vulnerabilities discovered through coordinated disclosure with [CERT-EU](https://cert.europa.eu) and should be treated as mandatory reading for all contributors.
+This document outlines security practices for Open Notebook Factory development. It is informed by real vulnerabilities found in Open Notebook through coordinated disclosure with [CERT-EU](https://cert.europa.eu) and should be treated as mandatory reading for all contributors.
 
 ## Reporting Vulnerabilities
 
-If you discover a security vulnerability, **do not open a public GitHub issue**. Instead:
-
-1. Use [GitHub Security Advisories](https://github.com/lfnovo/open-notebook/security/advisories/new) to report privately
-2. Or email the maintainers directly
+If you discover a security vulnerability, **do not open a public GitHub issue**. Report it privately through a [GitHub security advisory](https://github.com/KilroyHere/open-notebook-factory/security/advisories/new) (the repository's Security tab → **Report a vulnerability**). See [SECURITY.md](../../SECURITY.md) for what to include.
 
 We follow coordinated vulnerability disclosure and will work with you on a fix before any public announcement.
 
@@ -142,7 +139,7 @@ Never pass user-provided file paths directly to file reading or content extracti
 
 ### Authentication
 
-Open Notebook currently uses simple password-based middleware (`PasswordAuthMiddleware`). This is suitable for single-user self-hosted deployments but should be hardened for production:
+Open Notebook Factory currently uses simple password-based middleware (`PasswordAuthMiddleware`). This is suitable for single-user self-hosted deployments but should be hardened for production:
 
 - Set `OPEN_NOTEBOOK_PASSWORD` explicitly - there is no hardcoded default password; if it's unset, auth is fully disabled (all requests pass through unchecked)
 - Set a strong encryption key (`OPEN_NOTEBOOK_ENCRYPTION_KEY`). There is no default: credential storage is unavailable until it is set
@@ -186,9 +183,9 @@ When reviewing PRs, check for:
 
 ---
 
-## Past Vulnerabilities
+## Past Vulnerabilities (inherited from Open Notebook)
 
-These vulnerabilities were reported by CERT-EU and are documented here as learning examples:
+These vulnerabilities were reported by CERT-EU to Open Notebook, before this fork, and fixed there; the advisories are Open Notebook's. Open Notebook Factory is based on a later release, so it includes the fixes. They are documented here as learning examples:
 
 | Version | Vulnerability | Severity | Advisory |
 |---------|--------------|----------|----------|

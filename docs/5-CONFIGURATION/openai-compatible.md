@@ -1,6 +1,6 @@
 # OpenAI-Compatible Providers
 
-The **OpenAI Compatible** provider connects Open Notebook to any server that speaks the OpenAI API: LM Studio, vLLM, llama.cpp's server, LocalAI, Text Generation WebUI, Speaches and many hosted gateways. It supports language, embedding, speech-to-text and text-to-speech models.
+The **OpenAI Compatible** provider connects Open Notebook Factory to any server that speaks the OpenAI API: LM Studio, vLLM, llama.cpp's server, LocalAI, Text Generation WebUI, Speaches and many hosted gateways. It supports language, embedding, speech-to-text and text-to-speech models.
 
 For Ollama and oMLX, prefer their native providers: [Ollama](ollama.md), [oMLX](omlx.md).
 
@@ -21,7 +21,7 @@ One configuration has one Base URL. To use different servers for different jobs 
 
 ## Base URL from inside Docker
 
-`localhost` inside the Open Notebook container is the container itself.
+`localhost` inside the Open Notebook Factory container is the container itself.
 
 | Your server runs | Base URL |
 |------------------|----------|
@@ -29,7 +29,7 @@ One configuration has one Base URL. To use different servers for different jobs 
 | On the host, Linux | `http://host.docker.internal:<port>/v1` after adding `extra_hosts: ["host.docker.internal:host-gateway"]` to the `open_notebook` service, or the bridge IP `http://172.17.0.1:<port>/v1` |
 | In the same compose file | `http://<service-name>:<container-port>/v1` |
 | On another machine | `http://<server-ip>:<port>/v1` |
-| Open Notebook from source, server on the same machine | `http://localhost:<port>/v1` |
+| Open Notebook Factory from source, server on the same machine | `http://localhost:<port>/v1` |
 
 The server must listen on an address the container can reach, often `0.0.0.0` rather than `127.0.0.1`. Binding to `0.0.0.0` exposes the server, usually without authentication, on every network interface: allow its port only from this host and its Docker networks (for example with your firewall), never from untrusted networks.
 
@@ -43,8 +43,8 @@ docker compose exec open_notebook curl -s http://host.docker.internal:1234/v1/mo
 
 ## LM Studio
 
-1. In LM Studio, load a model and start the local server (default port 1234). Enable "Serve on Local Network" if Open Notebook runs in Docker on Linux or on another machine.
-2. Base URL: `http://host.docker.internal:1234/v1` (Open Notebook in Docker) or `http://localhost:1234/v1` (from source). No API key.
+1. In LM Studio, load a model and start the local server (default port 1234). Enable "Serve on Local Network" if Open Notebook Factory runs in Docker on Linux or on another machine.
+2. Base URL: `http://host.docker.internal:1234/v1` (Open Notebook Factory in Docker) or `http://localhost:1234/v1` (from source). No API key.
 
 ## vLLM
 
