@@ -4,8 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+Releases of this fork are numbered after the Open Notebook release they're based on, plus `.postN`
+(1.15.0.post1 is the first release on top of 1.15.0).
 
 ## [Unreleased]
+
+## [1.15.0.post1] - 2026-10-31
+
+The first release of Open Notebook Factory, based on Open Notebook 1.15.0.
 
 ### Added
 - **Deep dives: follow a tangent without losing your place.** **Go deeper** on an assistant answer in notebook chat opens a deep dive (a learning aside) as a thread under that answer, so the main conversation stays where it was. You can also select a passage of an answer, in main chat or inside a dive, and use the toolbar that appears (**Go deeper** / **Save to note**); a dive about a passage quotes it ("On this passage") while still seeing the whole answer and the conversation before it. A dive unfolds into its own conversation, with numbered citations and math, a question box (Ctrl+Enter, ⌘+Enter on macOS, sends), **Wrap up**, **Save for later**, **Discard** and **Open full height** for long dives. One dive is open at a time, a new reply scrolls into view unless you have scrolled away, and a resume prompt brings you back to a dive you left. The selection toolbar is reachable with Tab and announced to screen readers, and the Go deeper action is labelled. Design: [ADR-014](docs/7-DEVELOPMENT/decisions/ADR-014-learning-aside-context.md), [ADR-015](docs/7-DEVELOPMENT/decisions/ADR-015-inline-deep-dives.md).
