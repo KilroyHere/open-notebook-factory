@@ -1,13 +1,13 @@
 # Open Notebook Factory Documentation
 
-Open Notebook Factory is a self-hosted, privacy-focused AI research assistant. New here? Start with **[0-START-HERE](0-START-HERE/index.md)**: pick a quick start and you'll have a working chat in a few minutes.
+Open Notebook Factory is a self-hosted, privacy-focused AI research assistant, based on [Open Notebook](https://github.com/lfnovo/open-notebook). It adds [deep dives](3-USER-GUIDE/deep-dives.md): follow a tangent from an answer in its own thread, wrap it up into a conclusion, and the main chat uses what you learned. New here? Start with **[0-START-HERE](0-START-HERE/index.md)**: pick a quick start and you'll have a working chat in a few minutes.
 
 | Section | Read it when you want to… |
 |---|---|
 | **[0-START-HERE](0-START-HERE/index.md)** | Install for the first time with a cloud provider or local Ollama |
 | **[1-INSTALLATION](1-INSTALLATION/index.md)** | Choose an install route: Docker Compose (recommended), from source, Windows native, single container (deprecated) |
 | **[2-CORE-CONCEPTS](2-CORE-CONCEPTS/index.md)** | Understand notebooks, sources, notes, context, chat vs. transformations, podcasts |
-| **[3-USER-GUIDE](3-USER-GUIDE/index.md)** | Add sources, chat, take notes, search, create podcasts |
+| **[3-USER-GUIDE](3-USER-GUIDE/index.md)** | Add sources, chat, go on [deep dives](3-USER-GUIDE/deep-dives.md), take notes, search, create podcasts |
 | **[4-AI-PROVIDERS](4-AI-PROVIDERS/index.md)** | Connect a provider, set default models, compare what each provider supports |
 | **[5-CONFIGURATION](5-CONFIGURATION/index.md)** | Look up provider details, environment variables, security, reverse proxy, local TTS/STT |
 | **[6-TROUBLESHOOTING](6-TROUBLESHOOTING/index.md)** | Fix something that isn't working |

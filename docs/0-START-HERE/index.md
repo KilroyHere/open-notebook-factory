@@ -27,6 +27,7 @@ Running from source, Windows without Docker, or a hosting platform → [Installa
 
 - **Add content**: PDFs, Office and OpenDocument files, web pages, YouTube, audio, video, plain text
 - **Chat**: ask questions about the sources in a notebook, with citations, and choose what each source shares with the AI
+- **Go deeper**: follow a tangent from an answer in a [deep dive](../3-USER-GUIDE/deep-dives.md) without losing your place, then carry what you learned back into the chat
 - **Ask and search**: full-text and semantic search across everything
 - **Transform**: run summaries and extraction prompts on sources to produce insights
 - **Take notes**: write your own or save AI answers as notes

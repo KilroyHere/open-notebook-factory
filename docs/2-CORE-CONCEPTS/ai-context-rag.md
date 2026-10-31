@@ -44,7 +44,8 @@ When you send a message in notebook Chat, Open Notebook Factory builds one promp
 
 1. the notebook's name and description,
 2. every source and note in context, at its context level,
-3. the conversation so far, and your new message.
+3. the conclusions of your [deep dives](../3-USER-GUIDE/deep-dives.md#what-youve-learned) that you keep in main chat, newest first, up to about 4,000 tokens,
+4. the conversation so far, and your new message.
 
 There is no search step: the model sees all of the selected content every time. This is why Chat is good for reading closely and comparing a few sources, and why large selections get expensive.
 
