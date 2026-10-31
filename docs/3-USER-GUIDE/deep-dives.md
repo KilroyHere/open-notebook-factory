@@ -4,13 +4,15 @@ An answer often raises a prerequisite or a tangent: a term you don't know, a cla
 
 Deep dives are part of notebook chat. For context levels, sessions and model choice, see [Chat Effectively](chat-effectively.md).
 
+In a few places the app calls a dive an *aside*: the **Asides** button above the message box, the **Resolve aside** button and the **Open aside: …** bar. They're the same thing.
+
 ---
 
 ## Quick Start
 
 1. Under an assistant answer in notebook chat, click **Go deeper**.
 2. Ask your follow-up questions in the dive's box. **Ctrl+Enter** (**⌘+Enter** on Mac) sends.
-3. Click **Wrap up**, edit the draft of what you learned, and resolve the dive.
+3. Click **Wrap up**, edit the draft of what you learned, and click **Resolve aside**.
 4. Leave **Use this conclusion in the main conversation** checked (it is by default). Main-chat messages include the conclusion from then on.
 
 ---
@@ -51,9 +53,9 @@ Under the dive:
 
 In the full-height view, **✕** (or **Main thread** in its breadcrumb) brings the chat back where you left it, with the dive still open under its answer when it can show there. The view also has **Back to origin message** and, for a nested dive, **Back to parent dive**. Once the dive is resolved, its **Return to main thread** goes to the reply that used the conclusion, or to the message the dive started from.
 
-The button with the branch icon, just above the message box, shows how many dives the conversation has. It lists the active, parked and resolved ones in the full-height view, under **Learning journey**.
+The **Asides** button, just above the message box, shows how many dives the conversation has. It lists the active, parked and resolved ones in the full-height view, under **Learning journey**.
 
-When you come back to a notebook with an unfinished dive, a bar above the chat names it; **Resume** opens it under its answer. If several dives are unfinished, **Resume** returns to the active one (or the most recently parked one), not simply the oldest.
+When you come back to a notebook with an unfinished dive, a bar above the chat says **Open aside:** and its title; **Resume** opens it under its answer. If several dives are unfinished, **Resume** returns to the active one (or the most recently parked one), not simply the oldest.
 
 Dives don't appear in the **Chat Sessions** list.
 
@@ -69,7 +71,7 @@ Dives don't appear in the **Chat Sessions** list.
 - **Use this conclusion in the main conversation** (checked by default): whether main-chat messages include the conclusion.
 - **Also save the conclusion as a note** (unchecked by default): saves it as a notebook note as well.
 
-Edit any of it, then resolve the dive with the button at the end of the form. If no draft can be made, the form says so and starts from the dive's last answer.
+Edit any of it, then click **Resolve aside** at the end of the form. If no draft can be made, the form says so and starts from the dive's last answer.
 
 The sources the draft relied on are kept as evidence for the conclusion. If you also save the conclusion as a note, it behaves like any other notebook note: sessions that include notes in their context can use it. Leave that option off when the finding should stay with this conversation.
 

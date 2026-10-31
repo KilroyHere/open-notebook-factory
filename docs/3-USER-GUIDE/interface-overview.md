@@ -57,7 +57,7 @@ Opening a notebook shows its header, then three panels: **Sources** on the left,
 │   │ [Context] [Add]  │   references               │ Learned 2 · Open   │
 │   │ ┌──────────────┐ │   └ Deep dive · title    ▾ │ questions 1 · ...  │
 │   │ │ paper.pdf    │ │   └ ✓ Learned: …         ▾ │ [Outline] [Map]    │
-│   │ │ File · 2  ◐ ⋮│ │ [Current session]          │ 1. question        │
+│   │ │ File · 2  ◐ ⋮│ │ [Asides] [Current session] │ 1. question        │
 │   │ └──────────────┘ │ ╭ Ask anything...        ╮ │    └ deep dive     │
 │   │                  │ ╰ 2 sources  [Model] [➤] ╯ │                    │
 └───┴──────────────────┴────────────────────────────┴────────────────────┘
@@ -81,7 +81,7 @@ Studio has two tabs. It opens on **Journey** once the current chat has a deep di
 
 ### Chat column
 
-Notebook chat with the sources and notes in context. **Go deeper** under an answer opens a deep dive right below it, as a thread you can fold to one row (**Deep dive · title**, or **✓ Learned: …** once resolved) and unfold again; **Open full height** shows a long dive over the chat instead ([Deep Dives](deep-dives.md)). Selecting part of an answer shows **Go deeper** and **Save to note** for just that passage; in a dive's answer, Go deeper opens a dive nested under that dive ([Going deeper on a passage](deep-dives.md#going-deeper-on-a-passage)). Above the message box, the button with the branch icon lists the conversation's dives, and the button labeled with the current session title opens **Chat Sessions**. The message box is one rounded field: under the text sit a chip with what's in context (for example **2 sources · 1 note**), the model button, which picks a model for the session, and the send button. Hover or focus the chip to see how many sources are at *Insights only* and *Full content*, the estimated size in tokens and characters and, when the context limit leaves learned conclusions out, how many. Send with **Ctrl+Enter** (**⌘+Enter** on Mac). See [Chat Effectively](chat-effectively.md).
+Notebook chat with the sources and notes in context. **Go deeper** under an answer opens a deep dive right below it, as a thread you can fold to one row (**Deep dive · title**, or **✓ Learned: …** once resolved) and unfold again; **Open full height** shows a long dive over the chat instead ([Deep Dives](deep-dives.md)). Selecting part of an answer shows **Go deeper** and **Save to note** for just that passage; in a dive's answer, Go deeper opens a dive nested under that dive ([Going deeper on a passage](deep-dives.md#going-deeper-on-a-passage)). Above the message box, **Asides** lists the conversation's dives, and the button labeled with the current session title opens **Chat Sessions**. The message box is one rounded field: under the text sit a chip with what's in context (for example **2 sources · 1 note**), the model button, which picks a model for the session, and the send button. Hover or focus the chip to see how many sources are at *Insights only* and *Full content*, the estimated size in tokens and characters and, when the context limit leaves learned conclusions out, how many. Send with **Ctrl+Enter** (**⌘+Enter** on Mac). See [Chat Effectively](chat-effectively.md).
 
 ---
 
