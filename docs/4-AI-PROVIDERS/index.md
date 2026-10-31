@@ -137,4 +137,4 @@ Prices, context windows and model line-ups change often, so this guide doesn't l
 - [Ollama](../5-CONFIGURATION/ollama.md): local models, networking and timeouts
 - [User Guide](../3-USER-GUIDE/index.md): adding sources, chat, podcasts
 
-**Need help?** Join the [Discord community](https://discord.gg/37XJPXfz2w).
+**Need help?** Ask in [GitHub Issues](https://github.com/KilroyHere/open-notebook-factory/issues).

@@ -49,4 +49,4 @@ Running from source, Windows without Docker, or a hosting platform → [Installa
 
 ---
 
-**Need help?** Join our [Discord community](https://discord.gg/37XJPXfz2w) or see the [full documentation](../index.md).
+**Need help?** See the [full documentation](../index.md), or ask in [GitHub Issues](https://github.com/KilroyHere/open-notebook-factory/issues).

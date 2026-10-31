@@ -128,4 +128,4 @@ docker compose exec open_notebook curl -s http://host.docker.internal:11434/api/
 - [Docker Compose guide](../1-INSTALLATION/docker-compose.md): settings, backups, updates
 - [User Guide](../3-USER-GUIDE/index.md)
 
-**Need help?** Join our [Discord community](https://discord.gg/37XJPXfz2w).
+**Need help?** See [Quick Fixes](../6-TROUBLESHOOTING/quick-fixes.md), or ask in [GitHub Issues](https://github.com/KilroyHere/open-notebook-factory/issues).

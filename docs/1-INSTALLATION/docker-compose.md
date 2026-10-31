@@ -266,4 +266,4 @@ The [`examples/`](../../examples/) folder has complete compose files for other s
 - [User Guide](../3-USER-GUIDE/index.md)
 - [Security](../5-CONFIGURATION/security.md) and [Reverse Proxy](../5-CONFIGURATION/reverse-proxy.md) before exposing it to a network
 
-**Need help?** [Discord](https://discord.gg/37XJPXfz2w) · [GitHub Issues](https://github.com/KilroyHere/open-notebook-factory/issues)
+**Need help?** [GitHub Issues](https://github.com/KilroyHere/open-notebook-factory/issues)

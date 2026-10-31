@@ -84,4 +84,4 @@ The last step of that page creates a notebook, adds a text source and sends a ch
 - [User Guide](../3-USER-GUIDE/index.md): sources, chat, notes, podcasts
 - Before exposing Open Notebook Factory to a network, set a password: [Security](../5-CONFIGURATION/security.md)
 
-**Need help?** Join our [Discord community](https://discord.gg/37XJPXfz2w).
+**Need help?** See [Quick Fixes](../6-TROUBLESHOOTING/quick-fixes.md), or ask in [GitHub Issues](https://github.com/KilroyHere/open-notebook-factory/issues).

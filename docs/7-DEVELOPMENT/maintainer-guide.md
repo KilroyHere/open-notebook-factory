@@ -4,27 +4,27 @@ This guide is for project maintainers to help manage contributions effectively w
 
 ## Table of Contents
 
-- [Discussion Management](#discussion-management)
+- [Ideas and Feature Requests](#ideas-and-feature-requests)
 - [Issue Management](#issue-management)
 - [Pull Request Review](#pull-request-review)
 - [Merging PR Batches](#merging-pr-batches)
 - [Common Scenarios](#common-scenarios)
 - [Communication Templates](#communication-templates)
 
-## Discussion Management
+## Ideas and Feature Requests
 
-Discussions are the intake and deliberation space for feature requests, ideas,
-behavior changes, product direction, design, architecture, and contribution
-proposals. An accepted idea becomes an Issue only when it is sufficiently clear
-to track and execute.
+This fork has no GitHub Discussions. Feature requests, ideas, behavior changes,
+product direction, design, architecture, and contribution proposals arrive as
+Issues, next to bug reports. An idea becomes work only when it is sufficiently
+clear to track and execute.
 
-### When a New Idea Discussion Is Created
+### When a New Idea Is Opened
 
 **1. Initial triage** (within 24-48 hours when possible)
 
 - Confirm that it is an idea or open-ended proposal rather than a reproducible bug.
-- Search Discussions, Issues, PRs, `VISION.md`, and decision records for related context.
-- Merge the signal into a canonical Discussion when the topic already exists; preserve links to the original author and contribution.
+- Search Issues, PRs, `VISION.md`, and decision records for related context.
+- Merge the signal into a canonical Issue when the topic already exists; preserve links to the original author and contribution.
 - Replace `needs-triage` with `needs-vision` when the question is *whether/why* the project should pursue it, or `needs-design` when the problem is wanted but the *how* remains open.
 
 **2. Shape the conversation**
@@ -37,21 +37,24 @@ Ask for missing evidence rather than an implementation plan by default:
 - Which constraints, alternatives, or failure modes matter?
 - How would we validate that the outcome is better?
 
-For larger proposals, keep a synthesis in the Discussion body or a maintainer
+For larger proposals, keep a synthesis in the Issue body or a maintainer
 comment: what is known, what remains open, alternatives, and the decision owner.
 
 **3. Close the loop**
 
-Every mature Discussion ends with an explicit outcome:
+Every mature idea ends with an explicit outcome:
 
-- **Accepted:** create one or more scoped Issues from the Discussion, replace inherited discovery labels with `ready`, link them in both directions, and close the Discussion as resolved.
+- **Accepted:** replace the discovery label with `ready` when the Issue is scoped enough to build, or split it into scoped Issues marked `ready`, link them in both directions, and close the original.
 - **Experiment:** describe the bounded experiment and the evidence needed before a commitment.
 - **Parked:** state why it is not timely and what condition would reopen it.
 - **Declined:** explain the conflict with vision, scope, or maintenance cost.
-- **Superseded/duplicate:** link the canonical Discussion or initiative.
+- **Superseded/duplicate:** link the canonical Issue or initiative.
 
-Creating an Issue is the graduation event: it means the project has committed to
-track executable work, not merely that the idea received positive reactions.
+Marking an Issue `ready` is the graduation event: it means the project has
+committed to executable work, not merely that the idea received positive reactions.
+
+If an idea would fit the original project better, say so and point to
+[Open Notebook](https://github.com/lfnovo/open-notebook), where it can be proposed upstream.
 
 ## Issue Management
 
@@ -59,8 +62,8 @@ track executable work, not merely that the idea received positive reactions.
 
 **1. Initial triage** (within 24-48 hours when possible)
 
-- Public Issues arrive through the bug or installation forms with `needs-triage`.
-- Maintainers also create Issues when accepted Discussions graduate into executable work.
+- Bug and installation reports arrive through their forms with `needs-triage`; questions and ideas arrive as blank issues with no label.
+- Maintainers also create Issues when an accepted idea is split into executable work.
 - Add one **type** and one **area** label where they apply (see [Labels](#labels)).
 
 Quick assessment:
@@ -68,7 +71,7 @@ Quick assessment:
 - Is it a reproducible bug or an already approved work item?
 - Does it duplicate an existing Issue?
 - Does it need more reproduction details or environment information?
-- If it is an idea, feature request, or open-ended proposal, convert it to a Discussion and explain the workflow.
+- If it is an idea, feature request, or open-ended proposal, triage it as described in [Ideas and Feature Requests](#ideas-and-feature-requests).
 
 **2. Initial response**
 
@@ -85,7 +88,7 @@ Ask yourself:
 - Can it be reproduced from the supplied steps and environment?
 - Is more information required from the reporter?
 - Is it already fixed, a duplicate, or rooted in an upstream dependency?
-- Is the expected behavior actually a product/design decision? If so, open or link a Discussion before defining the fix.
+- Is the expected behavior actually a product/design decision? If so, settle it in the Issue (`needs-design` or `needs-vision`) before defining the fix.
 
 **4. Issue assignment**
 
@@ -116,23 +119,11 @@ Thanks for offering to work on this! Before we proceed, we need to clarify a few
 Once we have these details, we can discuss the best approach.
 ```
 
-**For an idea opened as an Issue:**
-
-```markdown
-Thank you for the proposal! We use GitHub Discussions for feature requests,
-product/design/architecture ideas, and contribution proposals so the community
-can explore them before they become implementation commitments.
-
-I'm converting this Issue to a Discussion. If the direction is accepted and
-sufficiently scoped, we'll create an approved Issue from it before implementation.
-```
-
 ### Labels
 
 The label set is curated — **don't invent labels**. If something doesn't fit, raise it instead of adding one. Assign **one state**, **one type**, and **one area** where each applies; multiple bundling/ecosystem labels are fine.
 
-**Discovery states** — primarily used on Discussions. Historical Issues may retain
-these while the backlog is migrated; do not newly route feature proposals into Issues:
+**Discovery states** — used on ideas and feature requests:
 
 | Label | Meaning |
 |---|---|
@@ -183,14 +174,14 @@ these while the backlog is migrated; do not newly route feature proposals into I
 - `good first issue` — small, well-scoped, newcomer-friendly
 - `help wanted` — we'd welcome a contributor to take this
 
-### Consolidation: Discussion vs. umbrella
+### Consolidation: canonical Issue vs. umbrella
 
 When several open issues circle the same topic, pick the model by **how decided the work is** — not just by shared theme:
 
-- **Pre-vision / pre-design topic** → create or select **one canonical Discussion**, capture each request's signal (👍 counts, interested contributors) in its synthesis, and convert/link the related Issues or Discussions to it. A topic isn't N work items — it's one thinking space.
-- **Already decomposed into real parallel tasks** → use `umbrella` + `tracked-in-umbrella`. Children stay open because each is independently pickable (e.g. the multi-user umbrella #712).
+- **Pre-vision / pre-design topic** → create or select **one canonical Issue**, capture each request's signal (👍 counts, interested contributors) in its synthesis, and close the related Issues as duplicates of it. A topic isn't N work items — it's one thinking space.
+- **Already decomposed into real parallel tasks** → use `umbrella` + `tracked-in-umbrella`. Children stay open because each is independently pickable.
 
-Rule of thumb: if work cannot start until *we* make a call, it belongs in a Discussion. If the call is made and the work splits into things a contributor could pick up today, it belongs in an umbrella with child Issues. **Never convert or close an Issue that has an active assignee/contributor or open PR without coordinating with them** — link it as a phase instead.
+Rule of thumb: if work cannot start until *we* make a call, it stays in its canonical Issue with `needs-vision` or `needs-design`. If the call is made and the work splits into things a contributor could pick up today, it belongs in an umbrella with child Issues. **Never close an Issue that has an active assignee/contributor or open PR without coordinating with them** — link it as a phase instead.
 
 ## Pull Request Review
 
@@ -205,7 +196,7 @@ Rule of thumb: if work cannot start until *we* make a call, it belongs in a Disc
 - [ ] Are there tests? Screenshots (for UI changes)?
 
 **Red Flags** (may require closing PR):
-- No associated approved Issue on a non-trivial change (small obvious fixes are exempt; sizeable PRs should become drafts while an idea goes through Discussion or a bug goes through Issue triage)
+- No associated approved Issue on a non-trivial change (small obvious fixes are exempt; sizeable PRs should become drafts while their Issue goes through triage)
 - Issue was not assigned to contributor
 - PR tries to solve multiple unrelated problems
 - Breaking changes without discussion
@@ -286,7 +277,7 @@ Mechanics for landing a batch of approved PRs without stepping on each other:
 - **Squash-merge everything.** One commit per PR keeps `main` linear and makes reverts trivial.
 - **Expect CHANGELOG conflicts.** Every PR adds a bullet under `[Unreleased]`, so the Nth merge often flips its siblings to DIRTY. Resolve by rebasing the branch onto `main` and keeping **both** sides' bullets — they're independent entries, not competing edits — then `git push --force-with-lease`.
 - **Contributor forks:** rebase the fork's branch onto `origin/main`, skipping commits that are already upstream, and push with an explicit-OID lease: `git push --force-with-lease=<branch>:<headOID>`. This works whenever the contributor left "Allow edits by maintainers" (maintainerCanModify) enabled.
-- **Check for scheduled replacements first.** Before merging a fix into code that's slated to be replaced (e.g. the database layer migrating to surreal-basics, issue #1031), redirect the fix upstream or note it on the tracking issue instead of landing it in code that's about to disappear.
+- **Check for scheduled replacements first.** Before merging a fix into code that's slated to be replaced (e.g. the database layer, which upstream plans to move to surreal-basics in lfnovo/open-notebook#1031), redirect the fix upstream or note it on the tracking issue instead of landing it in code that's about to disappear.
 - **Hunt for competing PRs.** Before merging a fix, search open PRs for others addressing the same bug — pick the best one and close the rest with a link, rather than merging the first one you review.
 
 ## Common Scenarios
@@ -325,14 +316,14 @@ This helps us:
 
 Could you please:
 1. Mark this PR as draft
-2. Start a Discussion if this is a feature/design proposal, or an Issue if it fixes a reproducible bug
+2. Open an Issue that describes the problem, whether it is a feature/design proposal or a reproducible bug
 3. Wait for an approved Issue to be scoped and assigned
 4. We can then continue with this PR
 
 Sorry for the inconvenience - this process helps us manage the project effectively.
 ```
 
-### Scenario 3: Idea Discussion Not Aligned with Vision
+### Scenario 3: Idea Not Aligned with Vision
 
 **Situation**: Well-intentioned feature that doesn't fit project goals.
 
@@ -477,7 +468,7 @@ This will be included in the next release.
 
 ### Be Responsive
 
-- Respond to new Discussions and Issues within 48 hours when possible (even just to acknowledge)
+- Respond to new Issues within 48 hours when possible (even just to acknowledge)
 - Review PRs within a week when possible
 - Keep contributors updated on status
 - Close stale issues/PRs to keep things tidy
@@ -493,7 +484,7 @@ Ask yourself:
 
 If you're unsure, it's perfectly fine to:
 - Ask for input from other maintainers
-- Start or link a GitHub Discussion
+- Ask more questions in the Issue
 - Sleep on it before making a decision
 
 ---

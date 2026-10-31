@@ -13,8 +13,6 @@ changeLog:
   - date: 2026-06-19
     description: First release
 links:
-  - label: Website
-    url: https://www.open-notebook.ai
   - label: Documentation
     url: https://github.com/KilroyHere/open-notebook-factory/tree/main/docs
   - label: Github

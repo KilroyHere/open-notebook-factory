@@ -88,8 +88,7 @@ gh run list --workflow=build-and-release.yml --limit 1 && gh run watch <id> --ex
 ```
 
 - Release notes follow `.github/RELEASE_PROCESS.md` → Communication (verdict, sections,
-  behavior changes for self-hosters, **Thanks** by handle — never skipped). Announcement text
-  for Discord is delivered to the owner after `v1-latest` is live.
+  behavior changes for self-hosters, **Thanks** by handle — never skipped).
 
 ## Verify from the registry
 

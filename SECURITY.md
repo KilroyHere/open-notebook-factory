@@ -15,16 +15,15 @@ reporting an issue — the problem may already be fixed.
 
 ## Reporting a Vulnerability
 
-**Please do not report security vulnerabilities through public GitHub issues,
-discussions, or pull requests.**
+**Please do not report security vulnerabilities through public GitHub issues or
+pull requests.**
 
 Instead, report them privately through GitHub's built-in **private vulnerability
 reporting**:
 
-1. Go to the [Security tab](https://github.com/lfnovo/open-notebook/security) of
-   the repository.
-2. Click **"Report a vulnerability"**.
-3. Fill out the form with as much detail as you can.
+1. Open a [new private vulnerability report](https://github.com/KilroyHere/open-notebook-factory/security/advisories/new)
+   (the repository's **Security** tab → **Report a vulnerability**).
+2. Fill out the form with as much detail as you can.
 
 This keeps the report private between you and the maintainers until a fix is
 available.

@@ -6,8 +6,8 @@
 
 <!-- Non-trivial PRs (features, architecture changes) must link an approved Issue.
      Small obvious fixes (typo, docs, tiny bug) don't need one — write "N/A (small fix)" below.
-     Sizeable change without an approved Issue? Mark this PR as draft. Start a Discussion for an
-     idea/feature or open an Issue for a reproducible bug, then wait for the work to be approved. -->
+     Sizeable change without an approved Issue? Mark this PR as draft, open an Issue for the
+     idea, feature or bug, then wait for the work to be approved. -->
 
 Fixes #<!-- issue number, or "N/A (small fix)" -->
 
@@ -103,7 +103,7 @@ Before submitting, please verify:
 
 - [ ] I have read [CONTRIBUTING.md](https://github.com/KilroyHere/open-notebook-factory/blob/main/docs/7-DEVELOPMENT/contributing.md)
 - [ ] I have read [VISION.md](https://github.com/KilroyHere/open-notebook-factory/blob/main/VISION.md)
-- [ ] This PR addresses an approved Issue assigned to me, **or** it's a small obvious fix (typo, docs, tiny bug) that doesn't need one — ideas and features begin in Discussions; reproducible bugs begin in Issues
+- [ ] This PR addresses an approved Issue assigned to me, **or** it's a small obvious fix (typo, docs, tiny bug) that doesn't need one — ideas, features and bugs all begin in Issues
 - [ ] I have not included unrelated changes in this PR
 - [ ] My PR title follows the Conventional Commits format (e.g., "fix(podcasts): …", "feat: …")
 

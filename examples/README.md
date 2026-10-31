@@ -152,5 +152,4 @@ Add to `open_notebook` service environment:
 
 ## 🆘 Need Help?
 
-- **Discord**: [Join our community](https://discord.gg/37XJPXfz2w)
 - **Issues**: [GitHub Issues](https://github.com/KilroyHere/open-notebook-factory/issues)

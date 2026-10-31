@@ -118,4 +118,4 @@ The published image has its Python dependencies installed. Downloads at startup 
 ## Still stuck?
 
 - Look up your exact message in the [Troubleshooting index](index.md).
-- Ask in [Discord](https://discord.gg/37XJPXfz2w) or [GitHub Discussions](https://github.com/lfnovo/open-notebook/discussions/categories/q-a).
+- Ask in [GitHub Issues](https://github.com/KilroyHere/open-notebook-factory/issues).

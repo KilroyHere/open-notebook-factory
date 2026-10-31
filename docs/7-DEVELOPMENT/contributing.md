@@ -1,43 +1,45 @@
 # Contributing to Open Notebook Factory
 
-Thank you for your interest in contributing to Open Notebook Factory! We welcome contributions from developers of all skill levels. This guide will help you understand our contribution workflow and what makes a good contribution.
+Thank you for your interest in contributing to Open Notebook Factory. This guide explains how contributions work here and what makes a good one.
 
-## 🚦 Discussions for Ideas, Issues for Work
+Open Notebook Factory is a fork of [Open Notebook](https://github.com/lfnovo/open-notebook). A change that would help the original project too (a fix in code the two share, a provider, a translation) can also be proposed upstream, following [Open Notebook's contributing guide](https://github.com/lfnovo/open-notebook/blob/main/docs/7-DEVELOPMENT/contributing.md). This fork takes in upstream changes when it merges upstream `main`.
 
-Open Notebook Factory separates **exploration** from **execution**:
+## 🚦 Issues First, Then Pull Requests
 
-- **Feature requests, ideas, behavior changes, product/design/architecture proposals, and contribution proposals start in [GitHub Discussions](https://github.com/lfnovo/open-notebook/discussions/new?category=ideas).** This is where the community explores the problem and maintainers make the product or design decision.
-- **Reproducible bugs start in [GitHub Issues](https://github.com/lfnovo/open-notebook/issues/new/choose).**
-- **Implementation starts from an approved Issue.** Once an idea is sufficiently clear and accepted, a maintainer creates an Issue from the Discussion, scopes it, and assigns it before coding begins.
+Everything starts in this repository's [Issues](https://github.com/KilroyHere/open-notebook-factory/issues). There are no Discussions.
+
+- **Reproducible bugs** use the [Bug Report form](https://github.com/KilroyHere/open-notebook-factory/issues/new?template=bug_report.yml).
+- **Questions, ideas, feature requests, behavior changes and design proposals** go in a blank issue. Describe the problem and the outcome you want; the maintainer decides whether and how the project pursues it.
+- **Implementation starts from an approved Issue.** Once the problem and the approach are clear, the maintainer marks the issue `ready` and assigns it before coding begins.
 
 This means non-trivial contributions follow one of two paths:
 
 ```text
-Idea or feature → Discussion → decision → approved Issue → code → PR
-Reproducible bug               → triaged Issue  → code → PR
+Idea or feature  → Issue → decision → approved Issue → code → PR
+Reproducible bug → triaged Issue                     → code → PR
 ```
 
-**When you can skip both and just open a PR:**
+**When you can skip the Issue and just open a PR:**
 - Typos, broken links, and small documentation clarifications
 - Small, obvious bug fixes — a few lines, one clear right answer, no design decisions
 - Translation fixes or completing missing i18n keys
 
-**When a Discussion is definitely required first:**
+**When an approved Issue is definitely required first:**
 - New features, of any size
 - Architecture or structural changes
 - Breaking changes
 - Product, UX, or behavior changes
 - Anything where the *how* has more than one reasonable answer
 
-**Already coded something sizeable without prior discussion or an approved Issue?** Don't throw it away: mark the PR as **draft**. Open a Discussion for a feature or design proposal, or an Issue for a reproducible bug, and link it from the PR. A maintainer will help route the work.
+**Already coded something sizeable without an approved Issue?** Don't throw it away: mark the PR as **draft**, open an Issue that describes the problem, and link it from the PR. The maintainer will help route the work.
 
 **Why this process?**
 - Prevents duplicate work
 - Ensures solutions align with our architecture and design principles
 - Saves your time by getting feedback before coding
-- Helps maintainers manage the project direction
+- Helps the maintainer manage the project direction
 
-> ⚠️ **Non-trivial pull requests without an approved Issue may be closed**, even if the code is good. A Discussion is where an idea is explored; an Issue is the project's commitment to execute it.
+> ⚠️ **Non-trivial pull requests without an approved Issue may be closed**, even if the code is good. An Issue is where an idea is decided; an approved Issue is the project's commitment to execute it.
 
 ## Code of Conduct
 
@@ -48,7 +50,7 @@ By participating in this project, you are expected to uphold our [Code of Conduc
 ### Reporting Bugs
 
 1. **Search existing issues** - Check if the bug was already reported
-2. **Create a bug report** - Use the [Bug Report template](https://github.com/lfnovo/open-notebook/issues/new?template=bug_report.yml)
+2. **Create a bug report** - Use the [Bug Report template](https://github.com/KilroyHere/open-notebook-factory/issues/new?template=bug_report.yml)
 3. **Provide details** - Include:
    - Steps to reproduce
    - Expected vs actual behavior
@@ -58,16 +60,16 @@ By participating in this project, you are expected to uphold our [Code of Conduc
 
 ### Suggesting Features
 
-1. **Search existing Discussions and Issues** - Check whether the problem is already being explored or worked on
-2. **Start an Idea Discussion** - Use the [Ideas form](https://github.com/lfnovo/open-notebook/discussions/new?category=ideas)
+1. **Search existing Issues** - Check whether the problem is already being discussed or worked on
+2. **Open an Issue** - Use a [blank issue](https://github.com/KilroyHere/open-notebook-factory/issues/new)
 3. **Start with the problem and outcome** - Explain what you are trying to do, what is difficult today, and what success would look like
 4. **Add possible directions if useful** - Implementation ideas and references are welcome, but not required
-5. **Join the exploration** - Help answer questions, evaluate trade-offs, or test prototypes
-6. **Wait for graduation before coding** - If accepted, the proposal becomes one or more approved Issues that can be assigned
+5. **Answer follow-up questions** - The maintainer may ask about use cases, trade-offs or alternatives
+6. **Wait for approval before coding** - If accepted, the issue (or one split from it) is marked `ready` and assigned
 
 ### Contributing Code (Pull Requests)
 
-**IMPORTANT: For non-trivial work, start from an approved and assigned Issue before coding. Ideas reach that point through Discussions; reproducible bugs reach it through Issue triage.**
+**IMPORTANT: For non-trivial work, start from an approved and assigned Issue before coding. Ideas and bugs both reach that point through Issue triage.**
 
 Once your issue is assigned:
 
@@ -104,7 +106,7 @@ Once your issue is assigned:
 A large share of contributions — including our own — are written with coding agents (Claude Code, Cursor, Copilot, etc.). That's welcome. The tool doesn't change the contract; **the operator does not stop being the author**:
 
 1. **You own the PR.** You must have read, understood, and be able to explain every line of the diff. "The agent wrote it" is never an answer in review.
-2. **Discussion before commitment; approved Issue before implementation.** Agents make it cheap to produce large unsolicited PRs — those get closed like any other unassigned PR, regardless of code quality. Small obvious fixes are exempt. For larger work, use a Discussion to shape an idea or an Issue to report a reproducible bug, then wait for an approved work item.
+2. **Approved Issue before implementation.** Agents make it cheap to produce large unsolicited PRs — those get closed like any other unassigned PR, regardless of code quality. Small obvious fixes are exempt. For larger work, open an Issue for the idea or the bug, then wait for it to be approved.
 3. **Tests must have actually run.** Paste real output. An agent *claiming* tests pass is not test evidence.
 4. **Point your agent at the right context.** The repo ships `AGENTS.md` files (root, `open_notebook/`, `frontend/`) with the normative rules, and [change-playbooks.md](change-playbooks.md) with step-by-step recipes — agents that read them produce PRs that pass review faster.
 5. **Keep it scoped.** Agents tend to "improve" surrounding code along the way. Unrelated refactors belong in separate issues/PRs.
@@ -186,11 +188,7 @@ Current priorities and what is out of scope live in [VISION.md](../../VISION.md)
 
 ## Getting Help
 
-### Community Support
-
-- **Discord**: [Join our Discord server](https://discord.gg/37XJPXfz2w) for real-time help
-- **GitHub Discussions**: For questions, ideas, features, product direction, design, and architecture
-- **GitHub Issues**: For reproducible bugs and approved work items
+Ask in [GitHub Issues](https://github.com/KilroyHere/open-notebook-factory/issues): questions, ideas, design proposals, reproducible bugs and approved work items all live there. Report security vulnerabilities privately instead, as [SECURITY.md](../../SECURITY.md) describes.
 
 ### Documentation References
 
@@ -206,7 +204,6 @@ Current priorities and what is out of scope live in [VISION.md](../../VISION.md)
 We recognize contributions through:
 
 - **GitHub credits** on releases
-- **Community recognition** in Discord
 - **Contribution statistics** in project analytics
 - **Maintainer consideration** for active contributors
 
@@ -214,4 +211,4 @@ We recognize contributions through:
 
 Thank you for contributing to Open Notebook Factory! Your contributions help make research more accessible and private for everyone.
 
-For questions about this guide or contributing in general, please reach out on [Discord](https://discord.gg/37XJPXfz2w) or open a GitHub Discussion.
+For questions about this guide or contributing in general, open an [issue](https://github.com/KilroyHere/open-notebook-factory/issues).

@@ -121,8 +121,6 @@ Release notes follow this structure (see v1.11.0 as the reference):
    (collect via `git log <last-tag>..<tag>` + `gh pr view` for handles), plus
    the issue reporters collectively. Never skip this section.
 
-Announce on Discord after `v1-latest` is live.
-
 ## Retro
 
 Close every release by asking: what should improve in this process? Apply the

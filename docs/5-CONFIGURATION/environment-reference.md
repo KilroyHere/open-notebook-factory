@@ -225,7 +225,7 @@ SurrealDB's own log level is the `--log` argument in the `surrealdb` service's `
 
 ## Legacy: AI provider variables (deprecated)
 
-> **Deprecated.** Configure providers in **Manage → Models**. These variables still work as a fallback (the database is read first, then the environment), but there is no guarantee they keep working, and new automation should not be built on them. A declarative provisioning contract for headless deployments is being discussed in [#765](https://github.com/lfnovo/open-notebook/discussions/765).
+> **Deprecated.** Configure providers in **Manage → Models**. These variables still work as a fallback (the database is read first, then the environment), but there is no guarantee they keep working, and new automation should not be built on them.
 
 If you have them set, **Manage → Models** shows **Environment Variables Detected** with a **Migrate to Database** button. Migration creates a credential named "Default (Migrated from env)" per provider. It copies only the variables marked "yes" below; the others keep working only as an environment fallback and must be re-entered by hand if you remove them.
 

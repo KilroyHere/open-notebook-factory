@@ -159,4 +159,4 @@ focused on our core vision. We appreciate all contributions and ideas!
 
 ---
 
-**Questions about these principles?** Open a discussion on GitHub or join our [Discord](https://discord.gg/37XJPXfz2w).
+**Questions about these principles?** Open an [issue](https://github.com/KilroyHere/open-notebook-factory/issues).

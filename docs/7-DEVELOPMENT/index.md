@@ -5,7 +5,7 @@ Documentation for people (and coding agents) working on the Open Notebook Factor
 ## Start here
 
 1. **[Development Setup](development-setup.md)**: install, configure and run the stack from source.
-2. **[Contributing](contributing.md)**: the Discussions → Issues → PRs workflow, commit and CHANGELOG conventions, and the checks CI runs.
+2. **[Contributing](contributing.md)**: the Issues → PRs workflow, commit and CHANGELOG conventions, and the checks CI runs.
 3. **[Change Playbooks](change-playbooks.md)**: step-by-step recipes for common changes (new field, endpoint, provider, migration, command, language).
 
 The normative rules for coding agents (and humans in a hurry) are in the `AGENTS.md` files: [root](../../AGENTS.md), [backend](../../open_notebook/AGENTS.md) (also covers `api/`, `commands/`, `prompts/`) and [frontend](../../frontend/AGENTS.md).
@@ -31,9 +31,8 @@ The normative rules for coding agents (and humans in a hurry) are in the `AGENTS
 
 ## Getting help
 
-- **GitHub Discussions**: questions, ideas, product direction, design and architecture
-- **GitHub Issues**: reproducible bugs and approved work items
-- **Discord**: [join the server](https://discord.gg/37XJPXfz2w) for real-time help
+- **[GitHub Issues](https://github.com/KilroyHere/open-notebook-factory/issues)**: bugs, questions, ideas, design proposals and approved work items
+- **Security vulnerabilities**: report them privately through a [security advisory](https://github.com/KilroyHere/open-notebook-factory/security/advisories/new)
 
 ## Libraries it depends on
 

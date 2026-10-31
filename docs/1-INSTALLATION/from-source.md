@@ -156,4 +156,4 @@ The development workflow is described in the [Development Setup](../7-DEVELOPMEN
 - [Architecture](../7-DEVELOPMENT/architecture.md)
 - [Contributing](../7-DEVELOPMENT/contributing.md)
 
-**Need help?** [Discord](https://discord.gg/37XJPXfz2w) · [GitHub Issues](https://github.com/KilroyHere/open-notebook-factory/issues)
+**Need help?** [GitHub Issues](https://github.com/KilroyHere/open-notebook-factory/issues)
