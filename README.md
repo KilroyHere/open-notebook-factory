@@ -46,7 +46,7 @@ The fork keeps in sync with upstream: it merges Open Notebook's `main` from time
 
 ## A private, multi-model, 100% local, full-featured alternative to Notebook LM
 
-![New Notebook](docs/assets/asset_list.png)
+![A notebook in Open Notebook Factory: sources on the left, the chat with a deep dive open under an answer, and Studio's Journey tab with what you've learned and the open questions](docs/assets/notebook-deep-dive.png)
 
 In a world dominated by Artificial Intelligence, having the ability to think 🧠 and acquire new knowledge 💡, is a skill that should not be a privilege for a few, nor restricted to a single provider.
 
@@ -205,6 +205,8 @@ Thanks to the [Esperanto](https://github.com/lfnovo/esperanto) library, we suppo
 - **🔎 Deep Dives**: **Go deeper** on an answer or a selected passage opens a thread under it; dives nest, and **Wrap up** turns one into a conclusion with open questions ([guide](docs/3-USER-GUIDE/deep-dives.md))
 - **🧠 What You've Learned**: resolved conclusions go with every main-chat message; **Use in main chat** switches each one on or off, and markers show the ones the context limit leaves out
 - **🧭 Journey Tab**: Studio outlines the conversation, maps its branches and counts what you've learned, open questions and dives saved for later
+
+![The learning loop: a resolved dive's conclusion sits under its answer, the next reply uses it, and the Journey map shows the main thread and its branches](docs/assets/learning-loop.png)
 
 ### Core Capabilities
 - **🔒 Privacy-First**: Self-hosted; with local models nothing leaves your machine
