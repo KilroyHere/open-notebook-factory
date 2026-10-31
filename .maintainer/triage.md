@@ -69,8 +69,9 @@ The label set is curated — **never invent a label**; raise it instead.
   load-bearing ones: PDR-001 (single-user first, multi-user compatible), PDR-002
   (provider-agnostic core; provider-exclusive capabilities need a PDR), ADR-007 (opt-in
   heavy runtimes), ADR-008 (notebook-scoped search).
-- Current posture (VISION.md → Current Posture): get the basics solid across the provider
-  matrix before new product surfaces. A request for a new surface that fits the identity is
-  `needs-vision`, not `needs-design`.
+- Current posture (VISION.md → Current Posture): the fork's work goes into learning with
+  your research (deep dives, what you've learned, the Journey tab and the plans on its
+  horizon); the core experience comes from upstream. A request for another new surface that
+  fits the identity is `needs-vision`, not `needs-design`.
 - A request that keeps coming back against a principle is a signal to revisit the principle
   through a decision record — not to make a quiet exception.

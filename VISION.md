@@ -1,26 +1,30 @@
-# Open Notebook — Vision & Principles
+# Open Notebook Factory — Vision & Principles
 
-This document is the product's source of truth in two layers with different lifespans: **Identity** (durable — what Open Notebook is and refuses to be) and **Current Posture** (temporal — where we are in the journey and what's on the horizon). Triage and design decisions are evaluated against this document; the reasoning behind each rule lives in the [decision records](docs/7-DEVELOPMENT/decisions/README.md).
+This document is the product's source of truth in two layers with different lifespans: **Identity** (durable — what Open Notebook Factory is and refuses to be) and **Current Posture** (temporal — where we are in the journey and what's on the horizon). Triage and design decisions are evaluated against this document; the reasoning behind each rule lives in the [decision records](docs/7-DEVELOPMENT/decisions/README.md).
+
+Open Notebook Factory is a fork of [Open Notebook](https://github.com/lfnovo/open-notebook) by Luis Novo. It keeps Open Notebook's identity and principles, and adds a direction of its own: helping you learn from your research.
 
 ---
 
 ## Identity
 
-Open Notebook is a **privacy-focused, self-hosted alternative to Google's Notebook LM** that empowers users to:
+Open Notebook Factory is a **privacy-focused, self-hosted alternative to Google's Notebook LM** and a **research assistant that helps you learn**. It empowers users to:
 
 1. **Own their research data** — full control over where data lives and who can access it
 2. **Choose their AI providers** — any provider, or fully local models
 3. **Customize their workflows** — adapt the tool to different research needs
 4. **Access their work anywhere** — web UI, API, or integrations
+5. **Learn as they research** — follow a tangent without losing their place, turn it into a conclusion, and carry that conclusion into the main conversation
 
-### What Open Notebook IS
+### What Open Notebook Factory IS
 
 - A **research assistant** for managing and understanding content
+- A **learning companion**: an answer can open a deep dive, the dive ends in a conclusion you approve, and the main conversation builds on what you learned
 - A **platform** that connects various AI providers
 - A **privacy-first** tool that keeps your data under your control
 - An **extensible system** with APIs and customization options
 
-### What Open Notebook IS NOT
+### What Open Notebook Factory IS NOT
 
 - A document editor (use Google Docs, Notion, etc.)
 - A file storage system (use Dropbox, S3, etc.)
@@ -29,7 +33,7 @@ Open Notebook is a **privacy-focused, self-hosted alternative to Google's Notebo
 
 ### Principles
 
-Durable, normative rules. Each links to the decision record that established it.
+Durable, normative rules. Each links to the decision record that established it. The first six come from Open Notebook; the last two are the fork's.
 
 | Principle | Rule |
 |---|---|
@@ -39,6 +43,8 @@ Durable, normative rules. Each links to the decision record that established it.
 | **API-first** | Every capability is accessible via the REST API — the UI is a client, never the only door ([ADR-003](docs/7-DEVELOPMENT/decisions/ADR-003-streamlit-to-nextjs.md)). |
 | **Extensibility through standards** | Extension happens through well-defined interfaces (transformations, commands, prompt templates), not forks. |
 | **Async-first** | Long-running operations never block the UI or the API ([ADR-004](docs/7-DEVELOPMENT/decisions/ADR-004-background-workers.md)). |
+| **The learner approves what carries over** | A tangent's conversation stays in its dive. Only a conclusion the learner has read, edited and approved enters the main conversation, and the learner can take it out again. Explanation alone never counts as mastery ([ADR-014](docs/7-DEVELOPMENT/decisions/ADR-014-learning-aside-context.md)). |
+| **Never lose your place** | Following a tangent keeps the learner in the conversation they are studying: a dive opens under the answer it came from, and the conversation's scroll position and draft survive it ([ADR-015](docs/7-DEVELOPMENT/decisions/ADR-015-inline-deep-dives.md)). |
 
 ### How we evaluate requests
 
@@ -48,27 +54,28 @@ A feature request that conflicts with the IS NOT list or a principle gets closed
 
 ## Current Posture
 
-> **Reviewed: 2026-07.** This section is expected to change. Updating it is not a reversal — it's a phase change, recorded with a short PDR and an edit here.
+> **Reviewed: 2026-10.** This section is expected to change. Updating it is not a reversal — it's a phase change, recorded with a short PDR and an edit here.
 
-**The phase we're in: get the basics working well for everyone before expanding.** Priority goes to making the core experience (sources, chat, search, notes, podcasts) solid across the full provider matrix and deployment surface, ahead of new product surfaces.
+**The phase we're in: make learning with your research work well.** The fork's work goes into deep dives, what you've learned and the Journey tab, and into the plans on the horizon below. The core experience (sources, chat, search, notes, podcasts) comes from Open Notebook, and the fork takes in upstream's improvements when it merges upstream `main`.
 
 ### Directional constraints
 
 Decisions about the future we haven't made yet — recorded as "which door to keep open":
 
-- **Single-user first, multi-user compatible.** Open Notebook is a single-user tool today, but multi-user is under active consideration ([#712](https://github.com/lfnovo/open-notebook/issues/712)). New features must not gratuitously preclude multi-user (schema, auth, data scoping) ([PDR-001](docs/7-DEVELOPMENT/decisions/PDR-001-single-user-first.md)).
+- **Single-user first, multi-user compatible.** Open Notebook Factory is a single-user tool. Upstream is considering multi-user ([lfnovo/open-notebook#712](https://github.com/lfnovo/open-notebook/issues/712)). New features must not gratuitously preclude multi-user (schema, auth, data scoping) ([PDR-001](docs/7-DEVELOPMENT/decisions/PDR-001-single-user-first.md)).
 - **Portable by default.** Provider-exclusive capabilities (including paid-only ones) are on the table for the future — deliberately, via PDR, never by accident ([PDR-002](docs/7-DEVELOPMENT/decisions/PDR-002-provider-agnostic-core.md)).
+- **Stay mergeable with upstream.** The fork merges Open Notebook's `main` from time to time. Prefer adding to shared code over rewriting it, and keep the fork's database migrations after upstream's ([Syncing with Upstream](docs/7-DEVELOPMENT/syncing-upstream.md)).
 
 ### Horizon
 
-The big clusters under consideration — direction, not roadmap; no dates. Each has an umbrella issue where the thinking happens:
+What the fork plans next — direction, not roadmap; no dates:
 
-| Cluster | What it is | Where |
-|---|---|---|
-| **Platform v-next** | SurrealDB v3 migration, possible frontend/backend Docker image split, possible Surreal Commands → Celery move — evaluated together as one coordinated breaking change | [#372](https://github.com/lfnovo/open-notebook/issues/372) · [#378](https://github.com/lfnovo/open-notebook/issues/378) · [#381](https://github.com/lfnovo/open-notebook/issues/381) |
-| **Multi-user** | Deep platform redesign: auth, data scoping, what "multi-user" means for a self-hosted tool | [#712](https://github.com/lfnovo/open-notebook/issues/712) |
-| **Content modes & artifacts** | The output side: generated artifacts, videos, explainers, presentations, mind maps — as one coherent product surface, not a pile of features | [#203](https://github.com/lfnovo/open-notebook/issues/203) |
-| **Agents operating Open Notebook** | Role inversion via MCP: AI agents use Open Notebook on the user's behalf — the platform becomes the research memory of agents, not just a UI | [#878](https://github.com/lfnovo/open-notebook/issues/878) · [#693](https://github.com/lfnovo/open-notebook/issues/693) · [#973](https://github.com/lfnovo/open-notebook/issues/973) |
+- **An Audio tab in Studio**, next to Journey and Notes.
+- **Suggested questions and a summary for empty notebooks.**
+- **A review quiz from what you've learned**, built from the conclusions of your deep dives.
+- **A study-guide export of a journey.**
+
+Open Notebook's own horizon (a platform update around SurrealDB v3, multi-user, new output formats, agents that use it through MCP) is described in [its VISION.md](https://github.com/lfnovo/open-notebook/blob/main/VISION.md#horizon). What upstream ships reaches the fork through the upstream merges.
 
 ---
 
