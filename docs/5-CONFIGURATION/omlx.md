@@ -1,8 +1,8 @@
 # oMLX Setup Guide
 
-[oMLX](https://omlx.ai/) is a macOS-native inference server for Apple Silicon. It runs [MLX](https://opensource.apple.com/projects/mlx/) models locally and exposes an **OpenAI-compatible API** at `/v1`, so Open Notebook can use it for language and embedding models without sending data to the cloud.
+[oMLX](https://omlx.ai/) is a macOS-native inference server for Apple Silicon. It runs [MLX](https://opensource.apple.com/projects/mlx/) models locally and exposes an **OpenAI-compatible API** at `/v1`, so Open Notebook Factory can use it for language and embedding models without sending data to the cloud.
 
-Open Notebook treats **oMLX** as a first-class provider in Manage → Models. Identity comes from Esperanto’s built-in `omlx` [OpenAI-compatible profile](https://github.com/lfnovo/esperanto/issues/228) (`AIFactory.create_language("omlx", ...)` / `create_embedding("omlx", ...)`). There is no remapping to the generic `openai-compatible` provider and no `OPENAI_COMPATIBLE_*` env mirroring.
+Open Notebook Factory treats **oMLX** as a first-class provider in Manage → Models. Identity comes from Esperanto’s built-in `omlx` [OpenAI-compatible profile](https://github.com/lfnovo/esperanto/issues/228) (`AIFactory.create_language("omlx", ...)` / `create_embedding("omlx", ...)`). There is no remapping to the generic `openai-compatible` provider and no `OPENAI_COMPATIBLE_*` env mirroring.
 
 ## Why Choose oMLX?
 
@@ -41,7 +41,7 @@ Admin UI (when using oMLX’s own default port): `http://localhost:8000/admin`
 
 ## Port Conflict with SurrealDB
 
-oMLX and SurrealDB both default to **port 8000**. Open Notebook’s database uses `8000`, so running oMLX on the default port will collide.
+oMLX and SurrealDB both default to **port 8000**. Open Notebook Factory’s database uses `8000`, so running oMLX on the default port will collide.
 
 **Recommended:** run oMLX on **11435** (same idea as Ollama’s 11434):
 
@@ -51,7 +51,7 @@ OMLX_PORT=11435 omlx serve
 
 Or set the port in oMLX’s admin settings / `~/.omlx/settings.json`.
 
-Then use this base URL in Open Notebook:
+Then use this base URL in Open Notebook Factory:
 
 ```text
 http://localhost:11435/v1
@@ -59,12 +59,12 @@ http://localhost:11435/v1
 
 > Always include the `/v1` suffix — oMLX’s OpenAI API lives under `/v1` (e.g. `GET /v1/models`).
 
-## Configure Open Notebook
+## Configure Open Notebook Factory
 
 Follow [Connect a provider](../4-AI-PROVIDERS/index.md#connect-a-provider) and pick **oMLX**. In the form:
 
 - **Configuration Name** (required), e.g. "oMLX"
-- **Base URL**: keep `http://localhost:11435/v1` (prefilled), or use `http://host.docker.internal:11435/v1` if Open Notebook runs in Docker
+- **Base URL**: keep `http://localhost:11435/v1` (prefilled), or use `http://host.docker.internal:11435/v1` if Open Notebook Factory runs in Docker
 - **API Key**: only if you started oMLX with `--api-key`
 
 In **Discover Models**, add your models with **Model Type** `Language`, then again with `Embedding`.
@@ -82,12 +82,12 @@ These match Esperanto’s profile env names (`OMLX_API_BASE`, `OMLX_API_KEY`).
 
 ## Network Notes (Docker)
 
-oMLX itself must run on the Mac host. If Open Notebook runs in Docker:
+oMLX itself must run on the Mac host. If Open Notebook Factory runs in Docker:
 
 | Setup | Base URL |
 |-------|----------|
 | Both on host | `http://localhost:11435/v1` |
-| Open Notebook in Docker, oMLX on host | `http://host.docker.internal:11435/v1` |
+| Open Notebook Factory in Docker, oMLX on host | `http://host.docker.internal:11435/v1` |
 
 Ensure oMLX listens on an interface Docker can reach.
 

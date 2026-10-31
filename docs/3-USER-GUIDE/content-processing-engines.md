@@ -1,6 +1,6 @@
 # Content Processing Engines - Choosing How Content Is Extracted
 
-When you add a source, Open Notebook extracts its text before chunking, embedding, and indexing it. How that extraction happens depends on the **processing engine**. You usually don't need to touch this — the defaults handle most content — but knowing your options helps when a document extracts poorly or a URL comes back empty.
+When you add a source, Open Notebook Factory extracts its text before chunking, embedding, and indexing it. How that extraction happens depends on the **processing engine**. You usually don't need to touch this — the defaults handle most content — but knowing your options helps when a document extracts poorly or a URL comes back empty.
 
 Configure everything here in **Settings → Content Processing**.
 
@@ -47,7 +47,7 @@ Controls how uploaded files (PDF, Word, PowerPoint, EPUB, etc.) are turned into 
 
 ## URL Processing Engines
 
-Controls how web links are fetched and converted to text. Sites differ wildly — some are static HTML, others render everything with JavaScript, others sit behind anti-bot protection — so Open Notebook offers several engines with different capabilities.
+Controls how web links are fetched and converted to text. Sites differ wildly — some are static HTML, others render everything with JavaScript, others sit behind anti-bot protection — so Open Notebook Factory offers several engines with different capabilities.
 
 | Engine | What it does | Needs |
 |--------|--------------|-------|
@@ -59,7 +59,7 @@ Controls how web links are fetched and converted to text. Sites differ wildly �
 
 ### How the Auto fallback chain works
 
-In Auto mode, Open Notebook tries engines in order and stops at the first that returns usable content:
+In Auto mode, Open Notebook Factory tries engines in order and stops at the first that returns usable content:
 
 ```
 Firecrawl  →  Jina  →  Crawl4AI  →  simple (bs4)
@@ -123,7 +123,7 @@ Notes:
 - **The UI reflects reality.** Settings shows Docling/Crawl4AI/OCR as disabled until the runtime is actually installed and importable, so while a first-boot install is still running they correctly read "unavailable".
 - **Offline / air-gapped deployments:** the startup install needs network access on first boot. If you can't reach PyPI, leave these disabled.
 
-Set the variables the same way as any other Open Notebook environment variable (see the [Environment Reference](../5-CONFIGURATION/environment-reference.md) and your `docker-compose.yml`).
+Set the variables the same way as any other Open Notebook Factory environment variable (see the [Environment Reference](../5-CONFIGURATION/environment-reference.md) and your `docker-compose.yml`).
 
 ---
 

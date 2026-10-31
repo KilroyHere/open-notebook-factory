@@ -2,7 +2,7 @@
 # Release image gate: fresh-install and upgrade tests against built Docker images.
 #
 # Usage: release-image-test.sh <fresh|upgrade|probe|all> <new-image> [old-image]
-#   e.g. release-image-test.sh all lfnovo/open_notebook:1.12.0 lfnovo/open_notebook:1.11.0
+#   e.g. release-image-test.sh all ghcr.io/kilroyhere/open-notebook-factory:1.12.0 ghcr.io/kilroyhere/open-notebook-factory:1.11.0
 #
 # Scenarios:
 #   fresh   - empty DB -> migrations on boot -> worker processes a source

@@ -8,7 +8,7 @@ body:
       value: |
         Thanks for reporting a bug! Please fill out the information below to help us understand and fix the issue.
 
-        Issues are for **reproducible bugs** and maintainer-created work items. Feature requests, ideas, behavior changes, product/design/architecture proposals, and contribution proposals belong in [Discussions](https://github.com/lfnovo/open-notebook/discussions/new?category=ideas).
+        This form is for **reproducible bugs**. For a question, an idea or a feature request, open a blank issue instead.
 
         **Installation or setup problem?** Use the "Installation Issue" template instead.
 
@@ -16,7 +16,7 @@ body:
     id: bug-confirmation
     attributes:
       label: Is this a reproducible bug?
-      description: Ideas and feature requests belong in Discussions and may be converted there if opened as Issues.
+      description: Questions, ideas and feature requests go in a blank issue.
       options:
         - label: I confirm this is a reproducible bug, not a feature request, idea, question, or contribution proposal.
           required: true
@@ -65,7 +65,7 @@ body:
   - type: dropdown
     id: version
     attributes:
-      label: Open Notebook Version
+      label: Open Notebook Factory Version
       description: Which version are you using?
       options:
         - v1-latest (Docker)
@@ -112,4 +112,4 @@ body:
         1. A maintainer will review your bug report
         2. If you checked the box above and want to fix it, please propose your solution approach
         3. Wait for assignment before starting development
-        4. See our [Contributing Guide](https://github.com/lfnovo/open-notebook/blob/main/CONTRIBUTING.md) for more details
+        4. See our [Contributing Guide](https://github.com/KilroyHere/open-notebook-factory/blob/main/docs/7-DEVELOPMENT/contributing.md) for more details

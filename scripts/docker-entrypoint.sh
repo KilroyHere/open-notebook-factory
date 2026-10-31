@@ -112,5 +112,5 @@ if is_true "$OPEN_NOTEBOOK_ENABLE_CRAWL4AI"; then
     fi
 fi
 
-log "Starting Open Notebook."
+log "Starting Open Notebook Factory."
 exec "$@"

@@ -218,8 +218,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Open Notebook API",
-    description="API for Open Notebook - Research Assistant",
+    title="Open Notebook Factory API",
+    description="API for Open Notebook Factory - Research Assistant",
     lifespan=lifespan,
 )
 
@@ -410,7 +410,7 @@ app.include_router(learning.router, prefix="/api", tags=["learning"])
 
 @app.get("/")
 async def root():
-    return {"message": "Open Notebook API is running"}
+    return {"message": "Open Notebook Factory API is running"}
 
 
 @app.get("/health")

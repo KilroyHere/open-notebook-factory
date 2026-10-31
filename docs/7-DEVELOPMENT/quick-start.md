@@ -1,6 +1,6 @@
 # Quick Start (Development)
 
-This page has been merged into **[Development Setup](development-setup.md)**, which is the single, maintained guide for running Open Notebook from source.
+This page has been merged into **[Development Setup](development-setup.md)**, which is the single, maintained guide for running Open Notebook Factory from source.
 
 The short version:
 

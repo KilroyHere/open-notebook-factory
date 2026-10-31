@@ -1,6 +1,6 @@
 # Configuration
 
-Open Notebook is configured in two places:
+Open Notebook Factory is configured in two places:
 
 1. **Environment variables** for infrastructure: the encryption key, the database connection, the API URL, timeouts. The complete list is the [Environment Reference](environment-reference.md).
 2. **The web UI** for everything else: AI provider credentials and models in **Manage → Models**, content processing engines in **Settings**.
@@ -29,7 +29,7 @@ services:
 
 Replace `<generated-key>` with a value you generate yourself, for example with `openssl rand -hex 32` (on Windows, see [Set your encryption key](../1-INSTALLATION/docker-compose.md#step-2-set-your-encryption-key)). Don't reuse an example value.
 
-The shipped `docker-compose.yml` doesn't load an env file into the container. A `.env` file next to it only fills the `${...}` placeholders in the compose file (`SURREAL_USER`, `SURREAL_PASSWORD`), so a variable that exists only in `.env` never reaches Open Notebook. To keep settings in a file, add `env_file: .env` to the `open_notebook` service.
+The shipped `docker-compose.yml` doesn't load an env file into the container. A `.env` file next to it only fills the `${...}` placeholders in the compose file (`SURREAL_USER`, `SURREAL_PASSWORD`), so a variable that exists only in `.env` never reaches Open Notebook Factory. To keep settings in a file, add `env_file: .env` to the `open_notebook` service.
 
 ### From source
 
@@ -92,7 +92,7 @@ Set `OPEN_NOTEBOOK_PASSWORD` for anything reachable beyond your own machine. Wit
 | [Security](security.md) | Password, credential encryption, CORS, hardening |
 | [Reverse Proxy](reverse-proxy.md) | nginx, Caddy, Traefik, custom domains, HTTPS |
 | [Advanced](advanced.md) | Concurrency, timeouts, ports, logging, backups |
-| [MCP Integration](mcp-integration.md) | Using Open Notebook from MCP clients |
+| [MCP Integration](mcp-integration.md) | Using Open Notebook Factory from MCP clients |
 
 ---
 

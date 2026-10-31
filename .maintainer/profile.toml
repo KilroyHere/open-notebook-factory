@@ -4,8 +4,8 @@
 schema_version = 1
 
 [project]
-name = "Open Notebook"
-repo = "lfnovo/open-notebook"
+name = "Open Notebook Factory"
+repo = "KilroyHere/open-notebook-factory"
 artifact = "app-docker"
 commands_doc = "AGENTS.md"                  # canonical commands: AGENTS.md → Commands, Makefile
 
@@ -33,11 +33,11 @@ changelog = "CHANGELOG.md"
 version_files = ["pyproject.toml"]
 lock_command = "uv lock"           # uv.lock records the package's own version (line 2053)
 # First action that can start public distribution: the CI workflow pushes the <version> and
-# <version>-single tags to both registries (public, but v1-latest untouched). Publication of
+# <version>-single tags to GHCR (public, but v1-latest untouched). Publication of
 # the GitHub release is what promotes v1-latest — see latest_promotion.
 distribution_trigger = "gh workflow run build-and-release.yml --ref main -f push_latest=false"
 publish_workflow = ".github/workflows/build-and-release.yml"
-latest_promotion = "publishing a non-prerelease GitHub release (gh release create v<ver> --latest) re-runs build-and-release.yml, which adds the v1-latest and v1-latest-single tags on both registries; manual equivalent: the same workflow with push_latest=true"
+latest_promotion = "publishing a non-prerelease GitHub release (gh release create v<ver> --latest) re-runs build-and-release.yml, which adds the v1-latest and v1-latest-single tags on GHCR; manual equivalent: the same workflow with push_latest=true"
 notes_source = "CHANGELOG.md"
 consumer_surfaces = [
   "REST API under /api (the UI is one client; integrations are others)",
@@ -55,7 +55,7 @@ alerts_policy = "open Dependabot highs are resolved or explicitly accepted by th
 merge_own_prs = "ask-once-per-session"      # ask once per session ("merge when clean?") and honor the answer
 
 [artifacts.docker]
-registries = ["lfnovo/open_notebook", "ghcr.io/lfnovo/open-notebook"]
+registries = ["ghcr.io/kilroyhere/open-notebook-factory"]   # Docker Hub only if the workflows get its secrets
 variants = ["", "-single"]                  # runtime target and --target single, same Dockerfile
 platforms = ["amd64", "arm64"]
 dev_tag = "v1-dev"                          # rebuilt from main on every push (build-dev.yml)
@@ -113,4 +113,4 @@ public_language = "en"
 agent_attribution = "none"
 
 [channels]
-announce = ["discord"]                      # texts are delivered to the owner, never posted by a skill
+announce = []                               # no announce channel; texts are delivered to the owner, never posted by a skill

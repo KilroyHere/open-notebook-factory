@@ -86,7 +86,7 @@ Full message: `Content too large for the selected model. Try using a smaller sel
 **Fix:**
 
 - In notebook chat, include fewer sources, or switch them from "Full content" to "Insights only".
-- Use a model with a larger window. Open Notebook switches to the **Large Context Model** automatically when the content exceeds about 105,000 tokens, so assign a model with a large window to that role under Default Model Assignments.
+- Use a model with a larger window. Open Notebook Factory switches to the **Large Context Model** automatically when the content exceeds about 105,000 tokens, so assign a model with a large window to that role under Default Model Assignments.
 - Start a new chat session to drop a long history.
 
 **Ollama doesn't report this error.** When a prompt exceeds the credential's **Context Window (num_ctx)** (8192 tokens by default), Ollama silently drops the start of the prompt. Answers then ignore your sources or earlier messages. Raise **Context Window (num_ctx)** on the Ollama configuration in Manage → Models if your hardware allows; see [Ollama → Context window](../5-CONFIGURATION/ollama.md#context-window-num_ctx).
@@ -101,7 +101,7 @@ The provider returned a server error (500, 502, 503 or "overloaded"). Wait and r
 
 ### "AI service error: …"
 
-An error Open Notebook doesn't recognize; the rest of the message is the provider's own text (shortened). It usually names the problem (unsupported parameter, content policy, model access). The full error is in the log: `docker compose logs open_notebook | grep -i "Unclassified LLM error"`.
+An error Open Notebook Factory doesn't recognize; the rest of the message is the provider's own text (shortened). It usually names the problem (unsupported parameter, content policy, model access). The full error is in the log: `docker compose logs open_notebook | grep -i "Unclassified LLM error"`.
 
 ### "The model returned an empty response. Try again, or pick a different model if this keeps happening."
 

@@ -1,4 +1,4 @@
-# Contributing to Open Notebook
+# Contributing to Open Notebook Factory
 
 **📍 This file has moved!**
 
@@ -21,10 +21,10 @@ All contribution guidelines have been consolidated into the new development docu
 
 ## The Contribution Workflow
 
-**TL;DR**: Feature requests, product/design/architecture proposals, and other non-trivial ideas
-start in [GitHub Discussions](https://github.com/lfnovo/open-notebook/discussions/new?category=ideas).
-Reproducible bugs start in Issues. Coding starts from an approved and assigned Issue. Small obvious
-fixes (typos, docs, tiny bugs) can still go straight to a PR.
+**TL;DR**: Bugs, questions, feature requests and design proposals start in
+[Issues](https://github.com/KilroyHere/open-notebook-factory/issues). Coding starts from an approved and assigned Issue. Small obvious
+fixes (typos, docs, tiny bugs) can still go straight to a PR. Changes that would also help the
+original project can be proposed upstream, in [Open Notebook](https://github.com/lfnovo/open-notebook).
 
 This prevents wasted effort and ensures your work aligns with the project. [See details →](docs/7-DEVELOPMENT/contributing.md)
 

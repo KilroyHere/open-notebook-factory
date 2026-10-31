@@ -8,6 +8,7 @@ from fastapi import APIRouter, Request
 from loguru import logger
 
 from open_notebook.database.repository import repo_query
+from open_notebook.project import PROJECT_REPO_URL
 from open_notebook.utils.version_utils import (
     compare_versions,
     get_version_from_github_async,
@@ -65,9 +66,7 @@ async def get_latest_version_cached(current_version: str) -> tuple[Optional[str]
         logger.info("Checking for latest version from GitHub...")
 
         # Fetch latest version from GitHub with 10-second timeout
-        latest_version = await get_version_from_github_async(
-            "https://github.com/lfnovo/open-notebook", "main"
-        )
+        latest_version = await get_version_from_github_async(PROJECT_REPO_URL, "main")
 
         logger.info(
             f"Latest version from GitHub: {latest_version}, Current version: {current_version}"

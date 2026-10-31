@@ -21,7 +21,7 @@ docker compose exec speaches uv tool run speaches-cli model download Systran/fas
 | `Systran/faster-whisper-medium` | More accurate, much slower on CPU |
 | `Systran/faster-whisper-large-v3` | Most accurate; use a GPU |
 
-`speaches-cli registry ls --task automatic-speech-recognition` lists everything Speaches can download. Register the model in Open Notebook under the exact same id.
+`speaches-cli registry ls --task automatic-speech-recognition` lists everything Speaches can download. Register the model in Open Notebook Factory under the exact same id.
 
 Test it:
 
@@ -34,7 +34,7 @@ curl http://localhost:8969/v1/audio/transcriptions \
 
 ## Long recordings
 
-Before transcription, Open Notebook (through content-core) splits long audio and video into 10-minute segments and transcribes up to 3 at a time. Cloud APIs need this because of their upload limits; a local server usually doesn't. These variables go in the `open_notebook` environment (apply with `docker compose up -d`):
+Before transcription, Open Notebook Factory (through content-core) splits long audio and video into 10-minute segments and transcribes up to 3 at a time. Cloud APIs need this because of their upload limits; a local server usually doesn't. These variables go in the `open_notebook` environment (apply with `docker compose up -d`):
 
 | Variable | Default | Use |
 |----------|---------|-----|

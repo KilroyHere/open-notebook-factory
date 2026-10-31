@@ -18,7 +18,6 @@
 - SurrealDB itself, the AI providers' services and their pricing or availability.
 - Community packaging channels (Unraid, Helm charts, Podman recipes, desktop wrappers): valid
   ideas that wait for a champion.
-- The third-party "Installation Assistant" GPT linked from the issue forms.
 
 ## Tone in public text
 

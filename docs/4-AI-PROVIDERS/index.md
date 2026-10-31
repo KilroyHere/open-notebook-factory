@@ -1,6 +1,6 @@
 # AI Providers
 
-Open Notebook talks to AI models through providers. You connect a provider once in **Manage → Models**, pick which of its models to use, and choose a default model for each job (chat, embeddings, transcription and more).
+Open Notebook Factory talks to AI models through providers. You connect a provider once in **Manage → Models**, pick which of its models to use, and choose a default model for each job (chat, embeddings, transcription and more).
 
 This page has three parts:
 
@@ -14,7 +14,7 @@ Per-provider details (where to get a key, base URLs, regional endpoints) are in 
 
 ## Connect a provider
 
-Do this after Open Notebook is running and you can open the UI. It ends with a working chat.
+Do this after Open Notebook Factory is running and you can open the UI. It ends with a working chat.
 
 > **Before you start:** `OPEN_NOTEBOOK_ENCRYPTION_KEY` must be set (every install guide sets it). If it isn't, the Models page shows "Encryption key not configured" and won't store keys.
 
@@ -31,7 +31,7 @@ Do this after Open Notebook is running and you can open the UI. It ends with a w
 
 ### 2. Test the connection
 
-On the new configuration, click **Test** (tooltip: *Test Connection*). A green check means Open Notebook reached the provider with your key. A red cross means the key, the base URL or the network is wrong; see [Troubleshooting](#troubleshooting).
+On the new configuration, click **Test** (tooltip: *Test Connection*). A green check means Open Notebook Factory reached the provider with your key. A red cross means the key, the base URL or the network is wrong; see [Troubleshooting](#troubleshooting).
 
 ### 3. Add models
 
@@ -70,7 +70,7 @@ If you get an answer, you're done. Add more providers the same way at any time; 
 ### Troubleshooting
 
 - **Test fails on a cloud provider**: check the key on the provider's website and that the account has credit. Edit the configuration to replace the key.
-- **Test fails on a local provider**: the base URL must be reachable *from the Open Notebook container*, not from your browser. `localhost` inside the container is the container itself. See [Ollama](../5-CONFIGURATION/ollama.md).
+- **Test fails on a local provider**: the base URL must be reachable *from the Open Notebook Factory container*, not from your browser. `localhost` inside the container is the container itself. See [Ollama](../5-CONFIGURATION/ollama.md).
 - **Chat says "No model configured…"**: a default is empty. Go back to step 4.
 - **Source stays queued forever**: the background worker isn't running. In Docker it runs inside the `open_notebook` container (check `docker compose logs open_notebook`); from source you start it yourself.
 - **"Decryption Error" on a configuration**: `OPEN_NOTEBOOK_ENCRYPTION_KEY` changed since the key was saved. Delete the configuration and add it again.
@@ -80,7 +80,7 @@ If you get an answer, you're done. Add more providers the same way at any time; 
 
 ## Supported providers
 
-Open Notebook supports 24 providers. The table lists the model types each provider offers when you add a configuration. What you can actually add depends on the models in your provider account.
+Open Notebook Factory supports 24 providers. The table lists the model types each provider offers when you add a configuration. What you can actually add depends on the models in your provider account.
 
 | Provider | Language | Embedding | Speech-to-Text | Text-to-Speech | Setup |
 |---|:-:|:-:|:-:|:-:|---|
@@ -115,7 +115,7 @@ Open Notebook supports 24 providers. The table lists the model types each provid
 
 ## Choosing providers
 
-Open Notebook needs at least a **language** model (for chat) and an **embedding** model (for search and Ask). Podcasts also need **text-to-speech**.
+Open Notebook Factory needs at least a **language** model (for chat) and an **embedding** model (for search and Ask). Podcasts also need **text-to-speech**.
 
 **One provider for everything.** OpenAI, Google AI, Mistral AI, OpenRouter, PayPerQ and Azure OpenAI offer all four model types under one key. This is the simplest setup.
 
@@ -137,4 +137,4 @@ Prices, context windows and model line-ups change often, so this guide doesn't l
 - [Ollama](../5-CONFIGURATION/ollama.md): local models, networking and timeouts
 - [User Guide](../3-USER-GUIDE/index.md): adding sources, chat, podcasts
 
-**Need help?** Join the [Discord community](https://discord.gg/37XJPXfz2w).
+**Need help?** Ask in [GitHub Issues](https://github.com/KilroyHere/open-notebook-factory/issues).

@@ -2,7 +2,7 @@
 
 Engineering practices and decision-making guidance for contributors.
 
-> **Looking for the product vision?** What Open Notebook is (and is not), the durable product
+> **Looking for the product vision?** What Open Notebook Factory is (and is not), the durable product
 > principles, and the current posture live in **[VISION.md](../../VISION.md)** — read that first.
 > The reasoning behind past structural choices lives in the
 > **[decision records](decisions/README.md)**.
@@ -159,4 +159,4 @@ focused on our core vision. We appreciate all contributions and ideas!
 
 ---
 
-**Questions about these principles?** Open a discussion on GitHub or join our [Discord](https://discord.gg/37XJPXfz2w).
+**Questions about these principles?** Open an [issue](https://github.com/KilroyHere/open-notebook-factory/issues).

@@ -1,6 +1,6 @@
 # Notebooks, Sources, Insights, and Notes
 
-Open Notebook has four kinds of content. Knowing how they relate explains most of the app.
+Open Notebook Factory has four kinds of content. Knowing how they relate explains most of the app.
 
 ```
 NOTEBOOK  "AI Safety Research"  (name + description)

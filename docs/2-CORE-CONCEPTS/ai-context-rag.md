@@ -1,6 +1,6 @@
-# AI Context & RAG - How Open Notebook Uses Your Research
+# AI Context & RAG - How Open Notebook Factory Uses Your Research
 
-An AI model only knows what is sent to it in the prompt. Open Notebook has two ways of getting your research into that prompt:
+An AI model only knows what is sent to it in the prompt. Open Notebook Factory has two ways of getting your research into that prompt:
 
 - **Chat** sends the content you selected, as it is. Nothing is searched.
 - **Ask** searches your knowledge base and sends only the matching pieces. This is retrieval-augmented generation (RAG).
@@ -40,15 +40,16 @@ How to change it is described in [Chat Effectively](../3-USER-GUIDE/chat-effecti
 
 ## Chat: Full Content, No Retrieval
 
-When you send a message in notebook Chat, Open Notebook builds one prompt from:
+When you send a message in notebook Chat, Open Notebook Factory builds one prompt from:
 
 1. the notebook's name and description,
 2. every source and note in context, at its context level,
-3. the conversation so far, and your new message.
+3. the conclusions of your [deep dives](../3-USER-GUIDE/deep-dives.md#what-youve-learned) that you keep in main chat, newest first, up to about 4,000 tokens,
+4. the conversation so far, and your new message.
 
 There is no search step: the model sees all of the selected content every time. This is why Chat is good for reading closely and comparing a few sources, and why large selections get expensive.
 
-The model is your **Chat Model** default, or the model you picked for that chat session. If the prompt is larger than about 105,000 tokens, Open Notebook switches to the **Large Context Model** default instead (or the Chat Model if none is set), even if you picked a model for the session.
+The model is your **Chat Model** default, or the model you picked for that chat session. If the prompt is larger than about 105,000 tokens, Open Notebook Factory switches to the **Large Context Model** default instead (or the Chat Model if none is set), even if you picked a model for the session.
 
 ### Source Chat
 

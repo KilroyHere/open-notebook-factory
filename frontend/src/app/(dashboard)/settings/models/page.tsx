@@ -14,6 +14,7 @@ import {
 } from '@/lib/hooks/use-credentials'
 import { useProviders } from '@/lib/hooks/use-providers'
 import { Credential } from '@/lib/api/credentials'
+import { projectDocsUrl } from '@/lib/project'
 import {
   DefaultModelSelectors,
   MigrationBanner,
@@ -145,7 +146,7 @@ export default function ApiKeysPage() {
           {/* Help link */}
           <div className="border-t pt-4">
             <a
-              href="https://github.com/lfnovo/open-notebook/blob/main/docs/5-CONFIGURATION/ai-providers.md"
+              href={projectDocsUrl('5-CONFIGURATION/ai-providers.md')}
               target="_blank"
               rel="noopener noreferrer"
               className="text-sm text-primary hover:underline"

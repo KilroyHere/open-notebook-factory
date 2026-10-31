@@ -1,6 +1,6 @@
 # Chat vs. Ask vs. Transformations - Which Tool for Which Job?
 
-Open Notebook has several ways to put AI to work on your content. They differ in what content they use, whether you can follow up, and where the result goes.
+Open Notebook Factory has several ways to put AI to work on your content. They differ in what content they use, whether you can follow up, and where the result goes.
 
 | | Notebook Chat | Source Chat | Ask | Transformations |
 |---|---|---|---|---|

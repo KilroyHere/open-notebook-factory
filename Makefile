@@ -6,9 +6,10 @@
 # Get version from pyproject.toml
 VERSION := $(shell grep -m1 version pyproject.toml | cut -d'"' -f2)
 
-# Image names for both registries
-DOCKERHUB_IMAGE := lfnovo/open_notebook
-GHCR_IMAGE := ghcr.io/lfnovo/open-notebook
+# Image names, the same as in .github/workflows/. Only GHCR is published;
+# DOCKERHUB_IMAGE also names local builds (docker-build-local).
+DOCKERHUB_IMAGE := kilroyhere/open-notebook-factory
+GHCR_IMAGE := ghcr.io/kilroyhere/open-notebook-factory
 
 # Build platforms
 PLATFORMS := linux/amd64,linux/arm64
@@ -52,7 +53,7 @@ release-test:
 	@test -n "$(TAG)" || (echo "usage: make release-test TAG=<new> [OLD_TAG=<previous>]"; exit 1)
 	bash scripts/release-test/release-image-test.sh all \
 		"$(DOCKERHUB_IMAGE):$(TAG)" \
-		$(if $(OLD_TAG),"$(DOCKERHUB_IMAGE):$(OLD_TAG)")
+		$(if $(OLD_TAG),"$(GHCR_IMAGE):$(OLD_TAG)")
 
 # Browsable RC stack for manual verification (optionally with a data dump).
 # Usage: make release-stack TAG=1.12.0 [DUMP=/tmp/dev-dump.surql]
@@ -177,7 +178,7 @@ start-all:
 	@uv run python scripts/start_all.py
 
 stop-all:
-	@echo "🛑 Stopping all Open Notebook services..."
+	@echo "🛑 Stopping all Open Notebook Factory services..."
 	@if [ -f /tmp/open-notebook-start-all.pid ]; then \
 		kill "$$(cat /tmp/open-notebook-start-all.pid)" 2>/dev/null || true; \
 		sleep 1; \
@@ -190,7 +191,7 @@ stop-all:
 	@echo "✅ All services stopped!"
 
 status:
-	@echo "📊 Open Notebook Service Status:"
+	@echo "📊 Open Notebook Factory Service Status:"
 	@echo "Database (SurrealDB):"
 	@docker compose ps surrealdb 2>/dev/null || echo "  ❌ Not running"
 	@echo "API Backend:"

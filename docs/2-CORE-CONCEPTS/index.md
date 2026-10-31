@@ -1,6 +1,6 @@
 # Core Concepts - Understand the Mental Model
 
-These pages explain how Open Notebook is organized and how its AI features decide what content to use. Read them once and the rest of the app will make sense. For step-by-step instructions, go to the [User Guide](../3-USER-GUIDE/index.md).
+These pages explain how Open Notebook Factory is organized and how its AI features decide what content to use. Read them once and the rest of the app will make sense. For step-by-step instructions, go to the [User Guide](../3-USER-GUIDE/index.md).
 
 ## The Pages
 
@@ -34,7 +34,7 @@ How a podcast episode is generated from your content.
 
 ## The Big Picture
 
-- **You choose the providers.** Open Notebook works with cloud and local AI providers. A cloud AI provider receives the content each feature sends (described in the pages above); with local models, prompts stay on your machine. Adding a web link still fetches it from the internet, and the Firecrawl and Jina URL engines, when configured, fetch pages through those services.
+- **You choose the providers.** Open Notebook Factory works with cloud and local AI providers. A cloud AI provider receives the content each feature sends (described in the pages above); with local models, prompts stay on your machine. Adding a web link still fetches it from the internet, and the Firecrawl and Jina URL engines, when configured, fetch pages through those services.
 - **You choose what the AI sees.** In Chat you set the context per source and note. Ask and Search can be limited to specific notebooks.
 - **Your data stays in your deployment.** Sources, insights, notes and podcast records live in your SurrealDB database. Uploaded files, generated podcast audio and chat history (a checkpoint file) live in the app's data directory. Back up both.
 

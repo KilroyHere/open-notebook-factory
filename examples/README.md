@@ -76,7 +76,7 @@ templates playground.
 ---
 
 ### `docker-compose-dev.yml` - Development Setup
-**Use this if:** You're contributing to Open Notebook or developing custom features
+**Use this if:** You're contributing to Open Notebook Factory or developing custom features
 
 **Features:**
 - Hot-reload for code changes
@@ -152,5 +152,4 @@ Add to `open_notebook` service environment:
 
 ## 🆘 Need Help?
 
-- **Discord**: [Join our community](https://discord.gg/37XJPXfz2w)
-- **Issues**: [GitHub Issues](https://github.com/lfnovo/open-notebook/issues)
+- **Issues**: [GitHub Issues](https://github.com/KilroyHere/open-notebook-factory/issues)

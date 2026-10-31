@@ -4,7 +4,7 @@
 
 set -e
 
-echo "=== Open Notebook Dev Startup ==="
+echo "=== Open Notebook Factory Dev Startup ==="
 
 # Check SurrealDB connectivity
 SURREAL_PORT=${SURREAL_PORT:-8018}

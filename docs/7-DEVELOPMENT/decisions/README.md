@@ -2,6 +2,8 @@
 
 The project's decision log: short, dated, immutable records of structural decisions. They answer *"why is it like this?"* months later, and prevent settled discussions from being reopened without knowing they were settled.
 
+ADR-001 to ADR-013 and both PDRs were written in Open Notebook, before this fork; they are kept as its history and still apply unless a later record supersedes them. ADR-014 and later are this fork's. Upstream numbers its records on its own; see [Syncing with Upstream](../syncing-upstream.md#where-conflicts-are-expected) for a clash.
+
 Two kinds, same format:
 
 - **ADR** (Architecture Decision Record) — technical choices: `ADR-NNN-slug.md`
@@ -14,7 +16,7 @@ The **current rules** distilled from these records live in [VISION.md](../../../
 1. **Records are immutable.** Reversing a decision means writing a *new* record and marking the old one `Superseded by ADR-NNN` in its Status line — never editing history.
 2. **Write it in the same PR.** A design that resolves an open structural question ships with its record. Half a page, written while the context is loaded — not a documentation session later.
 3. **Keep it to half a page.** Four sections: Context, Decision, Alternatives considered, Consequences. If it needs more, link an issue or doc for the depth.
-4. **Number sequentially** within each prefix (ADR-005 comes after ADR-004, independent of PDRs). The maintainer assigns the number at merge: in a PR, name the file `ADR-0XX-<slug>.md`, and the next free number and the index row below are added when it lands. This avoids several open PRs claiming the same number. ADR-010 is currently unassigned: it was once set aside for the unmerged PR #1332, so the index jumps from 009 to 011.
+4. **Number sequentially** within each prefix (ADR-005 comes after ADR-004, independent of PDRs). The maintainer assigns the number at merge: in a PR, name the file `ADR-0XX-<slug>.md`, and the next free number and the index row below are added when it lands. This avoids several open PRs claiming the same number. ADR-010 is currently unassigned: it was once set aside in Open Notebook for the unmerged PR #1332, so the index jumps from 009 to 011.
 
 ## Template
 
@@ -58,3 +60,4 @@ What this makes easier, what it makes harder, what to watch. (bullets)
 | [ADR-015](ADR-015-inline-deep-dives.md) | Deep dives open inline under their answer; full height is the fallback | Accepted |
 | [PDR-001](PDR-001-single-user-first.md) | Single-user first; don't preclude multi-user | Accepted |
 | [PDR-002](PDR-002-provider-agnostic-core.md) | Provider-agnostic core by default | Accepted |
+| [PDR-003](PDR-003-fork-identity.md) | Open Notebook Factory has its own name, images and channels | Accepted |

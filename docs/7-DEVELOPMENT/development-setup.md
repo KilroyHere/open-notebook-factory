@@ -1,6 +1,6 @@
 # Development Setup
 
-This is the one page for running Open Notebook from a source checkout. Other pages (README.dev.md, the contributing guide, the quick start) link here instead of repeating it.
+This is the one page for running Open Notebook Factory from a source checkout. Other pages (README.dev.md, the contributing guide, the quick start) link here instead of repeating it.
 
 The stack has four processes. Start them in this order, because each one depends on the one before it:
 
@@ -33,9 +33,9 @@ It installs Node.js 22, uv with Python 3.12, Docker Engine with Compose v2, Git,
 ## 1. Clone and install
 
 ```bash
-git clone https://github.com/<your-user>/open-notebook.git   # your fork
-cd open-notebook
-git remote add upstream https://github.com/lfnovo/open-notebook.git
+git clone https://github.com/<your-user>/open-notebook-factory.git   # your fork
+cd open-notebook-factory
+git remote add upstream https://github.com/KilroyHere/open-notebook-factory.git
 
 uv sync                          # Python deps, including the dev group (pytest, ruff, mypy)
 cd frontend && npm install && cd ..

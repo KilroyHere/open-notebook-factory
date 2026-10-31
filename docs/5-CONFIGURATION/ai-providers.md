@@ -1,6 +1,6 @@
 # AI Providers - Configuration Guide
 
-Open Notebook supports 24 AI providers. You connect them in the web UI under **Manage → Models**; their keys are stored encrypted in the database.
+Open Notebook Factory supports 24 AI providers. You connect them in the web UI under **Manage → Models**; their keys are stored encrypted in the database.
 
 > **Prerequisite:** `OPEN_NOTEBOOK_ENCRYPTION_KEY` must be set before you can save a provider key. See [Security](security.md#api-key-encryption).
 
@@ -129,7 +129,7 @@ A pay-as-you-go gateway offering language, embedding and speech models. Discover
 
 ### Cohere
 
-Language (`command-a-03-2025` is used for the connection test) and embedding models through Cohere's own v2 API. Reranking is not used by Open Notebook.
+Language (`command-a-03-2025` is used for the connection test) and embedding models through Cohere's own v2 API. Reranking is not used by Open Notebook Factory.
 
 ### Voyage AI
 
@@ -149,7 +149,7 @@ Text-to-speech and speech-to-text.
 
 ### Ollama (Recommended for Local)
 
-Free local language and embedding models. Enter the server address as **Base URL**, for example `http://host.docker.internal:11434` when Open Notebook runs in Docker and Ollama on the host. Ollama credentials also have a **Context Window (num_ctx)** field (default 8192 tokens).
+Free local language and embedding models. Enter the server address as **Base URL**, for example `http://host.docker.internal:11434` when Open Notebook Factory runs in Docker and Ollama on the host. Ollama credentials also have a **Context Window (num_ctx)** field (default 8192 tokens).
 
 Networking, model names, context window and the 180-second timeout are covered in the [Ollama guide](ollama.md).
 
@@ -159,7 +159,7 @@ An MLX inference server for M-series Macs, for language and embedding models. Ru
 
 ### LM Studio (Local Alternative)
 
-Use the **OpenAI Compatible** provider with **Base URL** `http://host.docker.internal:1234/v1` (Open Notebook in Docker) or `http://localhost:1234/v1` (from source). No API key is needed. See [OpenAI-Compatible](openai-compatible.md#lm-studio).
+Use the **OpenAI Compatible** provider with **Base URL** `http://host.docker.internal:1234/v1` (Open Notebook Factory in Docker) or `http://localhost:1234/v1` (from source). No API key is needed. See [OpenAI-Compatible](openai-compatible.md#lm-studio).
 
 ### Other OpenAI-compatible servers
 

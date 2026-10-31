@@ -1,4 +1,4 @@
-# User Guide - How to Use Open Notebook
+# User Guide - How to Use Open Notebook Factory
 
 Step-by-step instructions for each feature. If you want to understand how things work first (notebooks, sources, insights, context levels), read [Core Concepts](../2-CORE-CONCEPTS/index.md).
 
@@ -6,7 +6,7 @@ Step-by-step instructions for each feature. If you want to understand how things
 
 ## Before You Start
 
-Open Notebook needs at least one AI provider and default models. Follow [AI Providers → Connect a provider](../4-AI-PROVIDERS/index.md#connect-a-provider) to add a provider in **Manage → Models**, add its models and set the **Default Model Assignments**. [API Configuration](api-configuration.md) covers the rest of the Models page.
+Open Notebook Factory needs at least one AI provider and default models. Follow [AI Providers → Connect a provider](../4-AI-PROVIDERS/index.md#connect-a-provider) to add a provider in **Manage → Models**, add its models and set the **Default Model Assignments**. [API Configuration](api-configuration.md) covers the rest of the Models page.
 
 What each feature needs:
 
@@ -32,6 +32,7 @@ What each feature needs:
 | [Content Processing Engines](content-processing-engines.md) | How files and URLs are extracted (Docling, Firecrawl, Jina, Crawl4AI, OCR) |
 | [Transformations](transformations.md) | Generating insights from sources, built-in and custom transformations |
 | [Chat Effectively](chat-effectively.md) | Notebook chat, context levels, sessions, model choice, source chat |
+| [Deep Dives](deep-dives.md) | Going deeper on an answer or a passage, wrapping up what you learned, the Journey tab |
 | [Citations](citations.md) | Reading and checking the references in AI answers |
 | [Working with Notes](working-with-notes.md) | Writing notes and saving AI answers |
 | [Search and Ask](search.md) | Text and vector search, and Ask across your knowledge base |
@@ -54,6 +55,7 @@ What each feature needs:
 | Task | Use |
 |------|-----|
 | Explore a few sources with follow-up questions | [Notebook Chat](chat-effectively.md) |
+| Follow a tangent from an answer without losing your place | [Deep Dives](deep-dives.md) |
 | Ask one question across everything | [Ask](search.md#ask) |
 | Find a passage or term you remember | [Text search](search.md#search) |
 | Find content about an idea, whatever the wording | [Vector search](search.md#search) |

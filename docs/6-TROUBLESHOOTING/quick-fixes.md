@@ -76,7 +76,7 @@ On v1.15.0 the same timeout shows as "Could not connect to the AI provider…" a
 
 Open **Podcasts → Episodes**; the failed episode shows the error and a **Retry** button.
 
-- "Speaker profile 'X' has no voice model configured": the speaker profiles that ship with Open Notebook have no text-to-speech model. Edit them in **Podcasts → Profiles** and pick one.
+- "Speaker profile 'X' has no voice model configured": the speaker profiles that ship with Open Notebook Factory have no text-to-speech model. Edit them in **Podcasts → Profiles** and pick one.
 - `Voice name ... not supported` or `Requested entity was not found`: the profile's Voice ID isn't valid for its TTS model (the seeded profiles use OpenAI voice names).
 - Messages with a `NOTE:` explain the cause.
 
@@ -118,4 +118,4 @@ The published image has its Python dependencies installed. Downloads at startup 
 ## Still stuck?
 
 - Look up your exact message in the [Troubleshooting index](index.md).
-- Ask in [Discord](https://discord.gg/37XJPXfz2w) or [GitHub Discussions](https://github.com/lfnovo/open-notebook/discussions/categories/q-a).
+- Ask in [GitHub Issues](https://github.com/KilroyHere/open-notebook-factory/issues).

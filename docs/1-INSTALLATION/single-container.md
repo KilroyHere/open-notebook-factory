@@ -4,7 +4,7 @@
 
 The single image bundles SurrealDB, the API, the background worker and the web UI in one container. It is mostly useful on hosting platforms that run exactly one container per app.
 
-> **Images:** `lfnovo/open_notebook:v1-latest-single` on Docker Hub, `ghcr.io/lfnovo/open-notebook:v1-latest-single` on GitHub Container Registry.
+> **Image:** `ghcr.io/kilroyhere/open-notebook-factory:v1-latest-single` on GitHub Container Registry. There is no Docker Hub image. `v1-dev-single` is rebuilt from `main` on every push.
 
 ## What the container needs
 
@@ -28,7 +28,7 @@ The embedded database always starts with user `root` and password `root`, so set
 # docker-compose.yml
 services:
   open_notebook:
-    image: lfnovo/open_notebook:v1-latest-single
+    image: ghcr.io/kilroyhere/open-notebook-factory:v1-latest-single
     pull_policy: always
     ports:
       - "8502:8502"  # Web UI
@@ -64,12 +64,11 @@ After deploying, open the app's URL and follow [Connect a provider](../4-AI-PROV
 
 ### EasyPanel
 
-Open Notebook ships an EasyPanel template in [`examples/easypanel/`](https://github.com/lfnovo/open-notebook/tree/main/examples/easypanel). Unlike the single image, the template provisions **two services** (the Open Notebook app and a separate SurrealDB) and generates the database password, encryption key and, optionally, the app password for you.
+Open Notebook Factory ships an EasyPanel template in [`examples/easypanel/`](https://github.com/KilroyHere/open-notebook-factory/tree/main/examples/easypanel). Unlike the single image, the template provisions **two services** (the Open Notebook Factory app and a separate SurrealDB) and generates the database password, encryption key and, optionally, the app password for you.
 
-- **One-click:** once the template is published to the official [EasyPanel template gallery](https://github.com/easypanel-io/templates), create a new service from "Open Notebook", set an app password (or leave it blank to auto-generate one), and deploy.
-- **Manual:** copy `examples/easypanel/` into `templates/open-notebook` in a checkout of [`easypanel-io/templates`](https://github.com/easypanel-io/templates), run the templates playground (`npm run dev`), and create the template from the generated JSON in your EasyPanel instance.
+This fork's template is not in the official [EasyPanel template gallery](https://github.com/easypanel-io/templates). To use it, copy `examples/easypanel/` into `templates/open-notebook` in a checkout of [`easypanel-io/templates`](https://github.com/easypanel-io/templates), run the templates playground (`npm run dev`), and create the template from the generated JSON in your EasyPanel instance.
 
-See [`examples/easypanel/README.md`](https://github.com/lfnovo/open-notebook/blob/main/examples/easypanel/README.md) for details.
+See [`examples/easypanel/README.md`](https://github.com/KilroyHere/open-notebook-factory/blob/main/examples/easypanel/README.md) for details.
 
 ## Moving to Docker Compose
 
@@ -89,4 +88,4 @@ The single image's database uses `root:root`, which matches the compose default.
 
 ---
 
-**Need help?** [Discord](https://discord.gg/37XJPXfz2w) · [GitHub Issues](https://github.com/lfnovo/open-notebook/issues)
+**Need help?** [GitHub Issues](https://github.com/KilroyHere/open-notebook-factory/issues)
