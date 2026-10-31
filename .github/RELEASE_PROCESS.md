@@ -10,6 +10,11 @@ It was redesigned during the v1.11.0 release ([ADR-005](../docs/7-DEVELOPMENT/de
 
 ## Release Model
 
+- **Version numbers.** A release is numbered after the upstream Open Notebook
+  release it's based on, plus `.postN`: 1.15.0.post1 is the first release on
+  top of 1.15.0, then 1.15.0.post2. After merging a new upstream release X,
+  the next one is X.post1. This never reuses upstream's versions or tags, and
+  `pyproject.toml` (PEP 440), the image tags and the update check all accept it.
 - Patch releases ship backwards-compatible fixes.
 - Minor releases ship backwards-compatible features and improvements.
 - Major releases are planned with a milestone when they include breaking
