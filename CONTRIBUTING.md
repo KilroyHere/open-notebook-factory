@@ -1,4 +1,4 @@
-# Contributing to Open Notebook
+# Contributing to Open Notebook Factory
 
 **📍 This file has moved!**
 

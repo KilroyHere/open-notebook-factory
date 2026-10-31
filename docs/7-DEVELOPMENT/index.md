@@ -1,6 +1,6 @@
 # Development
 
-Documentation for people (and coding agents) working on the Open Notebook codebase.
+Documentation for people (and coding agents) working on the Open Notebook Factory codebase.
 
 ## Start here
 

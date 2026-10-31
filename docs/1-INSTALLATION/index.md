@@ -18,7 +18,7 @@ Want a guided first run with a specific provider? The [quick starts](../0-START-
 - **RAM:** 4 GB free at minimum, 8 GB or more recommended. Local models need much more (see [Ollama](../5-CONFIGURATION/ollama.md)).
 - **Disk:** room for the Docker images, your documents and any local models.
 - **GPU:** optional. It only matters for local models.
-- **Network:** needed to pull images and to reach cloud AI providers. With local models, Open Notebook works offline once installed.
+- **Network:** needed to pull images and to reach cloud AI providers. With local models, Open Notebook Factory works offline once installed.
 
 ## AI providers
 

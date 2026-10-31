@@ -1,10 +1,10 @@
-# Open Notebook - Start Here
+# Open Notebook Factory - Start Here
 
-**Open Notebook** is a self-hosted, privacy-focused AI research assistant. Add documents, web pages, audio and video, chat with an AI about them with citations, take notes, and turn your research into podcasts, using the AI providers you choose.
+**Open Notebook Factory** is a self-hosted, privacy-focused AI research assistant. Add documents, web pages, audio and video, chat with an AI about them with citations, take notes, and turn your research into podcasts, using the AI providers you choose.
 
 ## Choose your path
 
-Each quick start installs Open Notebook with Docker Compose and ends with a working chat.
+Each quick start installs Open Notebook Factory with Docker Compose and ends with a working chat.
 
 ### I have an API key for a cloud AI provider
 OpenAI, Anthropic, Google, Mistral, Groq, OpenRouter and more.
@@ -12,7 +12,7 @@ OpenAI, Anthropic, Google, Mistral, Groq, OpenRouter and more.
 → [Cloud Providers Quick Start](quick-start-cloud.md) (about 5 minutes)
 
 ### I want to run everything locally
-Ollama in Docker next to Open Notebook. No API keys; nothing leaves your machine.
+Ollama in Docker next to Open Notebook Factory. No API keys; nothing leaves your machine.
 
 → [Local Quick Start](quick-start-local.md) (about 10 minutes, plus model downloads)
 
@@ -32,9 +32,9 @@ Running from source, Windows without Docker, or a hosting platform → [Installa
 - **Take notes**: write your own or save AI answers as notes
 - **Create podcasts**: 1 to 4 speakers with configurable profiles
 
-## Open Notebook and Google Notebook LM
+## Open Notebook Factory and Google Notebook LM
 
-| | Open Notebook | Google Notebook LM |
+| | Open Notebook Factory | Google Notebook LM |
 |---|---|---|
 | **Where it runs** | Your machine or server | Google's cloud |
 | **AI models** | 20+ providers, cloud or local | Google's models |

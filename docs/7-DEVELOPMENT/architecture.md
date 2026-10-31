@@ -96,7 +96,7 @@ Nodes are `async def`, except in the two checkpointed chat graphs, which use syn
 1. A graph node calls `provision_langchain_model(content, model_id, default_type, **kwargs)` (`open_notebook/ai/provision.py`).
 2. Content over 105,000 tokens switches to the `large_context` default model. Otherwise an explicit `model_id` wins, then the default for `default_type` (`chat`, `transformation`, `tools`, …) from `DefaultModels`. No model → `ConfigurationError`, which the API returns as 422.
 3. `ModelManager.get_model()` loads the `Model` record. If it links a credential, the credential's config goes straight to Esperanto's `AIFactory`; otherwise `provision_provider_keys()` fills environment variables from stored credentials ([credentials.md](credentials.md#provisioning-two-paths)).
-4. The Esperanto model is converted with `.to_langchain()`. All provider calls go through [Esperanto](https://github.com/lfnovo/esperanto); nothing calls a provider SDK directly. Calls time out after `ESPERANTO_LLM_TIMEOUT` (Open Notebook sets 180 s when it's unset).
+4. The Esperanto model is converted with `.to_langchain()`. All provider calls go through [Esperanto](https://github.com/lfnovo/esperanto); nothing calls a provider SDK directly. Calls time out after `ESPERANTO_LLM_TIMEOUT` (Open Notebook Factory sets 180 s when it's unset).
 5. On failure, the node passes the exception through `classify_error()` (`open_notebook/utils/error_classifier.py`). It matches the error text (auth, rate limit, model not found, network/timeout, context length, …) and raises the matching `open_notebook.exceptions` type with a user-readable message. The API's exception handlers turn that into a status code, and the frontend shows the message.
 
 ## Background jobs

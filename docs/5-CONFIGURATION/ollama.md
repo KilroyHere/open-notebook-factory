@@ -1,6 +1,6 @@
 # Ollama Setup Guide
 
-[Ollama](https://ollama.com) runs open-weight models on your own hardware. Open Notebook can use it for chat, transformations, podcast scripts and embeddings. It doesn't provide speech models; for local podcasts and transcription, add [Speaches](local-tts.md).
+[Ollama](https://ollama.com) runs open-weight models on your own hardware. Open Notebook Factory can use it for chat, transformations, podcast scripts and embeddings. It doesn't provide speech models; for local podcasts and transcription, add [Speaches](local-tts.md).
 
 ---
 
@@ -20,11 +20,11 @@ ollama pull qwen3
 ollama pull mxbai-embed-large
 ```
 
-Open Notebook doesn't download Ollama models for you. Pull every model you plan to use, including the embedding model.
+Open Notebook Factory doesn't download Ollama models for you. Pull every model you plan to use, including the embedding model.
 
-### 2. Let Open Notebook reach Ollama
+### 2. Let Open Notebook Factory reach Ollama
 
-If Open Notebook runs in Docker or on another machine, Ollama must listen on more than localhost:
+If Open Notebook Factory runs in Docker or on another machine, Ollama must listen on more than localhost:
 
 ```bash
 OLLAMA_HOST=0.0.0.0:11434 ollama serve
@@ -47,7 +47,7 @@ Follow [Connect a provider](../4-AI-PROVIDERS/index.md#connect-a-provider) and p
 
 ## Which Base URL to use
 
-| Open Notebook runs | Ollama runs | Base URL |
+| Open Notebook Factory runs | Ollama runs | Base URL |
 |--------------------|-------------|----------|
 | From source on the same machine | Same machine | `http://localhost:11434` |
 | In Docker | On the host | `http://host.docker.internal:11434` |
@@ -92,7 +92,7 @@ Use Base URL `http://ollama:11434`, and pull models inside the container: `docke
 ## GPU acceleration
 
 - **Ollama in Docker with an NVIDIA GPU:** install the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) on the host and add the `deploy.resources.reservations.devices` block shown in [Ollama in the same compose file](#ollama-in-the-same-compose-file). Without it, the container runs on CPU only.
-- **Ollama installed on the host:** it uses a supported GPU (NVIDIA CUDA, Apple Silicon Metal, AMD ROCm) on its own; nothing to configure in Open Notebook.
+- **Ollama installed on the host:** it uses a supported GPU (NVIDIA CUDA, Apple Silicon Metal, AMD ROCm) on its own; nothing to configure in Open Notebook Factory.
 
 `ollama ps` shows whether a loaded model runs on the GPU or the CPU.
 
@@ -115,7 +115,7 @@ Use `gemma3:12b`, not `gemma3`. If you remove a model from Ollama, remove it fro
 
 Ollama credentials have a **Context Window (num_ctx)** field. Empty means 8192 tokens, which runs on GPUs with about 8 GB of VRAM. It applies to every model used through that credential.
 
-Ollama doesn't return an error when a prompt is longer than the window: it drops the start of the prompt and answers anyway (its server log shows a `truncating input prompt` warning). Symptoms in Open Notebook are answers that ignore your sources, chats that forget earlier messages, and transformations of long documents that only cover the end.
+Ollama doesn't return an error when a prompt is longer than the window: it drops the start of the prompt and answers anyway (its server log shows a `truncating input prompt` warning). Symptoms in Open Notebook Factory are answers that ignore your sources, chats that forget earlier messages, and transformations of long documents that only cover the end.
 
 To fix it, edit the Ollama credential in Manage → Models and raise **Context Window (num_ctx)**, for example to `32768`, if your hardware has the memory for it. If Ollama then runs out of memory or becomes very slow, lower it again or use a smaller model. Including fewer sources in chat context ("Insights only" instead of "Full content") also helps.
 
@@ -148,7 +148,7 @@ services:
 ### Test shows "Cannot connect to Ollama. Check if Ollama server is running."
 
 1. Is Ollama running? `curl http://localhost:11434/api/tags` on the Ollama machine.
-2. Is it listening beyond localhost? See [step 2](#2-let-open-notebook-reach-ollama) (and its exposure warning).
+2. Is it listening beyond localhost? See [step 2](#2-let-open-notebook-factory-reach-ollama) (and its exposure warning).
 3. Can the container reach it?
    ```bash
    docker compose exec open_notebook curl -s http://host.docker.internal:11434/api/tags

@@ -1,6 +1,6 @@
 # Docker Compose Installation (Recommended)
 
-This is the standard way to run Open Notebook. It uses the [`docker-compose.yml`](../../docker-compose.yml) in the root of the repository, which starts two services:
+This is the standard way to run Open Notebook Factory. It uses the [`docker-compose.yml`](../../docker-compose.yml) in the root of the repository, which starts two services:
 
 | Service | What it runs | Ports | Data folder |
 |---|---|---|---|
@@ -21,7 +21,7 @@ The background worker runs inside the `open_notebook` container, so source proce
 
 ## Step 1: Download the compose file
 
-Create a folder for Open Notebook and download the compose file into it:
+Create a folder for Open Notebook Factory and download the compose file into it:
 
 ```bash
 mkdir open-notebook
@@ -49,7 +49,7 @@ openssl rand -hex 32                                   # macOS, Linux
 [guid]::NewGuid().ToString("N") + [guid]::NewGuid().ToString("N")   # Windows PowerShell
 ```
 
-Open Notebook uses this key to encrypt the provider API keys it stores.
+Open Notebook Factory uses this key to encrypt the provider API keys it stores.
 
 > **Keep this key.** If it changes later, the keys you saved can no longer be decrypted and you have to enter them again.
 
@@ -62,7 +62,7 @@ The shipped file publishes ports `8502` (UI) and `5055` (API) on **all network i
 
 See [Access from another machine](#access-from-another-machine) if you do want to use it from other devices.
 
-## Step 4: Start Open Notebook
+## Step 4: Start Open Notebook Factory
 
 ```bash
 docker compose up -d
@@ -91,7 +91,7 @@ Then follow [Connect a provider](../4-AI-PROVIDERS/index.md#connect-a-provider):
 
 ## Changing settings
 
-Every Open Notebook setting is an environment variable on the **`open_notebook`** service. Add it to that service's `environment:` block and apply it with:
+Every Open Notebook Factory setting is an environment variable on the **`open_notebook`** service. Add it to that service's `environment:` block and apply it with:
 
 ```bash
 docker compose up -d
@@ -146,7 +146,7 @@ When you [connect a provider](../4-AI-PROVIDERS/index.md#connect-a-provider), pi
 
 ### Ollama installed on the host
 
-Open Notebook runs in a container, so `localhost` there is the container, not your computer. Use `host.docker.internal` instead.
+Open Notebook Factory runs in a container, so `localhost` there is the container, not your computer. Use `host.docker.internal` instead.
 
 1. Create `docker-compose.override.yml` so that name resolves on every platform (Docker Desktop already provides it; Docker Engine on Linux needs this line):
 
@@ -228,7 +228,7 @@ docker compose pull
 docker compose up -d
 ```
 
-Since v1.15.0, API keys saved (or migrated) by Open Notebook use an encryption format that older versions can't read. If you need to roll back after updating, restore the backup you made before the update.
+Since v1.15.0 (the Open Notebook release this fork is based on), API keys are saved (or migrated) in an encryption format that older versions can't read. If you need to roll back after updating, restore the backup you made before the update.
 
 ### Delete everything
 

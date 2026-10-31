@@ -1,6 +1,6 @@
 # Quick Start - Cloud AI Providers (5 minutes)
 
-Run Open Notebook with a cloud AI provider such as **OpenAI, Anthropic, Google, Mistral, Groq or OpenRouter**. You need Docker and an API key.
+Run Open Notebook Factory with a cloud AI provider such as **OpenAI, Anthropic, Google, Mistral, Groq or OpenRouter**. You need Docker and an API key.
 
 ## Prerequisites
 
@@ -15,7 +15,7 @@ Run Open Notebook with a cloud AI provider such as **OpenAI, Anthropic, Google, 
 
    Other providers are listed in [AI Providers](../4-AI-PROVIDERS/index.md#supported-providers).
 
-> **Pick a provider that does embeddings, or add a second one.** Open Notebook needs a language model for chat **and** an embedding model for search. OpenAI, Google AI, Mistral AI and OpenRouter offer both. Anthropic, DeepSeek and Groq offer no embedding models, so pair them with one that does (for example OpenAI, Google AI, Mistral AI or Voyage AI).
+> **Pick a provider that does embeddings, or add a second one.** Open Notebook Factory needs a language model for chat **and** an embedding model for search. OpenAI, Google AI, Mistral AI and OpenRouter offer both. Anthropic, DeepSeek and Groq offer no embedding models, so pair them with one that does (for example OpenAI, Google AI, Mistral AI or Voyage AI).
 
 ## Step 1: Download and configure (1 min)
 
@@ -82,6 +82,6 @@ The last step of that page creates a notebook, adds a text source and sends a ch
 
 - [Docker Compose guide](../1-INSTALLATION/docker-compose.md): changing settings, backups, updates, access from other machines
 - [User Guide](../3-USER-GUIDE/index.md): sources, chat, notes, podcasts
-- Before exposing Open Notebook to a network, set a password: [Security](../5-CONFIGURATION/security.md)
+- Before exposing Open Notebook Factory to a network, set a password: [Security](../5-CONFIGURATION/security.md)
 
 **Need help?** Join our [Discord community](https://discord.gg/37XJPXfz2w).

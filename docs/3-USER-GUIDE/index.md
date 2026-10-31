@@ -1,4 +1,4 @@
-# User Guide - How to Use Open Notebook
+# User Guide - How to Use Open Notebook Factory
 
 Step-by-step instructions for each feature. If you want to understand how things work first (notebooks, sources, insights, context levels), read [Core Concepts](../2-CORE-CONCEPTS/index.md).
 
@@ -6,7 +6,7 @@ Step-by-step instructions for each feature. If you want to understand how things
 
 ## Before You Start
 
-Open Notebook needs at least one AI provider and default models. Follow [AI Providers → Connect a provider](../4-AI-PROVIDERS/index.md#connect-a-provider) to add a provider in **Manage → Models**, add its models and set the **Default Model Assignments**. [API Configuration](api-configuration.md) covers the rest of the Models page.
+Open Notebook Factory needs at least one AI provider and default models. Follow [AI Providers → Connect a provider](../4-AI-PROVIDERS/index.md#connect-a-provider) to add a provider in **Manage → Models**, add its models and set the **Default Model Assignments**. [API Configuration](api-configuration.md) covers the rest of the Models page.
 
 What each feature needs:
 

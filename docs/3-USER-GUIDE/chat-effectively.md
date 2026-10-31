@@ -42,7 +42,7 @@ Things to know:
 - Use *Full content* for the few sources you are reading closely or quoting.
 - Use *Insights only* for background sources. It's much smaller and usually enough for orientation.
 - Exclude anything unrelated to the current question. Less noise gives better answers.
-- If the context is very large (over about 105,000 tokens), Open Notebook switches to your **Large Context Model**.
+- If the context is very large (over about 105,000 tokens), Open Notebook Factory switches to your **Large Context Model**.
 
 ---
 

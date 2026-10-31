@@ -1,6 +1,6 @@
 # From Source Installation
 
-Clone the repository and run each part yourself. **For developers and contributors.** To just use Open Notebook, [Docker Compose](docker-compose.md) is simpler.
+Clone the repository and run each part yourself. **For developers and contributors.** To just use Open Notebook Factory, [Docker Compose](docker-compose.md) is simpler.
 
 A source install runs four processes, each in its own terminal:
 

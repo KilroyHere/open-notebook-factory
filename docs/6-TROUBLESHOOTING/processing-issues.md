@@ -118,7 +118,7 @@ Insights are created by a background job. If the source is Completed but its ins
 
 ## Podcast failures
 
-A failed episode shows **Failed** with the error message on the episode card in **Podcasts → Episodes**, and a **Retry** button. Podcast generation is attempted once; use Retry after fixing the cause. When Open Notebook recognizes the error, the message ends with a `NOTE:` that explains it.
+A failed episode shows **Failed** with the error message on the episode card in **Podcasts → Episodes**, and a **Retry** button. Podcast generation is attempted once; use Retry after fixing the cause. When Open Notebook Factory recognizes the error, the message ends with a `NOTE:` that explains it.
 
 ### Profile errors (generation stops before any model is called)
 
@@ -127,7 +127,7 @@ A failed episode shows **Failed** with the error message on the episode card in 
 | "Episode profile 'X' has no speaker profile configured. Please update the profile to select a speaker profile." | Edit the episode profile in **Podcasts → Profiles** and pick a speaker profile |
 | "Episode profile 'X' references a speaker profile that no longer exists. Please update the profile to select a speaker profile." | The speaker profile was deleted; pick another |
 | "Episode profile 'X' has no outline model configured. Please update the profile to select an outline model." (same for "transcript model") | Pick the models in the episode profile |
-| "Speaker profile 'X' has no voice model configured. Please update the profile to select a voice model." | Edit the speaker profile and choose a text-to-speech model. The speaker profiles that ship with Open Notebook have no voice model until you set one |
+| "Speaker profile 'X' has no voice model configured. Please update the profile to select a voice model." | Edit the speaker profile and choose a text-to-speech model. The speaker profiles that ship with Open Notebook Factory have no voice model until you set one |
 
 If no text-to-speech model is assigned, **Manage → Models** shows "Not set — audio generation unavailable until configured" next to the Text-to-Speech Model. Add a provider with TTS (OpenAI, Google, ElevenLabs, MiniMax, a local [Speaches](../5-CONFIGURATION/local-tts.md) server…).
 

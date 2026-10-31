@@ -85,7 +85,7 @@ volumes:
 #   docker compose exec speaches uv tool run speaches-cli model download Systran/faster-whisper-small
 #
 # ==========================================
-# CONFIGURATION IN OPEN NOTEBOOK
+# CONFIGURATION IN OPEN NOTEBOOK FACTORY
 # ==========================================
 #
 # 1. Go to Manage → Models

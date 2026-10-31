@@ -1,6 +1,6 @@
 # Quick Start - External Ollama
 
-Run Open Notebook in Docker and connect it to an **Ollama you installed directly on your computer** (not in Docker). Useful when you already use Ollama, or want its native GPU support without Docker GPU passthrough.
+Run Open Notebook Factory in Docker and connect it to an **Ollama you installed directly on your computer** (not in Docker). Useful when you already use Ollama, or want its native GPU support without Docker GPU passthrough.
 
 If you don't have Ollama yet and want everything in Docker, use the [Local Quick Start](quick-start-local.md).
 
@@ -11,7 +11,7 @@ If you don't have Ollama yet and want everything in Docker, use the [Local Quick
 
 ## Step 1: Download models (2-5 min)
 
-Open Notebook needs a chat model and an embedding model:
+Open Notebook Factory needs a chat model and an embedding model:
 
 ```bash
 ollama pull qwen3
@@ -22,7 +22,7 @@ On a smaller machine, use `llama3.2` or `gemma3:1b` instead of `qwen3`.
 
 ## Step 2: Let containers reach Ollama
 
-Open Notebook runs in a container, where `localhost` means the container itself. It reaches your computer's Ollama through the name `host.docker.internal`.
+Open Notebook Factory runs in a container, where `localhost` means the container itself. It reaches your computer's Ollama through the name `host.docker.internal`.
 
 **macOS and Windows (Docker Desktop):** Docker Desktop forwards `host.docker.internal` to your computer, so Ollama's default setup usually works as is; try it first. If the connection test in Step 5 fails, make Ollama listen on all interfaces: on macOS run `launchctl setenv OLLAMA_HOST "0.0.0.0:11434"`, then quit and reopen the Ollama app (this setting is lost when you log out or reboot, so run it again after each login, or follow Ollama's FAQ for a permanent setup); on Windows add a user environment variable `OLLAMA_HOST` = `0.0.0.0:11434`, then quit and restart Ollama. See Ollama's [documentation](https://github.com/ollama/ollama/tree/main/docs) (FAQ, "How do I configure Ollama server?").
 
@@ -47,7 +47,7 @@ If you run Ollama by hand, start it with `OLLAMA_HOST=0.0.0.0:11434 ollama serve
 
 **On any platform,** `OLLAMA_HOST=0.0.0.0` exposes Ollama's API, which has no authentication, on every network interface. Allow port 11434 only from this computer and its Docker networks (for example with your firewall), never from untrusted networks.
 
-## Step 3: Download and configure Open Notebook (1 min)
+## Step 3: Download and configure Open Notebook Factory (1 min)
 
 ```bash
 mkdir open-notebook

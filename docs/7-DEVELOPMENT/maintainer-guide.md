@@ -413,7 +413,7 @@ We'd love to have you contribute in other ways! Check out:
 - Help wanted issues
 - Our roadmap
 
-Thanks again for your interest in Open Notebook!
+Thanks again for your interest in Open Notebook Factory!
 ```
 
 ### Closing a Stale Issue

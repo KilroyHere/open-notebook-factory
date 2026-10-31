@@ -1,6 +1,6 @@
-# Open Notebook Documentation
+# Open Notebook Factory Documentation
 
-Open Notebook is a self-hosted, privacy-focused AI research assistant. New here? Start with **[0-START-HERE](0-START-HERE/index.md)**: pick a quick start and you'll have a working chat in a few minutes.
+Open Notebook Factory is a self-hosted, privacy-focused AI research assistant. New here? Start with **[0-START-HERE](0-START-HERE/index.md)**: pick a quick start and you'll have a working chat in a few minutes.
 
 | Section | Read it when you want to… |
 |---|---|

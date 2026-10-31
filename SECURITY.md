@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-Open Notebook is an actively developed project. Security fixes are applied to the
+Open Notebook Factory is an actively developed project. Security fixes are applied to the
 **latest released version** only; there are no long-term support branches.
 
 | Version | Supported          |
@@ -34,7 +34,7 @@ When reporting, please include where relevant:
 - A description of the vulnerability and its impact.
 - Steps to reproduce (a proof of concept, affected endpoint/component, or sample
   configuration).
-- The Open Notebook version and how you are running it (Docker Compose,
+- The Open Notebook Factory version and how you are running it (Docker Compose,
   single-container, from source).
 - Any suggested remediation, if you have one.
 
@@ -49,7 +49,7 @@ When reporting, please include where relevant:
 
 ## Scope
 
-Open Notebook is **self-hosted**: you run the API, frontend, and SurrealDB
+Open Notebook Factory is **self-hosted**: you run the API, frontend, and SurrealDB
 yourself, and you control the AI provider credentials. Please keep in mind:
 
 - The built-in password middleware (`OPEN_NOTEBOOK_PASSWORD`) is a basic access
@@ -62,4 +62,4 @@ yourself, and you control the AI provider credentials. Please keep in mind:
   in the project — though we welcome reports where the defaults or docs actively
   steer users toward an insecure setup.
 
-Thank you for helping keep Open Notebook and its users safe.
+Thank you for helping keep Open Notebook Factory and its users safe.

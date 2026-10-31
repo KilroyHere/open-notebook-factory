@@ -92,6 +92,6 @@ Settings belong under the `open_notebook` service's `environment:` block and tak
 
 1. Search [GitHub Issues](https://github.com/lfnovo/open-notebook/issues) for your exact message.
 2. Ask in [Discord](https://discord.gg/37XJPXfz2w) or [GitHub Discussions](https://github.com/lfnovo/open-notebook/discussions/categories/q-a).
-3. For a reproducible bug, open an issue with: the exact message, steps to reproduce, the relevant part of `docker compose logs open_notebook` (remove keys and passwords), your Open Notebook version, how you run it (Docker, single container, from source) and the provider you use.
+3. For a reproducible bug, open an issue with: the exact message, steps to reproduce, the relevant part of `docker compose logs open_notebook` (remove keys and passwords), your Open Notebook Factory version, how you run it (Docker, single container, from source) and the provider you use.
 
 Security problems: don't open a public issue, see [SECURITY.md](../../SECURITY.md).

@@ -6,7 +6,7 @@ The workspace pages have a sidebar on the left (it can be collapsed to icons). T
 
 ```
 ┌──────────────────────┐
-│ Open Notebook        │
+│ Open Notebook Factory│
 │ [+ New]              │  → Source, Notebook, Podcast
 │                      │
 │ COLLECT              │

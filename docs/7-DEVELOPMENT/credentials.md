@@ -1,6 +1,6 @@
 # Credential System
 
-How Open Notebook stores, encrypts and provisions AI provider credentials — from the settings UI down to Esperanto model instantiation. This is the single reference for the subsystem; the frontend and backend halves are documented together on purpose.
+How Open Notebook Factory stores, encrypts and provisions AI provider credentials — from the settings UI down to Esperanto model instantiation. This is the single reference for the subsystem; the frontend and backend halves are documented together on purpose.
 
 ## Overview
 

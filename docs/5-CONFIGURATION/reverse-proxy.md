@@ -1,6 +1,6 @@
 # Reverse Proxy Configuration
 
-Run Open Notebook behind nginx, Caddy, Traefik or a hosting platform, with your own domain and HTTPS.
+Run Open Notebook Factory behind nginx, Caddy, Traefik or a hosting platform, with your own domain and HTTPS.
 
 ---
 
@@ -231,7 +231,7 @@ Three limits apply to uploads from the UI, and the smallest wins:
 | Next.js proxy for `/api/*` | 100 MB | Fixed in the frontend build |
 | API | 100 MB | `OPEN_NOTEBOOK_MAX_UPLOAD_SIZE_MB` |
 
-When the proxy rejects a file, the response doesn't come from Open Notebook, so it has no CORS headers and the browser reports a CORS error with status 413. When the API rejects it, the message is `Request body exceeds the maximum allowed upload size`. To upload files larger than 100 MB, raise `OPEN_NOTEBOOK_MAX_UPLOAD_SIZE_MB` and send them to the API directly (port 5055, or a `/api/` location routed to 5055 as above).
+When the proxy rejects a file, the response doesn't come from Open Notebook Factory, so it has no CORS headers and the browser reports a CORS error with status 413. When the API rejects it, the message is `Request body exceeds the maximum allowed upload size`. To upload files larger than 100 MB, raise `OPEN_NOTEBOOK_MAX_UPLOAD_SIZE_MB` and send them to the API directly (port 5055, or a `/api/` location routed to 5055 as above).
 
 Traefik example (dynamic file configuration):
 

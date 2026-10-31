@@ -1,11 +1,11 @@
-name: Open Notebook
+name: Open Notebook Factory
 description:
-  Open Notebook is an open-source, self-hosted notebook and research workspace
+  Open Notebook Factory is an open-source, self-hosted notebook and research workspace
   for collecting sources, taking notes, searching, chatting with content, and
   generating podcasts.
 instructions:
   Deploy the template, open the generated EasyPanel domain, and log in with the
-  configured Open Notebook password. Configure AI providers from Settings > API
+  configured Open Notebook Factory password. Configure AI providers from Settings > API
   Keys after the first login. If the password field is left blank, a random
   password is generated and stored as OPEN_NOTEBOOK_PASSWORD in the app service
   environment.
@@ -48,12 +48,12 @@ schema:
       default: surrealdb/surrealdb:v2
     appPassword:
       type: string
-      title: Open Notebook Password
+      title: Open Notebook Factory Password
       default: ""
 benefits:
   - title: One-click deployment
     description:
-      Creates the Open Notebook app and SurrealDB database services with the
+      Creates the Open Notebook Factory app and SurrealDB database services with the
       required environment variables and persistent volumes.
   - title: Secure defaults
     description:
@@ -61,7 +61,7 @@ benefits:
       supports a user-provided or generated application password.
   - title: Reverse-proxy friendly
     description:
-      Exposes only the frontend port and uses Open Notebook's built-in Next.js
+      Exposes only the frontend port and uses Open Notebook Factory's built-in Next.js
       API proxy for backend requests.
 features:
   - title: Source collection

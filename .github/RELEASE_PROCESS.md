@@ -1,6 +1,6 @@
 # Release Process
 
-Open Notebook uses a flow-driven release process. Work moves from `ready`
+Open Notebook Factory uses a flow-driven release process. Work moves from `ready`
 issues into pull requests, pull requests merge to `main`, and maintainers cut a
 version when the branch has enough validated change to ship.
 

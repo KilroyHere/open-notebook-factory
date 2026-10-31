@@ -1,6 +1,6 @@
 # Windows Native Installation (No Docker)
 
-This guide runs [Open Notebook](https://github.com/lfnovo/open-notebook) on Windows **natively, without Docker or WSL**. It is community-maintained; the officially supported route is [Docker Compose](docker-compose.md).
+This guide runs [Open Notebook Factory](https://github.com/lfnovo/open-notebook) on Windows **natively, without Docker or WSL**. It is community-maintained; the officially supported route is [Docker Compose](docker-compose.md).
 
 ## Who Is This For?
 
@@ -48,7 +48,7 @@ This guide runs [Open Notebook](https://github.com/lfnovo/open-notebook) on Wind
 
 3. **Start the four services**, each in its own terminal, from the `open-notebook` folder.
 
-   > Open Notebook does not ship a launcher script. Start the services manually as below, or wrap them in your own `.bat` (see [Optional: one-click launcher](#optional-one-click-launcher)).
+   > Open Notebook Factory does not ship a launcher script. Start the services manually as below, or wrap them in your own `.bat` (see [Optional: one-click launcher](#optional-one-click-launcher)).
 
    ```batch
    REM Terminal 1 — SurrealDB (database files go in the folder you name here)
@@ -76,7 +76,7 @@ This guide runs [Open Notebook](https://github.com/lfnovo/open-notebook) on Wind
 
 ## Optional: one-click launcher
 
-Open Notebook does not ship a launcher, but you can save the following as
+Open Notebook Factory does not ship a launcher, but you can save the following as
 `start-open-notebook.bat` (anywhere you like) to start all four services with a
 double-click. Adjust `ROOT` and `DB_DIR` to match your setup.
 
@@ -199,7 +199,7 @@ Then restart all services. Your `.env` and data are preserved.
 
 ## Migrating from a Docker Install
 
-If you already run Open Notebook with the stock `docker-compose.yml`, you can
+If you already run Open Notebook Factory with the stock `docker-compose.yml`, you can
 move to a native install **without re-importing anything**: the compose file
 bind-mounts `./surreal_data` and `./notebook_data`, so the database and uploads
 already live on your Windows disk.

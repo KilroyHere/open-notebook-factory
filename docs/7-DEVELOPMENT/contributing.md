@@ -1,10 +1,10 @@
-# Contributing to Open Notebook
+# Contributing to Open Notebook Factory
 
-Thank you for your interest in contributing to Open Notebook! We welcome contributions from developers of all skill levels. This guide will help you understand our contribution workflow and what makes a good contribution.
+Thank you for your interest in contributing to Open Notebook Factory! We welcome contributions from developers of all skill levels. This guide will help you understand our contribution workflow and what makes a good contribution.
 
 ## 🚦 Discussions for Ideas, Issues for Work
 
-Open Notebook separates **exploration** from **execution**:
+Open Notebook Factory separates **exploration** from **execution**:
 
 - **Feature requests, ideas, behavior changes, product/design/architecture proposals, and contribution proposals start in [GitHub Discussions](https://github.com/lfnovo/open-notebook/discussions/new?category=ideas).** This is where the community explores the problem and maintainers make the product or design decision.
 - **Reproducible bugs start in [GitHub Issues](https://github.com/lfnovo/open-notebook/issues/new/choose).**
@@ -53,7 +53,7 @@ By participating in this project, you are expected to uphold our [Code of Conduc
    - Steps to reproduce
    - Expected vs actual behavior
    - Logs, screenshots, or error messages
-   - Your environment (OS, Docker version, Open Notebook version)
+   - Your environment (OS, Docker version, Open Notebook Factory version)
 4. **Indicate if you want to fix it** - Check the "I would like to work on this" box if you're interested
 
 ### Suggesting Features
@@ -212,6 +212,6 @@ We recognize contributions through:
 
 ---
 
-Thank you for contributing to Open Notebook! Your contributions help make research more accessible and private for everyone.
+Thank you for contributing to Open Notebook Factory! Your contributions help make research more accessible and private for everyone.
 
 For questions about this guide or contributing in general, please reach out on [Discord](https://discord.gg/37XJPXfz2w) or open a GitHub Discussion.
