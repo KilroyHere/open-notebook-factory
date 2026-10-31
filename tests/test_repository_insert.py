@@ -88,3 +88,22 @@ async def test_ignored_duplicate_batch_continues_on_same_connection(connection):
     assert db.insert.await_count == 3
     factory.assert_called_once_with()
     context.__aexit__.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_rejected_create_is_logged_at_debug_not_error(connection, monkeypatch):
+    """A create the database rejects (a unique index, a transaction conflict)
+    is often handled by the caller, such as the learning race guards, so it
+    must not print an ERROR line. One nobody handles still surfaces: the
+    RuntimeError propagates to the API's error handling."""
+    rejection = "Database index `idx_learning_journey_main_session` already contains"
+    db, _, _ = connection
+    db.insert = AsyncMock(return_value=rejection)
+    log = MagicMock()
+    monkeypatch.setattr(repository, "logger", log)
+
+    with pytest.raises(RuntimeError, match="already contains"):
+        await repository.repo_create("learning_journey", {"main_session": "x"})
+
+    log.error.assert_not_called()
+    log.debug.assert_called_once()

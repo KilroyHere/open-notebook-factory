@@ -22,7 +22,7 @@ import type { NoteContextMode } from '../[id]/page'
 import type { NoteContextDefault } from '@/lib/utils/source-context'
 import { useDeleteNote } from '@/lib/hooks/use-notes'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
-import { CollapsibleColumn, createCollapseButton } from '@/components/notebooks/CollapsibleColumn'
+import { CollapsibleColumn, CollapseColumnButton } from '@/components/notebooks/CollapsibleColumn'
 import { useNotebookColumnsStore } from '@/lib/stores/notebook-columns-store'
 import { useTranslation } from '@/lib/hooks/use-translation'
 import { cn } from '@/lib/utils'
@@ -61,9 +61,9 @@ export function NotesColumn({
   const notesLabel = t('common.notes')
   const collapseButton = useMemo(
     () =>
-      allowCollapse && !embedded
-        ? createCollapseButton(toggleNotes, notesLabel)
-        : null,
+      allowCollapse && !embedded ? (
+        <CollapseColumnButton onToggle={toggleNotes} label={notesLabel} />
+      ) : null,
     [allowCollapse, embedded, toggleNotes, notesLabel]
   )
 

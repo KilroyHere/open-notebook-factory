@@ -15,6 +15,7 @@ uv run pytest tests/ --cov=open_notebook --cov=api     # with coverage
 npm run test              # vitest run, once
 npm run test:watch        # watch mode
 npm run test:coverage     # what CI runs
+npm run test:e2e          # Playwright end-to-end tests (builds and serves the app first)
 ```
 
 The backend suite needs **no running SurrealDB, worker or AI provider**. CI runs it with nothing but `uv sync`. SurrealDB access, models and HTTP requests are mocked; a few tests use in-memory substitutes instead (for example an in-memory `SqliteSaver` in `tests/test_empty_model_reply.py`). Tests that need real SurrealQL semantics use the SurrealDB driver's embedded engine (`AsyncSurreal("mem://")`). `tests/test_learning_asides_db.py` points the repository's `db_connection` at one shared in-memory connection, so `ObjectModel` saves, unique indexes and deletes run for real; it runs record creates one at a time, because the embedded engine does not reliably enforce a UNIQUE index between overlapping inserts.
@@ -77,6 +78,37 @@ def test_delete_notebook_missing_returns_404(mock_get, client):
 Tests are colocated with the code as `*.test.ts` / `*.test.tsx` (for example `src/lib/locales/index.test.ts`, `src/components/common/ConfirmDialog.test.tsx`). `frontend/src/test/` holds only the shared setup (`setup.ts`: jest-dom matchers and mocks for `next/navigation`, `matchMedia` and `@/lib/hooks/use-translation`, whose `t()` returns the key itself, so assert on keys rather than English text).
 
 Vitest runs in `jsdom` with globals enabled and the `@/` alias (`frontend/vitest.config.ts`). Use Testing Library to render components; mock API modules rather than the network.
+
+## End-to-end tests (Playwright)
+
+`frontend/e2e/` holds a small [Playwright](https://playwright.dev) suite that drives the notebook page in Chromium: asking in the main chat (numbered citations and the References list), **Go deeper** on an answer and on a selected passage, asking in a deep dive, **Wrap up** with the AI draft and resolving it, and **Use in main chat** in Studio's Journey, including a change the API rejects. It needs **no API, database or model**: the browser's API requests are answered by a mock inside the test.
+
+```bash
+# Inside frontend/
+npx playwright install chromium        # once: the browser (CI adds --with-deps)
+npm run test:e2e                       # build, serve on port 3100, run every test
+npx playwright test -g "Use in main chat"   # tests whose title matches
+npx playwright test --ui               # pick, watch and step through tests
+npx playwright show-report             # the HTML report of the last run
+```
+
+**How it runs.** `frontend/playwright.config.ts` starts the app with Playwright's `webServer`: a production build (`next build`, Turbopack) served by `next start` on `127.0.0.1:3100`, so the tests see what users get, without the dev overlay or on-demand compiles. The server gets `API_URL` set to its own origin, so `/config` sends the browser's API calls to `/api/…` on the app itself, and `INTERNAL_API_URL` pointing at a closed port, so even a request that got past the browser mock could not reach a real API on 5055. That build replaces `frontend/.next/`, so run `npm run build` again before `npm start` (`npm run dev` compiles its own). Settings:
+
+- `E2E_PORT`: another port for the test server.
+- `E2E_REUSE_SERVER=1`: use a server already running on that port instead of building one (it must have been built with `INTERNAL_API_URL=http://127.0.0.1:9 npx next build` and started with `API_URL=http://127.0.0.1:3100 npx next start --port 3100 --hostname 127.0.0.1`).
+- `PLAYWRIGHT_CHROMIUM_EXECUTABLE`: a Chromium already on the machine, instead of the one `playwright install` downloads.
+
+**The mock.** `e2e/support/mock-api.ts` answers every `/api/*` request in the browser (Playwright's `context.route`) and keeps the notebook, chat sessions, messages, journeys, asides, conclusions and outline sections in memory, so a GET after a POST or PATCH sees the change, like the real API. What a model would write comes from the test: `api.chatReplies`, `api.asideReplies` and `api.draft`. The fixture in `e2e/support/fixtures.ts` gives every test its own mock and fails the test if the app called an API path the mock does not handle, if any request left the app's origin, or if the page threw an uncaught error.
+
+**Writing a test.**
+
+- Import `test` and `expect` from `./support/fixtures`. Seed the mock before `page.goto`, with the scenarios in `e2e/support/notebook.ts` (`seedAnsweredQuestion`, `seedResolvedDive`, …) or `api.addSession` / `api.addMessage` / `api.createAside`.
+- Check what the app sent with `api.callsTo(method, path)`; each call has the parsed JSON `body`. Use `api.failNext(...)` for an error response (`detail: null` sends a plain-text 500, as an unhandled server error does) and `api.hold(...)` to keep requests waiting while you look at the UI in between.
+- When a page calls an endpoint the mock doesn't know, the test fails with that endpoint's name: add a handler to the `routes` table in `mock-api.ts`, with the shapes from `src/lib/types/api.ts`.
+- Find elements by role, label or placeholder, and match labels that may be reworded with a regular expression. Wait on UI state (`expect(...)` assertions, `expect.poll` over `api.calls`), never on timeouts.
+- To prove something never happens, not even for a moment (a question leaving the chat while the model answers), record it in the page with a MutationObserver instead of polling: `watchChatMessage` in `e2e/support/notebook-page.ts` does this for chat messages.
+
+Reports and traces go to `frontend/playwright-report/` and `frontend/e2e/test-results/` (both ignored by git). Vitest skips `e2e/` (`frontend/vitest.config.ts`), and `npm run lint` covers it. CI runs the suite in `.github/workflows/e2e.yml` on pull requests to `main` (and on demand) and uploads the report and traces as the `playwright-report` artifact when it fails.
 
 ## What to test
 

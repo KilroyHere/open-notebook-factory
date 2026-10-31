@@ -22,10 +22,13 @@ export type SetIncludeInMain = (
 export function IncludeInMainToggle({
   update,
   onChange,
+  describedBy,
   className,
 }: {
   update: Pick<LearningUpdate, 'id' | 'aside_id' | 'conclusion' | 'include_in_main'>
   onChange: SetIncludeInMain
+  /** ID of a note about this conclusion, read out with the checkbox. */
+  describedBy?: string
   className?: string
 }) {
   const { t } = useTranslation()
@@ -40,6 +43,7 @@ export function IncludeInMainToggle({
         aria-label={t('learningAsides.useInMainChatFor', {
           summary: leadingWords(update.conclusion, 12),
         })}
+        aria-describedby={describedBy}
       />
       <label htmlFor={id} className="cursor-pointer text-xs font-medium">
         {t('learningAsides.useInMainChat')}

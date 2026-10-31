@@ -192,6 +192,96 @@ describe('useNotebookWorkspace dives', () => {
     expect(input.content).toHaveLength(20_000)
   })
 
+  describe('Go deeper on a passage in a dive', () => {
+    const diveAnswer = { id: 'ai:dive-1', type: 'ai' as const, content: 'Because log is concave.' }
+    const passageDive = dive({ id: 'learning_aside:passage', parent_aside_id: root.id })
+
+    it('nests a dive about the passage under the dive it was selected in', async () => {
+      const createAside = vi.fn().mockImplementation(async (input) => {
+        input.onOpened?.(passageDive)
+        return passageDive
+      })
+      const { result, learning } = renderWorkspace(learningMock({ createAside }))
+
+      act(() =>
+        result.current.openAsideFromDiveSelection(root, diveAnswer, '  log is concave  ')
+      )
+
+      await waitFor(() => expect(createAside).toHaveBeenCalledTimes(1))
+      // Anchored to the dive's answer, in the dive's own conversation.
+      expect(createAside).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'message',
+          content: 'log is concave',
+          message_id: 'ai:dive-1',
+          locator: 'selection',
+          parentAside: root,
+          presentation: 'inline',
+        })
+      )
+      // Opened under its parent's thread with the cursor in its box, and
+      // nothing is asked for the learner.
+      expect(result.current.attention).toEqual({
+        asideId: passageDive.id,
+        scroll: 'nearest',
+        focus: true,
+      })
+      expect(learning.sendMessage).not.toHaveBeenCalled()
+    })
+
+    it('opens full height when it would nest too deep or the learner is there', async () => {
+      const createAside = vi.fn().mockImplementation(async (input) => {
+        input.onOpened?.(passageDive)
+        return passageDive
+      })
+      const nested = renderWorkspace(learningMock({ createAside })).result
+      act(() =>
+        nested.current.openAsideFromDiveSelection(child, diveAnswer, 'log is concave')
+      )
+      await waitFor(() =>
+        expect(createAside).toHaveBeenLastCalledWith(
+          expect.objectContaining({ parentAside: child, presentation: 'full' })
+        )
+      )
+      // The full-height view puts the cursor in its box; nothing scrolls.
+      expect(nested.current.attention).toEqual({
+        asideId: passageDive.id,
+        scroll: null,
+        focus: true,
+      })
+
+      const fullHeight = renderWorkspace(
+        learningMock({
+          createAside,
+          panelOpen: true,
+          activeAside: root,
+          activeAsideId: root.id,
+        })
+      ).result
+      act(() =>
+        fullHeight.current.openAsideFromDiveSelection(root, diveAnswer, 'log is concave')
+      )
+      await waitFor(() =>
+        expect(createAside).toHaveBeenLastCalledWith(
+          expect.objectContaining({ parentAside: root, presentation: 'full' })
+        )
+      )
+    })
+
+    it('keeps at most what the backend stores and ignores an empty passage', async () => {
+      const createAside = vi.fn().mockResolvedValue(passageDive)
+      const { result } = renderWorkspace(learningMock({ createAside }))
+
+      act(() =>
+        result.current.openAsideFromDiveSelection(root, diveAnswer, `  ${'x'.repeat(20_010)}  `)
+      )
+      act(() => result.current.openAsideFromDiveSelection(root, diveAnswer, '   '))
+
+      await waitFor(() => expect(createAside).toHaveBeenCalledTimes(1))
+      expect(createAside.mock.calls[0][0].content).toHaveLength(20_000)
+    })
+  })
+
   it('nests Dive in under an inline parent and asks the question', async () => {
     const created = dive({ id: 'learning_aside:new', parent_aside_id: root.id })
     const createAside = vi.fn().mockResolvedValue(created)
@@ -312,4 +402,89 @@ describe('useNotebookWorkspace parkQuestion', () => {
       expect(learning.createAside).not.toHaveBeenCalled()
     }
   )
+})
+
+describe('useNotebookWorkspace outline sections', () => {
+  function chatWith(messages: Array<{ id: string; type: 'human' | 'ai'; content: string }>) {
+    return {
+      messages,
+      currentSessionId: 'chat_session:main',
+      buildContext: vi.fn(),
+      tokenCount: 0,
+      charCount: 0,
+    } as unknown as ReturnType<typeof useNotebookChat>
+  }
+
+  it('names a section after a question once it is stored, not while it is on its way', async () => {
+    const syncSections = vi.fn().mockResolvedValue([])
+    vi.mocked(useLearningAsides).mockReturnValue(learningMock({ asides: [], syncSections }))
+    const question = { type: 'human' as const, content: 'Why a Gaussian prior?' }
+    vi.mocked(useNotebookChat).mockReturnValue(
+      chatWith([{ ...question, id: 'temp-1730000000000' }])
+    )
+    const { rerender } = renderHook(() =>
+      useNotebookWorkspace({
+        notebookId: 'notebook:1',
+        sources: [],
+        notes: [],
+        contextSelections: { sources: {}, notes: {} },
+      })
+    )
+
+    // The question shows before the API has stored it: no section yet.
+    expect(syncSections).not.toHaveBeenCalled()
+
+    vi.mocked(useNotebookChat).mockReturnValue(
+      chatWith([
+        { ...question, id: 'human:2' },
+        { id: 'ai:2', type: 'ai', content: 'Conjugacy keeps the posterior Gaussian.' },
+      ])
+    )
+    rerender()
+
+    await waitFor(() =>
+      expect(syncSections).toHaveBeenCalledWith([
+        { start_message_id: 'human:2', title: 'Why a Gaussian prior?' },
+      ])
+    )
+    expect(syncSections).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('useNotebookWorkspace actions', () => {
+  it('keeps the actions answers use across a render that changes none of their inputs', () => {
+    vi.mocked(useNotebookChat).mockReturnValue({
+      messages: [{ id: 'human:1', type: 'human', content: 'Explain the ELBO.' }, answer],
+      currentSessionId: 'chat_session:main',
+      buildContext: vi.fn(),
+      tokenCount: 0,
+      charCount: 0,
+    } as unknown as ReturnType<typeof useNotebookChat>)
+    vi.mocked(useLearningAsides).mockReturnValue(learningMock())
+    const { result, rerender } = renderHook(() =>
+      useNotebookWorkspace({
+        notebookId: 'notebook:1',
+        sources: [],
+        notes: [],
+        contextSelections: { sources: {}, notes: {} },
+      })
+    )
+    const before = result.current
+
+    rerender()
+
+    // Each answer is memoized on these: a new function would render every
+    // answer again (and, before, rebuild its text and drop a selection).
+    for (const action of [
+      'openAside',
+      'openAsideFromMessage',
+      'openAsideFromSelection',
+      'openAsideFromDiveSelection',
+      'diveIntoQuestion',
+      'parkQuestion',
+      'navigateToMainMessage',
+    ] as const) {
+      expect(result.current[action], action).toBe(before[action])
+    }
+  })
 })

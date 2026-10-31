@@ -5,6 +5,7 @@ import type {
   LearningAside,
   LearningAsideStatus,
   LearningResolutionDraft,
+  NotebookChatMessage,
   ResolveLearningAsideRequest,
 } from '@/lib/types/api'
 import type { CreatingDive } from '@/lib/hooks/use-learning-asides'
@@ -49,6 +50,14 @@ export interface InlineDivesController {
   ) => Promise<unknown>
   /** "Use in main chat" on a resolved dive's summary. */
   onSetIncludeInMain?: SetIncludeInMain
+  /** "Go deeper" on a passage selected in one of a dive's answers. */
+  onGoDeeperOnSelection?: (
+    parent: LearningAside,
+    message: NotebookChatMessage,
+    passage: string
+  ) => void
+  /** The notebook a passage selected in a dive is saved to as a note. */
+  notebookId?: string
 }
 
 const InlineDivesContext = createContext<InlineDivesController | null>(null)

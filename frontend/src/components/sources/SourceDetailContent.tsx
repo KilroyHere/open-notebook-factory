@@ -6,6 +6,7 @@ import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
 import { sourcesApi } from '@/lib/api/sources'
 import { QUERY_KEYS } from '@/lib/api/query-client'
 import { useSource, useUpdateSource, useDeleteSource } from '@/lib/hooks/use-sources'
+import { useSourceInsights } from '@/lib/hooks/use-insights'
 import { insightsApi, SourceInsightResponse } from '@/lib/api/insights'
 import { transformationsApi } from '@/lib/api/transformations'
 import { embeddingApi } from '@/lib/api/embedding'
@@ -75,6 +76,8 @@ interface SourceDetailContentProps {
   onClose?: () => void
 }
 
+const NO_INSIGHTS: SourceInsightResponse[] = []
+
 const safeExternalHref = (url: string | null | undefined): string | null => {
   if (!url) return null
 
@@ -102,10 +105,8 @@ function SourceDetailContentInner({
 }: SourceDetailContentProps) {
   const { t, language } = useTranslation()
   const queryClient = useQueryClient()
-  const [insights, setInsights] = useState<SourceInsightResponse[]>([])
   const [transformations, setTransformations] = useState<Transformation[]>([])
   const [selectedTransformation, setSelectedTransformation] = useState<string>('')
-  const [loadingInsights, setLoadingInsights] = useState(false)
   const [creatingInsight, setCreatingInsight] = useState(false)
   const [copied, setCopied] = useState(false)
   const [isEmbedding, setIsEmbedding] = useState(false)
@@ -123,24 +124,18 @@ function SourceDetailContentInner({
   const loadError = loadQueryError ? (isNotFoundError(loadQueryError) ? 'not-found' : 'error') : null
   const updateSource = useUpdateSource()
   const deleteSource = useDeleteSource()
+  // The source page's chat names cited insights from this same query.
+  const {
+    data: insights = NO_INSIGHTS,
+    isPending: loadingInsights,
+    refetch: refetchInsights,
+  } = useSourceInsights(sourceId)
 
   // file_available comes from the source payload; downloads may flip it later,
   // so keep it as local state synced from the query data.
   useEffect(() => {
     setFileAvailable(typeof source?.file_available === 'boolean' ? source.file_available : null)
   }, [source?.file_available])
-
-  const fetchInsights = useCallback(async () => {
-    try {
-      setLoadingInsights(true)
-      const data = await insightsApi.listForSource(sourceId)
-      setInsights(data)
-    } catch (err) {
-      console.error('Failed to fetch insights:', err)
-    } finally {
-      setLoadingInsights(false)
-    }
-  }, [sourceId])
 
   const fetchTransformations = useCallback(async () => {
     try {
@@ -153,10 +148,9 @@ function SourceDetailContentInner({
 
   useEffect(() => {
     if (sourceId) {
-      void fetchInsights()
       void fetchTransformations()
     }
-  }, [fetchInsights, fetchTransformations, sourceId])
+  }, [fetchTransformations, sourceId])
 
   useEffect(() => () => insightPollingRef.current?.abort(), [])
 
@@ -190,7 +184,7 @@ function SourceDetailContentInner({
         }).then(async status => {
           if (controller.signal.aborted) return
 
-          await fetchInsights()
+          await refetchInsights()
           if (controller.signal.aborted) return
           // Invalidate sources queries so notebook page refreshes with updated insights_count
           queryClient.invalidateQueries({ queryKey: ['sources'] })
@@ -210,7 +204,7 @@ function SourceDetailContentInner({
         // Fallback: refresh after delay if no command_id
         setTimeout(() => {
           if (controller.signal.aborted) return
-          void fetchInsights()
+          void refetchInsights()
           // Also invalidate sources queries
           queryClient.invalidateQueries({ queryKey: ['sources'] })
           if (insightPollingRef.current === controller) {
@@ -244,7 +238,7 @@ function SourceDetailContentInner({
       await insightsApi.delete(insightToDelete)
       toast.success(t('common.success'))
       setInsightToDelete(null)
-      await fetchInsights()
+      await refetchInsights()
     } catch (err) {
       console.error('Failed to delete insight:', err)
       toast.error(t('common.error'))
@@ -843,7 +837,7 @@ function SourceDetailContentInner({
             await insightsApi.delete(insightId)
             toast.success(t('common.success'))
             setSelectedInsight(null)
-            await fetchInsights()
+            await refetchInsights()
           } catch (err) {
             console.error('Failed to delete insight:', err)
             toast.error(t('common.error'))

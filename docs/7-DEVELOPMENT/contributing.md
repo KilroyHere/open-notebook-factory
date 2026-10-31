@@ -158,6 +158,7 @@ uv run pytest tests/
 npm run lint
 npm run test            # CI runs npm run test:coverage (same tests, plus a coverage report)
 npm run build
+npm run test:e2e        # Playwright; .github/workflows/e2e.yml runs it on PRs to main
 ```
 
 `make ruff` runs `ruff check . --fix` (it does **not** format) and `make lint` runs mypy. A separate workflow checks that relative Markdown links resolve (`python3 scripts/check_md_links.py`); run it if you edited docs.

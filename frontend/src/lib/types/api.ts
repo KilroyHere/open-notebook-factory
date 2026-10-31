@@ -262,6 +262,11 @@ export type LearningAsideAnchorType = 'message' | 'source' | 'citation' | 'equat
 export interface LearningAsideAnchor {
   type: LearningAsideAnchorType
   content: string
+  /**
+   * The answer the aside branched from, in the session it branched from: a
+   * main-chat answer, or, for a dive nested in a dive, one of that dive's
+   * answers. A dive started from an open question has none.
+   */
   message_id?: string
   source_id?: string
   locator?: string

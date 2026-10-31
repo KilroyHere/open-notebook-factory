@@ -15,6 +15,9 @@ import {
   ResolveLearningAsideRequest,
 } from '@/lib/types/api'
 
+// One empty list each, so a session without a journey hands the chat's
+// memoized answers the same list on every render.
+const EMPTY_ASIDES: LearningAside[] = []
 const EMPTY_SECTIONS: LearningSection[] = []
 import { useTranslation } from '@/lib/hooks/use-translation'
 import { getApiErrorMessage } from '@/lib/utils/error-handler'
@@ -466,6 +469,8 @@ export function useLearningAsides({
     },
   })
 
+  const refreshJourney = useCallback(() => refresh(), [refresh])
+
   /** Show a dive in the full-height view. */
   const openAside = useCallback((asideId: string) => {
     setView({ asideId, fullHeight: true })
@@ -503,7 +508,7 @@ export function useLearningAsides({
   return {
     journey: journeyQuery.data,
     resume: resumeQuery.data,
-    asides: journeyQuery.data?.asides ?? [],
+    asides: journeyQuery.data?.asides ?? EMPTY_ASIDES,
     sections: journeyQuery.data?.sections ?? EMPTY_SECTIONS,
     activeAside,
     activeAsideId,
@@ -531,7 +536,7 @@ export function useLearningAsides({
     collapseAside,
     closeAside,
     openList,
-    refreshJourney: () => refresh(),
+    refreshJourney,
     createAside: createMutation.mutateAsync,
     sendMessage: sendMutation.mutateAsync,
     draftResolution: draftMutation.mutateAsync,

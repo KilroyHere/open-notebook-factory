@@ -32,11 +32,12 @@ const aside: LearningAside = {
 
 function createWorkspace(
   asides: LearningAside[] = [],
-  shownAsideId: string | null = null
+  shownAsideId: string | null = null,
+  chat: Record<string, unknown> = {}
 ) {
   return {
     notebookId: 'notebook:1',
-    chat: { messages: [] },
+    chat: { messages: [], ...chat },
     learning: {
       asides,
       sections: [],
@@ -77,7 +78,7 @@ describe('StudioColumn', () => {
     render(<StudioColumn workspace={createWorkspace([aside])} notes={notes} />)
 
     expect(
-      screen.getByRole('tab', { name: 'learningAsides.journey' })
+      screen.getByRole('tab', { name: 'learningAsides.journeyTab' })
     ).toHaveAttribute('data-state', 'active')
     expect(
       screen.getByLabelText('learningAsides.statsSummary')
@@ -89,7 +90,7 @@ describe('StudioColumn', () => {
     const { rerender } = render(
       <StudioColumn workspace={createWorkspace()} notes={notes} />
     )
-    openTab('learningAsides.journey')
+    openTab('learningAsides.journeyTab')
     rerender(<StudioColumn workspace={createWorkspace([aside])} notes={notes} />)
     openTab('common.notes')
     rerender(<StudioColumn workspace={createWorkspace([aside])} notes={notes} />)
@@ -103,20 +104,21 @@ describe('StudioColumn', () => {
   it('collapses to a labelled rail and expands again', () => {
     render(<StudioColumn workspace={createWorkspace([aside])} notes={notes} />)
 
+    // Translated labels; CollapsibleColumn's own test checks the column name.
     const collapse = screen.getByRole('button', {
-      name: 'Collapse notebooks.studio',
+      name: 'notebooks.collapseColumn',
     })
     expect(collapse).toHaveAttribute('aria-expanded', 'true')
     fireEvent.click(collapse)
 
     const expand = screen.getByRole('button', {
-      name: 'Expand notebooks.studio',
+      name: 'notebooks.expandColumn',
     })
     expect(expand).toHaveAttribute('aria-expanded', 'false')
     expect(screen.queryByRole('tab')).toBeNull()
     fireEvent.click(expand)
     expect(
-      screen.getByRole('tab', { name: 'learningAsides.journey' })
+      screen.getByRole('tab', { name: 'learningAsides.journeyTab' })
     ).toBeInTheDocument()
   })
 
@@ -133,7 +135,9 @@ describe('StudioColumn', () => {
     )
 
     // The sheet has no desktop collapse control.
-    expect(screen.queryByRole('button', { name: /^Collapse / })).toBeNull()
+    expect(
+      screen.queryByRole('button', { name: 'notebooks.collapseColumn' })
+    ).toBeNull()
     fireEvent.click(screen.getByText('Current active aside'))
     expect(onShowConversation).toHaveBeenCalledTimes(1)
     // Opened where it lives (inline under its message when it can be),
@@ -215,6 +219,43 @@ describe('StudioColumn', () => {
         screen.getByRole('region', { name: 'learningAsides.whatYouLearned' })
       ).getByRole('checkbox')
     ).not.toBeChecked()
+  })
+
+  it('marks the conclusions the context limit leaves out of main chat', () => {
+    const conclusion = (id: string) => ({
+      id: `learning_update:${id}`,
+      aside_id: `learning_aside:${id}`,
+      conclusion: `Conclusion ${id}.`,
+      open_questions: [],
+      citations: [],
+      include_in_main: true,
+      version: 1,
+      created: aside.created,
+      updated: aside.updated,
+    })
+    const resolved = (id: string): LearningAside => ({
+      ...aside,
+      id: `learning_aside:${id}`,
+      title: `Dive ${id}`,
+      status: 'resolved',
+      updates: [conclusion(id)],
+    })
+    render(
+      <StudioColumn
+        workspace={createWorkspace([resolved('kept'), resolved('dropped')], null, {
+          learningUpdatesOmitted: 1,
+          keptLearningUpdateIds: new Set(['learning_update:kept']),
+        })}
+        notes={notes}
+      />
+    )
+
+    const learned = screen.getByRole('region', {
+      name: 'learningAsides.whatYouLearned',
+    })
+    const [kept, dropped] = within(learned).getAllByRole('listitem')
+    expect(within(dropped).getByText('learningAsides.leftOutOfMainChat')).toBeInTheDocument()
+    expect(within(kept).queryByText('learningAsides.leftOutOfMainChat')).toBeNull()
   })
 
   it('marks the dive on screen in the outline', () => {

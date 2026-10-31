@@ -176,6 +176,62 @@ describe('LearnedConclusions', () => {
     expect(screen.queryByText(/conclusionsLeftOut/)).toBeNull()
   })
 
+  it('marks each conclusion the context limit leaves out', () => {
+    const kl = aside({
+      id: 'learning_aside:kl',
+      title: 'KL term',
+      updates: [
+        update({
+          id: 'learning_update:kl',
+          aside_id: 'learning_aside:kl',
+          conclusion: 'The KL term keeps the posterior near the prior.',
+        }),
+      ],
+    })
+    render(
+      <LearnedConclusions
+        asides={[jensen, prior, kl]}
+        omitted={1}
+        keptUpdateIds={new Set(['learning_update:kl'])}
+        onOpenAside={vi.fn()}
+        onSetIncludeInMain={vi.fn()}
+      />
+    )
+
+    const [leftOut, unchecked, kept] = screen.getAllByRole('listitem')
+    expect(
+      within(leftOut).getByText('learningAsides.leftOutOfMainChat')
+    ).toBeInTheDocument()
+    // An unchecked conclusion is not sent anyway, and a kept one is sent.
+    expect(within(unchecked).queryByText('learningAsides.leftOutOfMainChat')).toBeNull()
+    expect(within(kept).queryByText('learningAsides.leftOutOfMainChat')).toBeNull()
+    // The conclusion and its switch say it to screen readers too.
+    expect(within(leftOut).getByRole('button')).toHaveAccessibleDescription(
+      'learningAsides.leftOutOfMainChat'
+    )
+    expect(within(leftOut).getByRole('checkbox')).toHaveAccessibleDescription(
+      'learningAsides.leftOutOfMainChat'
+    )
+    expect(within(kept).getByRole('checkbox')).not.toHaveAccessibleDescription()
+    // The note with the count stays.
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'learningAsides.conclusionsLeftOut:1'
+    )
+  })
+
+  it('marks nothing while nothing is left out', () => {
+    render(
+      <LearnedConclusions
+        asides={[jensen, prior]}
+        omitted={0}
+        keptUpdateIds={new Set()}
+        onOpenAside={vi.fn()}
+      />
+    )
+
+    expect(screen.queryByText('learningAsides.leftOutOfMainChat')).toBeNull()
+  })
+
   it('is read-only without a way to change it, and absent with nothing learned', () => {
     const { unmount } = render(
       <LearnedConclusions asides={[jensen]} onOpenAside={vi.fn()} />

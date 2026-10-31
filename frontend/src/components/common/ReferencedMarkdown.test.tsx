@@ -37,6 +37,35 @@ describe('ReferencedMarkdown', () => {
     expect(onReferenceClick).toHaveBeenLastCalledWith('note', 'n1')
   })
 
+  it('keeps its DOM when it renders again, so a selection in it survives', () => {
+    const titles = { 'source:paper': 'Attention Is All You Need' }
+    const { rerender } = render(
+      <ReferencedMarkdown
+        content={content}
+        onReferenceClick={vi.fn()}
+        referenceTitles={titles}
+      />
+    )
+    const paragraph = screen.getByText(/Scaled attention/)
+    const citation = screen.getByRole('button', { name: '1' })
+
+    // A parent's re-render: a new handler and an equal titles object.
+    const onReferenceClick = vi.fn()
+    rerender(
+      <ReferencedMarkdown
+        content={content}
+        onReferenceClick={onReferenceClick}
+        referenceTitles={{ ...titles }}
+      />
+    )
+
+    expect(screen.getByText(/Scaled attention/)).toBe(paragraph)
+    expect(screen.getByRole('button', { name: '1' })).toBe(citation)
+    // The kept citation calls the newest handler.
+    fireEvent.click(citation)
+    expect(onReferenceClick).toHaveBeenCalledWith('source', 'paper')
+  })
+
   it('keeps the raw reference when no titles are given', () => {
     render(<ReferencedMarkdown content="See [source:paper]." />)
 

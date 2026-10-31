@@ -146,6 +146,25 @@ class CreateLearningAsideRequest(BaseModel):
         return stripped
 
 
+def _schema_without_null(schema: Dict[str, Any]) -> None:
+    """Describe a PATCH model's optional fields without null.
+
+    The fields are Optional so that leaving one out means "keep it" (and a
+    wrong value gets one error at the field), but ``_reject_null`` refuses
+    an explicit null, so the API docs should not offer it.
+    """
+    for definition in schema.get("properties", {}).values():
+        options = definition.pop("anyOf", None)
+        if options is not None:
+            kept = [option for option in options if option.get("type") != "null"]
+            if len(kept) == 1:
+                definition.update(kept[0])
+            else:
+                definition["anyOf"] = kept
+        if "default" in definition and definition["default"] is None:
+            del definition["default"]
+
+
 def _reject_null(value: Any) -> Any:
     """Refuse an explicit null for a PATCH field that may only be left out."""
     if value is None:
@@ -155,6 +174,8 @@ def _reject_null(value: Any) -> Any:
 
 class UpdateLearningAsideRequest(BaseModel):
     """Fields to change. Leave a field out to keep it; null is rejected."""
+
+    model_config = ConfigDict(json_schema_extra=_schema_without_null)
 
     title: Optional[str] = Field(None, min_length=1, max_length=200)
     status: Optional[Literal["active", "parked", "discarded"]] = None
@@ -303,6 +324,8 @@ class SyncLearningSectionsRequest(BaseModel):
 
 class UpdateLearningSectionRequest(BaseModel):
     """Fields to change. Leave a field out to keep it; null is rejected."""
+
+    model_config = ConfigDict(json_schema_extra=_schema_without_null)
 
     title: Optional[str] = Field(None, max_length=200)
     pinned: Optional[bool] = None

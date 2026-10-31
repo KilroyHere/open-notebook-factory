@@ -1,8 +1,13 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LearningAsidePanel } from './LearningAsidePanel'
 import { clearAsideDrafts } from './AsideComposer'
 import { LearningAside, LearningResolutionDraft } from '@/lib/types/api'
+
+const { createNote } = vi.hoisted(() => ({ createNote: vi.fn() }))
+vi.mock('@/lib/hooks/use-notes', () => ({
+  useCreateNote: () => ({ mutate: createNote, isPending: false }),
+}))
 
 const aside: LearningAside = {
   id: 'learning_aside:one',
@@ -60,6 +65,10 @@ describe('LearningAsidePanel', () => {
         onSelectAside={onSelectAside}
       />
     )
+    // The list keeps the long title; Studio's tab uses the short one.
+    expect(
+      screen.getByRole('region', { name: 'learningAsides.journey' })
+    ).toBeInTheDocument()
 
     fireEvent.click(screen.getByText('Why does Jensen apply?'))
 
@@ -999,5 +1008,187 @@ describe('LearningAsidePanel', () => {
     expect(
       screen.getByRole('button', { name: 'learningAsides.backToOrigin' })
     ).toBeInTheDocument()
+  })
+
+  describe('a passage selected in the dive', () => {
+    afterEach(() => window.getSelection()?.removeAllRanges())
+
+    function selectInAnswer(start: number, end: number) {
+      const text = screen.getByText(/The logarithm is concave/).firstChild!
+      const range = document.createRange()
+      range.setStart(text, start)
+      range.setEnd(text, end)
+      window.getSelection()!.removeAllRanges()
+      window.getSelection()!.addRange(range)
+      fireEvent.mouseUp(text)
+    }
+
+    it('goes deeper on it or saves it as a note', () => {
+      createNote.mockReset()
+      const onGoDeeperOnSelection = vi.fn()
+      render(
+        <LearningAsidePanel
+          {...baseProps}
+          activeAside={aside}
+          notebookId="notebook:1"
+          onGoDeeperOnSelection={onGoDeeperOnSelection}
+        />
+      )
+
+      selectInAnswer(4, 13)
+      fireEvent.click(
+        within(
+          screen.getByRole('toolbar', { name: 'learningAsides.selectionActions' })
+        ).getByRole('button', { name: 'learningAsides.goDeeper' })
+      )
+      expect(onGoDeeperOnSelection).toHaveBeenCalledWith(
+        aside,
+        aside.messages[1],
+        'logarithm'
+      )
+
+      selectInAnswer(4, 13)
+      fireEvent.click(screen.getByRole('button', { name: 'common.saveToNote' }))
+      expect(createNote).toHaveBeenCalledWith({
+        content: 'logarithm',
+        note_type: 'ai',
+        notebook_id: 'notebook:1',
+      })
+    })
+
+    it('puts the cursor in the question box of the dive it opened', () => {
+      const attention = { asideId: aside.id, scroll: null, focus: true }
+      const onAttended = vi.fn()
+      render(
+        <LearningAsidePanel
+          {...baseProps}
+          activeAside={aside}
+          attention={attention}
+          onAttended={onAttended}
+        />
+      )
+
+      expect(document.activeElement).toBe(
+        screen.getByLabelText('learningAsides.askPlaceholder')
+      )
+      expect(onAttended).toHaveBeenCalledWith(attention)
+    })
+
+    it('puts the cursor in the question box of a dive that replaces the aside list', () => {
+      // A dive opened full height shows the aside list while it is created,
+      // then the dive and the request for the cursor in the same render.
+      const onAttended = vi.fn()
+      const { rerender } = render(
+        <LearningAsidePanel {...baseProps} activeAside={undefined} onAttended={onAttended} />
+      )
+      const attention = { asideId: aside.id, scroll: null, focus: true }
+      rerender(
+        <LearningAsidePanel
+          {...baseProps}
+          activeAside={aside}
+          attention={attention}
+          onAttended={onAttended}
+        />
+      )
+
+      expect(document.activeElement).toBe(
+        screen.getByLabelText('learningAsides.askPlaceholder')
+      )
+      expect(onAttended).toHaveBeenCalledWith(attention)
+    })
+
+    it('leaves a request for another dive to that dive', () => {
+      const onAttended = vi.fn()
+      render(
+        <LearningAsidePanel
+          {...baseProps}
+          activeAside={aside}
+          attention={{ asideId: 'learning_aside:other', scroll: null, focus: true }}
+          onAttended={onAttended}
+        />
+      )
+
+      expect(document.activeElement).toBe(
+        screen.getByRole('region', { name: aside.title })
+      )
+      expect(onAttended).not.toHaveBeenCalled()
+    })
+
+    it('makes a dive that leads back to its parent dive, not to main chat', async () => {
+      const onOpenChange = vi.fn()
+      const onNavigateToMessage = vi.fn()
+      const onSelectAside = vi.fn()
+      const nested: LearningAside = {
+        ...aside,
+        id: 'learning_aside:nested',
+        parent_aside_id: aside.id,
+        title: 'logarithm',
+        // Anchored to the parent dive's answer, which main chat does not have.
+        anchor: {
+          type: 'message',
+          message_id: 'ai:one',
+          content: 'logarithm',
+          locator: 'selection',
+        },
+        messages: [],
+      }
+      const { rerender } = render(
+        <LearningAsidePanel
+          {...baseProps}
+          asides={[aside, nested]}
+          activeAside={nested}
+          onOpenChange={onOpenChange}
+          onNavigateToMessage={onNavigateToMessage}
+          onSelectAside={onSelectAside}
+        />
+      )
+
+      expect(screen.getByText('learningAsides.selectedPassage')).toBeInTheDocument()
+      expect(
+        screen.queryByRole('button', { name: 'learningAsides.backToOrigin' })
+      ).toBeNull()
+      // It asks nothing for the learner: a passage is not a question.
+      expect(
+        screen.queryByRole('button', { name: 'learningAsides.askThisQuestion' })
+      ).toBeNull()
+      fireEvent.click(
+        screen.getByRole('button', { name: 'learningAsides.backToParent' })
+      )
+      expect(onSelectAside).toHaveBeenCalledWith(aside.id)
+
+      // Resolved without reaching main chat, the way back closes the view.
+      rerender(
+        <LearningAsidePanel
+          {...baseProps}
+          asides={[aside, nested]}
+          activeAside={{
+            ...nested,
+            status: 'resolved',
+            updates: [
+              {
+                id: 'learning_update:nested',
+                aside_id: nested.id,
+                conclusion: 'Log is concave.',
+                open_questions: [],
+                citations: [],
+                include_in_main: true,
+                applied_message_id: null,
+                version: 1,
+                created: aside.created,
+                updated: aside.updated,
+              },
+            ],
+          }}
+          onOpenChange={onOpenChange}
+          onNavigateToMessage={onNavigateToMessage}
+        />
+      )
+      fireEvent.click(
+        screen.getByText('learningAsides.returnToMain').closest('button')!
+      )
+      expect(onOpenChange).toHaveBeenCalledWith(false)
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      expect(onNavigateToMessage).not.toHaveBeenCalled()
+    })
   })
 })

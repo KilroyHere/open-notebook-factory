@@ -46,6 +46,8 @@ interface LearningJourneyRailProps {
   onSetIncludeInMain?: SetIncludeInMain
   /** Used conclusions main chat's context limit leaves out. */
   omittedConclusions?: number
+  /** IDs of the conclusions main chat's counted context keeps. */
+  keptConclusionIds?: ReadonlySet<string>
 }
 
 function rootAsides(asides: LearningAside[]): LearningAside[] {
@@ -517,6 +519,7 @@ export function LearningJourneyRail({
   onTogglePinSection,
   onSetIncludeInMain,
   omittedConclusions = 0,
+  keptConclusionIds,
 }: LearningJourneyRailProps) {
   const { t } = useTranslation()
   const [tab, setTab] = useState('outline')
@@ -604,6 +607,7 @@ export function LearningJourneyRail({
               <LearnedConclusions
                 asides={visibleAsides}
                 omitted={omittedConclusions}
+                keptUpdateIds={keptConclusionIds}
                 activeAsideId={activeAsideId}
                 onOpenAside={onOpenAside}
                 onSetIncludeInMain={onSetIncludeInMain}
