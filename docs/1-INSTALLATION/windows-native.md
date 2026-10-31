@@ -1,6 +1,6 @@
 # Windows Native Installation (No Docker)
 
-This guide runs [Open Notebook Factory](https://github.com/lfnovo/open-notebook) on Windows **natively, without Docker or WSL**. It is community-maintained; the officially supported route is [Docker Compose](docker-compose.md).
+This guide runs Open Notebook Factory on Windows **natively, without Docker or WSL**. It was contributed to Open Notebook by its users and has not been tested with this fork; the supported route is [Docker Compose](docker-compose.md).
 
 ## Who Is This For?
 
@@ -25,8 +25,8 @@ This guide runs [Open Notebook Factory](https://github.com/lfnovo/open-notebook)
 
    ```batch
    cd %USERPROFILE%\Projects
-   git clone https://github.com/lfnovo/open-notebook.git
-   cd open-notebook
+   git clone https://github.com/KilroyHere/open-notebook-factory.git
+   cd open-notebook-factory
    uv sync
    cd frontend && npm install && cd ..
    ```
@@ -46,7 +46,7 @@ This guide runs [Open Notebook Factory](https://github.com/lfnovo/open-notebook)
 
    Use `127.0.0.1`, not `localhost` and not `surrealdb` (see [Issue 2](#issue-2-database-health-check-timeout)). You add AI provider keys in the UI later, not in `.env`.
 
-3. **Start the four services**, each in its own terminal, from the `open-notebook` folder.
+3. **Start the four services**, each in its own terminal, from the `open-notebook-factory` folder.
 
    > Open Notebook Factory does not ship a launcher script. Start the services manually as below, or wrap them in your own `.bat` (see [Optional: one-click launcher](#optional-one-click-launcher)).
 
@@ -72,7 +72,7 @@ This guide runs [Open Notebook Factory](https://github.com/lfnovo/open-notebook)
 ## Where your data lives
 
 - **Database:** the folder you pass to `surreal start` (above: `%USERPROFILE%\Projects\open-notebook-data\surrealdb`). Keeping it outside the code folder protects it when you reinstall.
-- **Uploads and chat checkpoints:** always in the `data\` folder inside `open-notebook\`. The path is fixed in `open_notebook/config.py` and can't be changed with an environment variable. Back it up together with the database.
+- **Uploads and chat checkpoints:** always in the `data\` folder inside `open-notebook-factory\`. The path is fixed in `open_notebook/config.py` and can't be changed with an environment variable. Back it up together with the database.
 
 ## Optional: one-click launcher
 
@@ -83,7 +83,7 @@ double-click. Adjust `ROOT` and `DB_DIR` to match your setup.
 ```batch
 @echo off
 REM --- adjust these two paths ---
-set ROOT=%USERPROFILE%\Projects\open-notebook
+set ROOT=%USERPROFILE%\Projects\open-notebook-factory
 set DB_DIR=%USERPROFILE%\Projects\open-notebook-data\surrealdb
 
 set PYTHONPATH=%ROOT%
@@ -189,7 +189,7 @@ uv run --env-file .env python -m surreal_commands.cli.worker --import-modules co
 When a new version is released:
 
 ```batch
-cd open-notebook
+cd open-notebook-factory
 git pull
 uv sync
 cd frontend && npm install && cd ..
@@ -287,11 +287,11 @@ will not find it for those older sources. New uploads are fine.
 ### Worker not processing commands
 
 - Check the Worker window for errors
-- Verify `PYTHONPATH` is set to the `open-notebook` folder in that terminal
+- Verify `PYTHONPATH` is set to the `open-notebook-factory` folder in that terminal
 
 ## Contributing
 
-Found another Windows-specific issue? Please share your solution!
+Found another Windows-specific issue? Please share your solution in an [issue](https://github.com/KilroyHere/open-notebook-factory/issues).
 
 ---
 

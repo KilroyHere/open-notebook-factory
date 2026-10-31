@@ -24,5 +24,5 @@ Open Notebook Factory is a self-hosted, privacy-focused AI research assistant. N
 ## Getting help
 
 - **Discord**: https://discord.gg/37XJPXfz2w
-- **GitHub Issues** (reproducible bugs): https://github.com/lfnovo/open-notebook/issues
+- **GitHub Issues** (reproducible bugs): https://github.com/KilroyHere/open-notebook-factory/issues
 - **GitHub Discussions** (questions and ideas): https://github.com/lfnovo/open-notebook/discussions

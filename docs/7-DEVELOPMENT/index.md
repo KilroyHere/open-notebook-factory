@@ -35,7 +35,9 @@ The normative rules for coding agents (and humans in a hurry) are in the `AGENTS
 - **GitHub Issues**: reproducible bugs and approved work items
 - **Discord**: [join the server](https://discord.gg/37XJPXfz2w) for real-time help
 
-## Libraries we maintain
+## Libraries it depends on
+
+Luis Novo, the author of Open Notebook, maintains these. A bug whose cause is in one of them is fixed there first.
 
 - [Esperanto](https://github.com/lfnovo/esperanto): one interface over the AI providers
 - [Content Core](https://github.com/lfnovo/content-core): content extraction

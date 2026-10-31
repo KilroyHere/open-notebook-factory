@@ -52,7 +52,7 @@ If you run Ollama by hand, start it with `OLLAMA_HOST=0.0.0.0:11434 ollama serve
 ```bash
 mkdir open-notebook
 cd open-notebook
-curl -o docker-compose.yml https://raw.githubusercontent.com/lfnovo/open-notebook/main/docker-compose.yml
+curl -o docker-compose.yml https://raw.githubusercontent.com/KilroyHere/open-notebook-factory/main/docker-compose.yml
 ```
 
 (On Windows PowerShell, use `curl.exe`.)

@@ -105,7 +105,7 @@ Back up, then `docker compose pull && docker compose up -d`. Database migrations
 
 - **Discord:** https://discord.gg/37XJPXfz2w
 - **GitHub Discussions:** questions and ideas, https://github.com/lfnovo/open-notebook/discussions
-- **GitHub Issues:** reproducible bugs, https://github.com/lfnovo/open-notebook/issues
+- **GitHub Issues:** reproducible bugs, https://github.com/KilroyHere/open-notebook-factory/issues
 
 When reporting a bug, include the exact error message, steps to reproduce, relevant logs (without keys or passwords), your version and how you run Open Notebook Factory.
 

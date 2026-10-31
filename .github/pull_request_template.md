@@ -40,7 +40,7 @@ Fixes #<!-- issue number, or "N/A (small fix)" -->
 
 <!-- This section helps ensure your PR aligns with our project vision -->
 
-**Which design principles does this PR support?** (See [VISION.md](https://github.com/lfnovo/open-notebook/blob/main/VISION.md))
+**Which design principles does this PR support?** (See [VISION.md](https://github.com/KilroyHere/open-notebook-factory/blob/main/VISION.md))
 
 - [ ] Privacy First
 - [ ] Simplicity Over Features
@@ -101,8 +101,8 @@ Fixes #<!-- issue number, or "N/A (small fix)" -->
 
 Before submitting, please verify:
 
-- [ ] I have read [CONTRIBUTING.md](https://github.com/lfnovo/open-notebook/blob/main/docs/7-DEVELOPMENT/contributing.md)
-- [ ] I have read [VISION.md](https://github.com/lfnovo/open-notebook/blob/main/VISION.md)
+- [ ] I have read [CONTRIBUTING.md](https://github.com/KilroyHere/open-notebook-factory/blob/main/docs/7-DEVELOPMENT/contributing.md)
+- [ ] I have read [VISION.md](https://github.com/KilroyHere/open-notebook-factory/blob/main/VISION.md)
 - [ ] This PR addresses an approved Issue assigned to me, **or** it's a small obvious fix (typo, docs, tiny bug) that doesn't need one — ideas and features begin in Discussions; reproducible bugs begin in Issues
 - [ ] I have not included unrelated changes in this PR
 - [ ] My PR title follows the Conventional Commits format (e.g., "fix(podcasts): …", "feat: …")

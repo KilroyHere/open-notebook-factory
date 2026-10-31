@@ -140,7 +140,7 @@ references mix issue and PR numbers):
 
 ```bash
 for n in <numbers>; do
-  STATE=$(gh api "repos/lfnovo/open-notebook/issues/$n" --jq 'if .pull_request then "pr" else .state end')
+  STATE=$(gh api "repos/KilroyHere/open-notebook-factory/issues/$n" --jq 'if .pull_request then "pr" else .state end')
   [ "$STATE" = "closed" ] && gh issue edit "$n" --add-label released
 done
 ```

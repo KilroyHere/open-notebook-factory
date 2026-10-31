@@ -48,4 +48,4 @@ The defaults are for a single user on a trusted machine: authentication is off a
 
 - [Quick Fixes](../6-TROUBLESHOOTING/quick-fixes.md)
 - [Discord](https://discord.gg/37XJPXfz2w)
-- [GitHub Issues](https://github.com/lfnovo/open-notebook/issues)
+- [GitHub Issues](https://github.com/KilroyHere/open-notebook-factory/issues)

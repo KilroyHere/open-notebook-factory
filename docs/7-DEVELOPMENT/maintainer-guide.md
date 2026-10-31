@@ -340,7 +340,7 @@ Sorry for the inconvenience - this process helps us manage the project effective
 ```markdown
 Thank you for this suggestion! I can see how this would be useful for [specific use case].
 
-After reviewing against our [vision and principles](https://github.com/lfnovo/open-notebook/blob/main/VISION.md), we've decided not to include this in the core project because [specific reason - e.g., "it conflicts with our 'Simplicity Over Features' principle" or "it would require dependencies that conflict with our privacy-first approach"].
+After reviewing against our [vision and principles](https://github.com/KilroyHere/open-notebook-factory/blob/main/VISION.md), we've decided not to include this in the core project because [specific reason - e.g., "it conflicts with our 'Simplicity Over Features' principle" or "it would require dependencies that conflict with our privacy-first approach"].
 
 Some alternatives:
 - [If applicable] This could be built as a plugin/extension
@@ -406,7 +406,7 @@ Thank you for taking the time to contribute! We really appreciate it.
 
 After careful review, we've decided not to merge this PR because [specific reason related to design principles].
 
-This isn't a reflection on your code quality - it's about maintaining focus on our core goals as outlined in [VISION.md](https://github.com/lfnovo/open-notebook/blob/main/VISION.md).
+This isn't a reflection on your code quality - it's about maintaining focus on our core goals as outlined in [VISION.md](https://github.com/KilroyHere/open-notebook-factory/blob/main/VISION.md).
 
 We'd love to have you contribute in other ways! Check out:
 - Good first issues

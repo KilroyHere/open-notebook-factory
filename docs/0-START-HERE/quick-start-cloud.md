@@ -22,7 +22,7 @@ Run Open Notebook Factory with a cloud AI provider such as **OpenAI, Anthropic, 
 ```bash
 mkdir open-notebook
 cd open-notebook
-curl -o docker-compose.yml https://raw.githubusercontent.com/lfnovo/open-notebook/main/docker-compose.yml
+curl -o docker-compose.yml https://raw.githubusercontent.com/KilroyHere/open-notebook-factory/main/docker-compose.yml
 ```
 
 (On Windows PowerShell, use `curl.exe`.)
