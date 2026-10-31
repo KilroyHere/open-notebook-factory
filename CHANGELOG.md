@@ -9,6 +9,9 @@ Releases of this fork are numbered after the Open Notebook release they're based
 
 ## [Unreleased]
 
+### Fixed
+- **A source with one insight says "1 insight".** Source cards said "1 insights", and used the plural for one in Catalan, French, German, Italian and Portuguese too. They now use the singular for one.
+
 ## [1.15.0.post1] - 2026-10-31
 
 The first release of Open Notebook Factory, based on Open Notebook 1.15.0.
