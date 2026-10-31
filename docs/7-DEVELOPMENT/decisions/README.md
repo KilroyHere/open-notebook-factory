@@ -60,3 +60,4 @@ What this makes easier, what it makes harder, what to watch. (bullets)
 | [ADR-015](ADR-015-inline-deep-dives.md) | Deep dives open inline under their answer; full height is the fallback | Accepted |
 | [PDR-001](PDR-001-single-user-first.md) | Single-user first; don't preclude multi-user | Accepted |
 | [PDR-002](PDR-002-provider-agnostic-core.md) | Provider-agnostic core by default | Accepted |
+| [PDR-003](PDR-003-fork-identity.md) | Open Notebook Factory has its own name, images and channels | Accepted |
