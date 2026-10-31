@@ -28,6 +28,7 @@ The normative rules for coding agents (and humans in a hurry) are in the `AGENTS
 | [Decision Records](decisions/README.md) | ADRs and PDRs: why things are the way they are |
 | [VISION.md](../../VISION.md) | Product identity, current posture and priorities |
 | [Maintainer Guide](maintainer-guide.md) | Triage, reviews, labels |
+| [Syncing with Upstream](syncing-upstream.md) | Merging Open Notebook's `main` into the fork, migration numbers, where conflicts are expected |
 
 ## Getting help
 

@@ -2,7 +2,7 @@
 
 Thank you for your interest in contributing to Open Notebook Factory. This guide explains how contributions work here and what makes a good one.
 
-Open Notebook Factory is a fork of [Open Notebook](https://github.com/lfnovo/open-notebook). A change that would help the original project too (a fix in code the two share, a provider, a translation) can also be proposed upstream, following [Open Notebook's contributing guide](https://github.com/lfnovo/open-notebook/blob/main/docs/7-DEVELOPMENT/contributing.md). This fork takes in upstream changes when it merges upstream `main`.
+Open Notebook Factory is a fork of [Open Notebook](https://github.com/lfnovo/open-notebook). A change that would help the original project too (a fix in code the two share, a provider, a translation) can also be proposed upstream, following [Open Notebook's contributing guide](https://github.com/lfnovo/open-notebook/blob/main/docs/7-DEVELOPMENT/contributing.md). This fork takes in upstream changes when it merges upstream `main` ([Syncing with Upstream](syncing-upstream.md)).
 
 ## 🚦 Issues First, Then Pull Requests
 

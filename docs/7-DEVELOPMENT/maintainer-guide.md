@@ -11,6 +11,8 @@ This guide is for project maintainers to help manage contributions effectively w
 - [Common Scenarios](#common-scenarios)
 - [Communication Templates](#communication-templates)
 
+Merging upstream Open Notebook into the fork has its own page: [Syncing with Upstream](syncing-upstream.md).
+
 ## Ideas and Feature Requests
 
 This fork has no GitHub Discussions. Feature requests, ideas, behavior changes,
