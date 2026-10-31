@@ -27,8 +27,11 @@ permissions:
   packages: write
 
 env:
-  GHCR_IMAGE: ghcr.io/lfnovo/open-notebook
-  DOCKERHUB_IMAGE: lfnovo/open_notebook
+  # This fork's own registries (image names must be lowercase). Docker Hub
+  # is used only when the DOCKER_USERNAME and DOCKER_PASSWORD secrets are
+  # set, and DOCKERHUB_IMAGE must then belong to that account.
+  GHCR_IMAGE: ghcr.io/kilroyhere/open-notebook-factory
+  DOCKERHUB_IMAGE: kilroyhere/open-notebook-factory
 
 jobs:
   extract-version:
