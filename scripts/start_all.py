@@ -421,7 +421,7 @@ def main() -> int:
                     )
             time.sleep(0.5)
     except KeyboardInterrupt:
-        print("\nStopping Open Notebook...")
+        print("\nStopping Open Notebook Factory...")
         return 0
     except (
         OSError,

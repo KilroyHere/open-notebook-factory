@@ -20,7 +20,7 @@ DOCKER_GROUP_CHANGED=false
 
 usage() {
   cat <<'EOF'
-Install Open Notebook development prerequisites on Debian or Ubuntu.
+Install Open Notebook Factory development prerequisites on Debian or Ubuntu.
 
 Options:
   --check             Report prerequisite status without changing the system.

@@ -178,7 +178,7 @@ start-all:
 	@uv run python scripts/start_all.py
 
 stop-all:
-	@echo "🛑 Stopping all Open Notebook services..."
+	@echo "🛑 Stopping all Open Notebook Factory services..."
 	@if [ -f /tmp/open-notebook-start-all.pid ]; then \
 		kill "$$(cat /tmp/open-notebook-start-all.pid)" 2>/dev/null || true; \
 		sleep 1; \
@@ -191,7 +191,7 @@ stop-all:
 	@echo "✅ All services stopped!"
 
 status:
-	@echo "📊 Open Notebook Service Status:"
+	@echo "📊 Open Notebook Factory Service Status:"
 	@echo "Database (SurrealDB):"
 	@docker compose ps surrealdb 2>/dev/null || echo "  ❌ Not running"
 	@echo "API Backend:"
