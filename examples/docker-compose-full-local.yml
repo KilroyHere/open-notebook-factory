@@ -70,7 +70,7 @@ services:
     # and add GPU device mapping (see docs)
 
   open_notebook:
-    image: lfnovo/open_notebook:v1-latest
+    image: ghcr.io/kilroyhere/open-notebook-factory:v1-latest
     ports:
       - "8502:8502"
       - "5055:5055"

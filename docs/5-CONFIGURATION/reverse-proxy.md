@@ -6,7 +6,7 @@ Run Open Notebook Factory behind nginx, Caddy, Traefik or a hosting platform, wi
 
 ## How It Works
 
-The `lfnovo/open_notebook` image runs three processes in one container: the Next.js frontend on port 8502, the API on port 5055 and the background worker. The Next.js server forwards every `/api/*` request it receives to the API (`INTERNAL_API_URL`, default `http://localhost:5055`).
+The `ghcr.io/kilroyhere/open-notebook-factory` image runs three processes in one container: the Next.js frontend on port 8502, the API on port 5055 and the background worker. The Next.js server forwards every `/api/*` request it receives to the API (`INTERNAL_API_URL`, default `http://localhost:5055`).
 
 So a reverse proxy only needs to reach **port 8502**:
 
@@ -83,7 +83,7 @@ Add an `nginx` service next to the `surrealdb` and `open_notebook` services of t
 ```yaml
 services:
   open_notebook:
-    image: lfnovo/open_notebook:v1-latest
+    image: ghcr.io/kilroyhere/open-notebook-factory:v1-latest
     environment:
       - API_URL=https://notebook.example.com
       - OPEN_NOTEBOOK_ENCRYPTION_KEY=<generated-key>
@@ -135,7 +135,7 @@ Caddy obtains and renews certificates automatically.
 ```yaml
 services:
   open_notebook:
-    image: lfnovo/open_notebook:v1-latest
+    image: ghcr.io/kilroyhere/open-notebook-factory:v1-latest
     environment:
       - API_URL=https://notebook.example.com
       # plus the variables from the shipped docker-compose.yml

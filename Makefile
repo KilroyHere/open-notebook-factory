@@ -6,9 +6,10 @@
 # Get version from pyproject.toml
 VERSION := $(shell grep -m1 version pyproject.toml | cut -d'"' -f2)
 
-# Image names for both registries
-DOCKERHUB_IMAGE := lfnovo/open_notebook
-GHCR_IMAGE := ghcr.io/lfnovo/open-notebook
+# Image names, the same as in .github/workflows/. Only GHCR is published;
+# DOCKERHUB_IMAGE also names local builds (docker-build-local).
+DOCKERHUB_IMAGE := kilroyhere/open-notebook-factory
+GHCR_IMAGE := ghcr.io/kilroyhere/open-notebook-factory
 
 # Build platforms
 PLATFORMS := linux/amd64,linux/arm64
@@ -52,7 +53,7 @@ release-test:
 	@test -n "$(TAG)" || (echo "usage: make release-test TAG=<new> [OLD_TAG=<previous>]"; exit 1)
 	bash scripts/release-test/release-image-test.sh all \
 		"$(DOCKERHUB_IMAGE):$(TAG)" \
-		$(if $(OLD_TAG),"$(DOCKERHUB_IMAGE):$(OLD_TAG)")
+		$(if $(OLD_TAG),"$(GHCR_IMAGE):$(OLD_TAG)")
 
 # Browsable RC stack for manual verification (optionally with a data dump).
 # Usage: make release-stack TAG=1.12.0 [DUMP=/tmp/dev-dump.surql]

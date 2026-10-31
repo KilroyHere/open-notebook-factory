@@ -40,11 +40,12 @@ this file does not repeat them.
   and after the backend suite).
 - Artifact gate: `[artifacts.docker].gate`, built from the candidate commit.
   `docker-build-local` tags with the current `pyproject.toml` version, so `docker pull` the
-  genuine previous tag before the upgrade scenario.
+  genuine previous tag (`ghcr.io/kilroyhere/open-notebook-factory:<prev>`) before the upgrade scenario.
 - Environment or credentials the checks need (names only, never values):
   - `.env` with `OPEN_NOTEBOOK_ENCRYPTION_KEY` and a `SURREAL_URL` (check which local
     SurrealDB it points at), at least one provider credential with chat + embedding defaults
-  - Docker with buildx; `docker login` on both registries only for the local push fallback
+  - Docker with buildx; `docker login` on GHCR and Docker Hub only for the local push fallback
+    (`make docker-push` pushes to both)
   - `gh` authenticated with `workflow` scope (dispatching *Build and Release*)
 
 ## Owner's manual checks
@@ -70,8 +71,8 @@ and tools defaults deliberately fall back to the chat default (`open_notebook/ai
 
 ## Publish, only after the GO
 
-- Trigger: `[release].distribution_trigger` — pushes `<ver>` and `<ver>-single` to Docker
-  Hub and GHCR (both arches). Watch it:
+- Trigger: `[release].distribution_trigger` — pushes `<ver>` and `<ver>-single` to GHCR
+  (both arches). Watch it:
 
 ```bash
 gh run list --workflow=build-and-release.yml --limit 1     # grab the id
@@ -93,10 +94,10 @@ gh run list --workflow=build-and-release.yml --limit 1 && gh run watch <id> --ex
 ## Verify from the registry
 
 ```bash
-for ref in lfnovo/open_notebook:<ver> lfnovo/open_notebook:<ver>-single ghcr.io/lfnovo/open-notebook:<ver> ghcr.io/lfnovo/open-notebook:<ver>-single; do
+for ref in ghcr.io/kilroyhere/open-notebook-factory:<ver> ghcr.io/kilroyhere/open-notebook-factory:<ver>-single; do
   docker manifest inspect "$ref" | python3 -c "import json,sys; d=json.load(sys.stdin); print(sorted(set(m['platform']['architecture'] for m in d.get('manifests',[]) if m['platform']['architecture']!='unknown')))"
 done
-# expect ['amd64', 'arm64'] for all four; repeat with v1-latest and v1-latest-single after publication
+# expect ['amd64', 'arm64'] for both; repeat with v1-latest and v1-latest-single after publication
 ```
 
 RC stack on the pushed image, optionally with a copy of the owner's dev data (copies only):
@@ -126,7 +127,7 @@ git checkout main && git pull && grep '^version' pyproject.toml   # still <ver>
 uv run pytest tests/ -q && ruff check .                            # + frontend if touched
 git tag -d v<ver> && git push origin :refs/tags/v<ver> && make tag
 git rev-parse v<ver> && git rev-parse HEAD                          # must match
-docker rmi lfnovo/open_notebook:<ver> lfnovo/open_notebook:local 2>/dev/null
+docker rmi kilroyhere/open-notebook-factory:<ver> kilroyhere/open-notebook-factory:local 2>/dev/null
 make docker-build-local && make release-test TAG=<ver> OLD_TAG=<prev>
 gh workflow run build-and-release.yml --ref main -f push_latest=false   # overwrites the stale images
 # re-verify the manifests, re-boot the RC stack, wait for the owner's re-GO

@@ -4,7 +4,7 @@
 
 The single image bundles SurrealDB, the API, the background worker and the web UI in one container. It is mostly useful on hosting platforms that run exactly one container per app.
 
-> **Images:** `lfnovo/open_notebook:v1-latest-single` on Docker Hub, `ghcr.io/lfnovo/open-notebook:v1-latest-single` on GitHub Container Registry.
+> **Image:** `ghcr.io/kilroyhere/open-notebook-factory:v1-latest-single` on GitHub Container Registry. There is no Docker Hub image. `v1-dev-single` is rebuilt from `main` on every push.
 
 ## What the container needs
 
@@ -28,7 +28,7 @@ The embedded database always starts with user `root` and password `root`, so set
 # docker-compose.yml
 services:
   open_notebook:
-    image: lfnovo/open_notebook:v1-latest-single
+    image: ghcr.io/kilroyhere/open-notebook-factory:v1-latest-single
     pull_policy: always
     ports:
       - "8502:8502"  # Web UI

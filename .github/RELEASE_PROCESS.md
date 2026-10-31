@@ -77,9 +77,10 @@ This runs two scenarios against real containers (`scripts/release-test/`):
 - **Upgrade**: boot the *published* previous image, seed data, swap to the new
   image on the same volume → migrations apply, data survives.
 
-Caveat: `docker-build-local` tags with the current `pyproject.toml` version —
-`docker pull` the genuine previous tag before the upgrade test so you are not
-comparing the new build against itself.
+Caveat: `docker-build-local` tags `kilroyhere/open-notebook-factory:<version>` with the current
+`pyproject.toml` version, and the upgrade test boots the previous release
+from GHCR (`ghcr.io/kilroyhere/open-notebook-factory:<previous>`). `docker pull` that tag first, so you
+are not comparing the new build against itself.
 
 ### 3. Fix loop with a re-test policy
 
@@ -97,16 +98,16 @@ are not release regressions become backlog issues instead of scope creep.
 3. After merge: `make tag`.
 4. Build and push version images **via CI** (it holds the registry
    credentials): trigger the *Build and Release* workflow with
-   `push_latest=false`. Local `make docker-push` also works but requires
-   `docker login` on both registries.
+   `push_latest=false`. Local `make docker-push` also works, but it pushes to
+   Docker Hub as well as GHCR and needs `docker login` on both.
 5. **Verify the pushed image** (bucket C, final gate): run it locally with
    `make release-stack TAG=<version> [DUMP=<dev-data-dump>]` — a browsable,
    isolated stack, optionally with a copy of real data — and walk the core
    flows in the browser.
 6. Publish the GitHub release. A non-prerelease publication triggers the
    workflow again and pushes the `v1-latest` tags automatically.
-7. Verify the `v1-latest` manifests on Docker Hub and GHCR (both arches, both
-   variants), and mark shipped issues with `released`.
+7. Verify the `v1-latest` manifests on GHCR (both arches, both variants), and
+   mark shipped issues with `released`.
 
 ## Communication
 
@@ -139,7 +140,9 @@ accepted improvements immediately — update this document, the scripts under
 | `make tag` | Create and push a git tag matching `pyproject.toml` | — |
 
 - **Platforms:** `linux/amd64`, `linux/arm64`
-- **Registries:** Docker Hub + GitHub Container Registry
+- **Registry:** GitHub Container Registry, `ghcr.io/kilroyhere/open-notebook-factory`. The workflows
+  also push to Docker Hub (`kilroyhere/open-notebook-factory`) when the `DOCKER_USERNAME` and
+  `DOCKER_PASSWORD` secrets are set; this fork has no Docker Hub image.
 - **Image variants:** regular + single-container (`-single`). Both are built
   from the same `Dockerfile`: regular is the default/`runtime` target, single
   is `--target single`
@@ -186,10 +189,11 @@ accepted improvements immediately — update this document, the scripts under
   `.env` is loaded. During bucket A, snapshot record counts per table before
   and after the suite (e.g. credentials count) — a diff means a test is
   leaking writes (this caught 48 leaked `Test` credentials in v1.12.0).
-- **A local `docker-build-local` tag shadows the pushed image.** Both are
-  `lfnovo/open_notebook:<ver>`, so Phase 6 could verify your own local build
-  instead of the registry artifact. `rc-stack.sh up` now `docker pull`s the tag
-  by default; if you boot the image any other way, pull first (v1.13.0 lesson).
+- **Verify the registry artifact, not a local build.** `docker-build-local`
+  tags `kilroyhere/open-notebook-factory:<ver>`; `rc-stack.sh up` boots
+  `ghcr.io/kilroyhere/open-notebook-factory:<ver>` and `docker pull`s it first. If you boot the
+  image any other way, pull first, or Phase 6 could verify a stale local copy
+  instead of the pushed image (v1.13.0 lesson).
 - **Judge opt-in runtime gating on a clean image, not the dev venv.** A dev
   venv may have `crawl4ai`/`docling` installed out-of-band (not via the opt-in
   flag), so `GET /api/capabilities` reports them available and the UI enables

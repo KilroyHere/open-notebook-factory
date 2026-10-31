@@ -37,7 +37,7 @@ schema:
     appServiceImage:
       type: string
       title: App Service Image
-      default: lfnovo/open_notebook:1.10.0
+      default: ghcr.io/kilroyhere/open-notebook-factory:v1-latest
     databaseServiceName:
       type: string
       title: Database Service Name

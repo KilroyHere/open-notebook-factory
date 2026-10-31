@@ -9,7 +9,7 @@ This is the standard way to run Open Notebook Factory. It uses the [`docker-comp
 
 The background worker runs inside the `open_notebook` container, so source processing, embeddings and podcasts work without extra services.
 
-> **Alternative registry:** images are published to Docker Hub (`lfnovo/open_notebook`) and GitHub Container Registry (`ghcr.io/lfnovo/open-notebook`). Swap the `image:` line if Docker Hub is blocked for you.
+> **Image:** `ghcr.io/kilroyhere/open-notebook-factory:v1-latest` on GitHub Container Registry. There is no Docker Hub image. Releases are also tagged with their version, and `v1-dev` is rebuilt from `main` on every push.
 
 ## Prerequisites
 
