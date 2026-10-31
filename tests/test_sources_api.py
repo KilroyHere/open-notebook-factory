@@ -269,3 +269,46 @@ class TestTitleSortUsesAlias:
     def test_invalid_sort_field_returns_400(self, client):
         response = client.get("/api/sources?sort_by=bogus")
         assert response.status_code == 400
+
+
+class TestListNamesInsights:
+    """The list carries each source's insights by ID and type, so a page that
+    lists sources can name the insights an answer cites."""
+
+    @pytest.mark.asyncio
+    @patch("api.routers.sources.repo_query", new_callable=AsyncMock)
+    async def test_list_includes_each_sources_insights(self, mock_query, client):
+        mock_query.return_value = [
+            {
+                "id": "source:paper",
+                "title": "Attention Is All You Need",
+                "created": "2026-10-31T00:00:00Z",
+                "updated": "2026-10-31T00:00:00Z",
+                "insights_count": 2,
+                "insights": [
+                    {"id": "source_insight:dense", "insight_type": "Dense Summary"},
+                    {"id": "source_insight:toc", "insight_type": "Table of Contents"},
+                ],
+                "embedded": True,
+            },
+            {
+                "id": "source:bare",
+                "title": "No insights yet",
+                "created": "2026-10-31T00:00:00Z",
+                "updated": "2026-10-31T00:00:00Z",
+                "insights_count": 0,
+                "insights": [],
+                "embedded": False,
+            },
+        ]
+
+        response = client.get("/api/sources")
+
+        assert response.status_code == 200
+        paper, bare = response.json()
+        assert paper["insights"] == [
+            {"id": "source_insight:dense", "insight_type": "Dense Summary"},
+            {"id": "source_insight:toc", "insight_type": "Table of Contents"},
+        ]
+        assert bare["insights"] == []
+        assert "insight_type FROM source_insight" in mock_query.call_args[0][0]

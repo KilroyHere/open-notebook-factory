@@ -111,10 +111,14 @@ export function referenceTitleKey(type: string, id: string): string {
 /**
  * The titles a References list and a learning update's evidence buttons can
  * show: each source's and note's title, and each insight's type (the
- * transformation that made it, such as "Dense Summary").
+ * transformation that made it, such as "Dense Summary"). A listed source's
+ * insights are named after the source too ("Paper · Dense Summary"), since a
+ * notebook can hold several sources with the same kind of insight; insights
+ * given on their own (a source's page) are named by type alone.
  */
 export function buildReferenceTitles(
-  sources: Pick<SourceListResponse, 'id' | 'title'>[] = [],
+  sources: (Pick<SourceListResponse, 'id' | 'title'> &
+    Partial<Pick<SourceListResponse, 'insights'>>)[] = [],
   notes: Pick<NoteResponse, 'id' | 'title'>[] = [],
   insights: Pick<SourceInsightResponse, 'id' | 'insight_type'>[] = []
 ): ReferenceTitles {
@@ -122,6 +126,12 @@ export function buildReferenceTitles(
   for (const source of sources) {
     const title = source.title?.trim()
     if (title) titles[referenceTitleKey('source', source.id)] = title
+    for (const insight of source.insights ?? []) {
+      const type = insight.insight_type?.trim()
+      if (type) {
+        titles[referenceTitleKey('source_insight', insight.id)] = title ? `${title} · ${type}` : type
+      }
+    }
   }
   for (const note of notes) {
     const title = note.title?.trim()
