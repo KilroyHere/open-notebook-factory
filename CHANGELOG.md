@@ -11,6 +11,7 @@ Releases of this fork are numbered after the Open Notebook release they're based
 
 ### Fixed
 - **A source with one insight says "1 insight".** Source cards said "1 insights", and used the plural for one in Catalan, French, German, Italian and Portuguese too. They now use the singular for one.
+- **Notebook chat names the insights it cites.** When an answer cited an insight, the References list in notebook chat and deep dives said "Insight 1". It now names the source and the insight's type, for example "Attention Is All You Need — notes · Dense Summary". For this, `GET /api/sources` returns each source's insights by ID and type (`insights`).
 
 ## [1.15.0.post1] - 2026-10-31
 

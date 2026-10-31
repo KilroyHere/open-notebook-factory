@@ -18,6 +18,12 @@ export interface NoteResponse {
   updated: string
 }
 
+/** An insight of a listed source, by ID and type (for example "Dense Summary"). */
+export interface SourceInsightRef {
+  id: string
+  insight_type: string
+}
+
 export interface SourceListResponse {
   id: string
   title: string | null
@@ -29,6 +35,8 @@ export interface SourceListResponse {
   embedded: boolean
   embedded_chunks: number            // ADD: From Python API
   insights_count: number
+  /** The source's insights, so a list of sources can name the ones an answer cites. */
+  insights?: SourceInsightRef[]
   created: string
   updated: string
   file_available?: boolean

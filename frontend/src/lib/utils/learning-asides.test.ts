@@ -367,6 +367,33 @@ describe('buildReferenceTitles', () => {
       'source_insight:dense': 'Dense Summary',
     })
   })
+
+  it("names a listed source's insights after the source and their type", () => {
+    expect(
+      buildReferenceTitles(
+        [
+          {
+            id: 'source:paper',
+            title: 'Attention Is All You Need',
+            insights: [
+              { id: 'source_insight:dense', insight_type: 'Dense Summary' },
+              { id: 'source_insight:blank', insight_type: ' ' },
+            ],
+          },
+          {
+            id: 'source:untitled',
+            title: null,
+            insights: [{ id: 'source_insight:toc', insight_type: 'Table of Contents' }],
+          },
+        ],
+        []
+      )
+    ).toEqual({
+      'source:paper': 'Attention Is All You Need',
+      'source_insight:dense': 'Attention Is All You Need · Dense Summary',
+      'source_insight:toc': 'Table of Contents',
+    })
+  })
 })
 
 describe('leadingWords', () => {

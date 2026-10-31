@@ -678,6 +678,13 @@ class SourceResponse(BaseModel):
     notebooks: Optional[List[str]] = None
 
 
+class SourceInsightRef(BaseModel):
+    """An insight of a listed source, by ID and type (for example "Dense Summary")."""
+
+    id: str
+    insight_type: str
+
+
 class SourceListResponse(BaseModel):
     id: str
     title: Optional[str]
@@ -686,6 +693,9 @@ class SourceListResponse(BaseModel):
     embedded: bool  # Boolean flag indicating if source has embeddings
     embedded_chunks: int  # Number of embedded chunks
     insights_count: int
+    # The source's insights, so a page that lists sources can name the
+    # insights an answer cites without reading each source.
+    insights: List[SourceInsightRef] = Field(default_factory=list)
     created: str
     updated: str
     file_available: Optional[bool] = None
