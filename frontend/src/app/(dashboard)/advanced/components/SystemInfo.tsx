@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card'
 import { getConfig } from '@/lib/config'
 import { Badge } from '@/components/ui/badge'
 import { useTranslation } from '@/lib/hooks/use-translation'
+import { PROJECT_REPO_URL } from '@/lib/project'
 
 export function SystemInfo() {
   const { t } = useTranslation()
@@ -83,7 +84,7 @@ export function SystemInfo() {
           {config?.hasUpdate && (
             <div className="pt-2 border-t">
               <a
-                href="https://github.com/lfnovo/open-notebook"
+                href={PROJECT_REPO_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-sm text-primary hover:underline inline-flex items-center gap-1"

@@ -11,6 +11,7 @@ import {
 import { Database, Server, ChevronDown, ExternalLink } from 'lucide-react'
 import { ConnectionError } from '@/lib/types/config'
 import { useTranslation } from '@/lib/hooks/use-translation'
+import { PROJECT_REPO_URL } from '@/lib/project'
 
 interface ConnectionErrorOverlayProps {
   error: ConnectionError
@@ -106,7 +107,7 @@ export function ConnectionErrorOverlay({
         <div className="text-sm">
           <p>{t('connectionErrors.seeDocumentation')}</p>
           <a
-            href="https://github.com/lfnovo/open-notebook"
+            href={PROJECT_REPO_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="text-primary hover:underline inline-flex items-center gap-1"

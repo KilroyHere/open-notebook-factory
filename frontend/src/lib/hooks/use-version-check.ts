@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { getConfig } from '@/lib/config'
 import { useTranslation } from '@/lib/hooks/use-translation'
+import { PROJECT_REPO_URL } from '@/lib/project'
 
 /**
  * Hook to check for version updates and display notification.
@@ -32,7 +33,7 @@ export function useVersionCheck() {
           closeButton: true,
           action: {
             label: t('advanced.viewOnGithub'),
-            onClick: () => window.open('https://github.com/lfnovo/open-notebook', '_blank', 'noopener,noreferrer'),
+            onClick: () => window.open(PROJECT_REPO_URL, '_blank', 'noopener,noreferrer'),
           },
           onDismiss: () => sessionStorage.setItem(dismissKey, 'true'),
         })
